@@ -20,6 +20,9 @@ struct TwoPasswordApp: App {
                     }
                 }
         }
+        // 1P8-style window: no title, compact toolbar over the content area
+        // only, sidebar running full-height with the traffic lights inside it.
+        .windowToolbarStyle(.unifiedCompact(showsTitle: false))
         .commands {
             CommandGroup(after: .appSettings) {
                 Button("Lock 2Password") {
