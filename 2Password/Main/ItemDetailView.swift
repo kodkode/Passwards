@@ -146,6 +146,9 @@ struct ItemDetailView: View {
             }
             ForEach(Array(section.fields.filter { !$0.value.isEmpty }.enumerated()), id: \.element.id) { index, field in
                 if index > 0 { Divider().padding(.leading, 14) }
+                if field.kind == .file {
+                    AttachmentDisplayRow(field: field, store: store)
+                } else {
                 FieldDisplayRow(
                     field: field,
                     revealed: revealedFields.contains(field.id),
@@ -160,13 +163,19 @@ struct ItemDetailView: View {
                     },
                     onLargeType: { largeTypeValue = field.value }
                 )
+                }
             }
         }
         .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
     }
 
     private func copy(_ field: ItemField) {
-        ClipboardManager.copy(field.value, concealed: field.kind.isSecret)
+        // OTP fields copy the current 6-digit code, not the secret.
+        if field.kind == .otp, let generator = TOTPGenerator(userInput: field.value) {
+            ClipboardManager.copy(generator.code(), concealed: true)
+        } else {
+            ClipboardManager.copy(field.value, concealed: field.kind.isSecret)
+        }
         copiedFieldID = field.id
         Task {
             try? await Task.sleep(for: .seconds(1.5))
@@ -330,9 +339,7 @@ struct FieldDisplayRow: View {
                     .font(.body.monospaced())
             }
         case .otp:
-            // Live TOTP rendering arrives in Phase 5; show the raw secret concealed.
-            Text(revealed ? field.value : "••••••")
-                .font(.body.monospaced())
+            TOTPCodeView(secretInput: field.value)
         case .url:
             Text(field.value)
                 .foregroundStyle(Theme.accent)

@@ -170,12 +170,16 @@ struct ItemListRow: View {
     }
 }
 
-/// Rich icon: favicon for logins with URLs (Phase 5), category icon otherwise.
+/// Rich icon: website favicon when the item has a URL, category icon otherwise.
 struct ItemIconView: View {
     let summary: ItemSummary
     var size: CGFloat = 32
 
     var body: some View {
-        CategoryIconView(category: summary.overview.category, size: size)
+        if let url = summary.overview.urls.first, !url.isEmpty {
+            FaviconView(urlString: url, fallback: summary.overview.category, size: size)
+        } else {
+            CategoryIconView(category: summary.overview.category, size: size)
+        }
     }
 }

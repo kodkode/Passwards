@@ -39,6 +39,13 @@ final class VaultStore {
     var editorDraft: VaultItem?
     var editorPrevious: VaultItem?
 
+    /// Files picked in the editor for `.file` fields, keyed by field ID.
+    /// Encrypted and attached when the item is saved (the item row must exist
+    /// before attachments can reference it).
+    var pendingAttachments: [UUID: URL] = [:]
+
+    var attachments: AttachmentStore? { appState.attachmentStore }
+
     private let appState: AppState
 
     init(appState: AppState) {
@@ -184,6 +191,9 @@ final class VaultStore {
         Self.reconcileOverview(&item)
         do {
             try await items?.create(item)
+            if try await attachPendingFiles(to: &item) {
+                try await items?.update(item)
+            }
             await refresh()
             selectedItemID = item.id
         } catch {
@@ -191,9 +201,28 @@ final class VaultStore {
         }
     }
 
+    /// Encrypts files picked in the editor and writes their attachment IDs
+    /// into the corresponding `.file` fields. Returns true if anything changed.
+    private func attachPendingFiles(to item: inout VaultItem) async throws -> Bool {
+        guard !pendingAttachments.isEmpty, let attachments else { return false }
+        var changed = false
+        for (sectionIndex, section) in item.details.sections.enumerated() {
+            for (fieldIndex, field) in section.fields.enumerated() {
+                guard field.kind == .file, let url = pendingAttachments[field.id] else { continue }
+                let data = try Data(contentsOf: url)
+                let attachmentID = try await attachments.add(data: data, filename: url.lastPathComponent, itemID: item.id)
+                item.details.sections[sectionIndex].fields[fieldIndex].value = attachmentID
+                changed = true
+            }
+        }
+        pendingAttachments.removeAll()
+        return changed
+    }
+
     /// Saves an edit; appends password history when the primary password changed.
     func save(_ item: VaultItem, previous: VaultItem?) async {
         var item = item
+        _ = try? await attachPendingFiles(to: &item)
         if let oldPassword = previous?.details.firstField(withPurpose: .password)?.value,
            let newPassword = item.details.firstField(withPurpose: .password)?.value,
            !oldPassword.isEmpty, oldPassword != newPassword {

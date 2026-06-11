@@ -19,6 +19,11 @@ final class AppState {
     private(set) var database: AppDatabase?
     private(set) var vaultRepository: VaultRepository?
     private(set) var itemRepository: ItemRepository?
+    private(set) var attachmentStore: AttachmentStore?
+
+    /// Decrypted attachment previews live here while unlocked; wiped on lock.
+    static let previewTempDirectory = FileManager.default.temporaryDirectory
+        .appendingPathComponent("2pw-previews", isDirectory: true)
 
     /// Set when the Secret Key is missing from the Keychain (e.g. fresh machine)
     /// and the lock screen must ask for it.
@@ -33,6 +38,7 @@ final class AppState {
             database = db
             vaultRepository = VaultRepository(database: db, keyStore: keyStore)
             itemRepository = ItemRepository(database: db, keyStore: keyStore)
+            attachmentStore = try? AttachmentStore(database: db, keyStore: keyStore)
             try? await itemRepository?.purgeTrash()
             if let existing = try await vaultRepository?.account() {
                 account = existing
@@ -146,6 +152,7 @@ final class AppState {
         guard phase == .unlocked else { return }
         autoLock.stop()
         Task { await keyStore.lock() }
+        try? FileManager.default.removeItem(at: Self.previewTempDirectory)
         onLocked?()
         phase = .locked
     }
@@ -158,7 +165,7 @@ struct SymmetricKeyBox: @unchecked Sendable {
 
 import CryptoKit
 
-enum SettingsKeys {
+nonisolated enum SettingsKeys {
     static let lastPasswordUnlock = "lastPasswordUnlock"
     static let requirePasswordAfterHours = "requirePasswordAfterHours"
     static let lockOnSleep = "lockOnSleep"

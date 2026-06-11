@@ -132,16 +132,26 @@ struct ItemEditView: View {
             let fields = draft.wrappedValue.details.sections[sectionIndex].fields
             ForEach(fields.indices, id: \.self) { fieldIndex in
                 if fieldIndex > 0 { Divider().padding(.leading, 14) }
-                FieldEditRow(
-                    field: draft.details.sections[sectionIndex].fields[fieldIndex],
-                    generatorShown: Binding(
-                        get: { generatorField == fields[fieldIndex].id },
-                        set: { generatorField = $0 ? fields[fieldIndex].id : nil }
-                    ),
-                    onDelete: {
-                        draft.wrappedValue.details.sections[sectionIndex].fields.remove(at: fieldIndex)
-                    }
-                )
+                if fields[fieldIndex].kind == .file {
+                    AttachmentEditRow(
+                        field: draft.details.sections[sectionIndex].fields[fieldIndex],
+                        store: store,
+                        onDelete: {
+                            draft.wrappedValue.details.sections[sectionIndex].fields.remove(at: fieldIndex)
+                        }
+                    )
+                } else {
+                    FieldEditRow(
+                        field: draft.details.sections[sectionIndex].fields[fieldIndex],
+                        generatorShown: Binding(
+                            get: { generatorField == fields[fieldIndex].id },
+                            set: { generatorField = $0 ? fields[fieldIndex].id : nil }
+                        ),
+                        onDelete: {
+                            draft.wrappedValue.details.sections[sectionIndex].fields.remove(at: fieldIndex)
+                        }
+                    )
+                }
             }
 
             Menu {
@@ -164,7 +174,7 @@ struct ItemEditView: View {
     }
 
     private var addableKinds: [FieldKind] {
-        [.text, .concealed, .email, .url, .phone, .otp, .date, .monthYear, .address]
+        [.text, .concealed, .email, .url, .phone, .otp, .date, .monthYear, .address, .file]
     }
 
     private func save() {
