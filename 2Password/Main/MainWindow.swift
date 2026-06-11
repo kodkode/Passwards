@@ -72,45 +72,166 @@ extension FocusedValues {
     }
 }
 
-/// "+ New Item" category chooser, like 1P8's grid.
+/// "+ New Item" chooser, mirroring 1P8's "What would you like to add?" sheet:
+/// search, a featured grid of the six everyday categories, then the rest in a
+/// two-column list.
 struct NewItemCategoryPicker: View {
     let store: VaultStore
     @Environment(\.dismiss) private var dismiss
 
-    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 10)]
+    @State private var query = ""
+    @FocusState private var searchFocused: Bool
+
+    private static let featured: [TwoPasswordCore.Category] = [
+        .login, .secureNote, .creditCard, .identity, .password, .document,
+    ]
+    private static let others: [TwoPasswordCore.Category] = {
+        var rest = TwoPasswordCore.Category.allCases.filter { !featured.contains($0) }
+        rest.sort { $0.displayName < $1.displayName }
+        // 1P8 leads the secondary list with SSH Key.
+        if let index = rest.firstIndex(of: .sshKey) {
+            rest.remove(at: index)
+            rest.insert(.sshKey, at: 0)
+        }
+        return rest
+    }()
+
+    private func matches(_ category: TwoPasswordCore.Category) -> Bool {
+        query.isEmpty || category.displayName.localizedCaseInsensitiveContains(query)
+    }
+
+    private var filteredFeatured: [TwoPasswordCore.Category] { Self.featured.filter(matches) }
+    private var filteredOthers: [TwoPasswordCore.Category] { Self.others.filter(matches) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Choose a category")
-                .font(.title3.bold())
+        VStack(spacing: 0) {
+            Text("What would you like to add?")
+                .font(.system(size: 17, weight: .bold))
+                .padding(.top, 26)
+                .padding(.bottom, 16)
+
+            HStack(spacing: 7) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                TextField("", text: $query, prompt: Text("Try searching anything"))
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13))
+                    .focused($searchFocused)
+                    .onSubmit(selectFirstMatch)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Theme.fieldCardBorder, lineWidth: 1)
+            }
+            .padding(.horizontal, 70)
+            .padding(.bottom, 20)
+
             ScrollView {
-                LazyVGrid(columns: columns, spacing: 10) {
-                    ForEach(TwoPasswordCore.Category.allCases) { category in
-                        Button {
-                            store.editorDraft = store.newItem(category: category)
-                            dismiss()
-                        } label: {
-                            HStack(spacing: 10) {
-                                CategoryIconView(category: category, size: 28)
-                                Text(category.displayName)
-                                    .font(.callout)
-                                    .lineLimit(1)
-                                Spacer(minLength: 0)
+                VStack(spacing: 0) {
+                    if !filteredFeatured.isEmpty {
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
+                            ForEach(filteredFeatured) { category in
+                                FeaturedCategoryCard(category: category) { choose(category) }
                             }
-                            .padding(8)
-                            .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
                         }
-                        .buttonStyle(.plain)
+                        if !filteredOthers.isEmpty {
+                            Divider()
+                                .padding(.vertical, 18)
+                        }
+                    }
+                    if !filteredOthers.isEmpty {
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 10) {
+                            ForEach(filteredOthers) { category in
+                                CompactCategoryRow(category: category) { choose(category) }
+                            }
+                        }
+                    }
+                    if filteredFeatured.isEmpty && filteredOthers.isEmpty {
+                        Text("No categories match “\(query)”")
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 40)
                     }
                 }
-            }
-            HStack {
-                Spacer()
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
             }
         }
-        .padding(20)
-        .frame(width: 520, height: 420)
+        .frame(width: 600, height: 620)
+        .background(Theme.detailBackground)
+        .onExitCommand { dismiss() }
+        .onAppear { searchFocused = true }
+    }
+
+    private func selectFirstMatch() {
+        if let first = filteredFeatured.first ?? filteredOthers.first {
+            choose(first)
+        }
+    }
+
+    private func choose(_ category: TwoPasswordCore.Category) {
+        store.editorDraft = store.newItem(category: category)
+        dismiss()
+    }
+}
+
+/// Large featured card: icon top-left, label bottom-left.
+private struct FeaturedCategoryCard: View {
+    let category: TwoPasswordCore.Category
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 0) {
+                CategoryIconView(category: category, size: 40)
+                Spacer(minLength: 14)
+                Text(category.displayName)
+                    .font(.system(size: 13, weight: .medium))
+                    .lineLimit(1)
+            }
+            .padding(13)
+            .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
+            .background(hovering ? Color.primary.opacity(0.07) : Theme.fieldCard, in: RoundedRectangle(cornerRadius: 10))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(Theme.fieldCardBorder, lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+    }
+}
+
+/// Compact row: small icon + label, two per line.
+private struct CompactCategoryRow: View {
+    let category: TwoPasswordCore.Category
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                CategoryIconView(category: category, size: 26)
+                Text(category.displayName)
+                    .font(.system(size: 13, weight: .medium))
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 11)
+            .padding(.vertical, 9)
+            .background(hovering ? Color.primary.opacity(0.07) : Theme.fieldCard, in: RoundedRectangle(cornerRadius: 9))
+            .overlay {
+                RoundedRectangle(cornerRadius: 9)
+                    .strokeBorder(Theme.fieldCardBorder, lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
     }
 }
