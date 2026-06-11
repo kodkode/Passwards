@@ -10,7 +10,7 @@ struct MainWindow: View {
 
     init(appState: AppState) {
         self.appState = appState
-        _store = State(initialValue: VaultStore(appState: appState))
+        _store = State(initialValue: appState.ensureVaultStore())
     }
 
     var body: some View {

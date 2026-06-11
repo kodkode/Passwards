@@ -5,12 +5,16 @@ import TwoPasswordCore
 struct TwoPasswordApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var appState = AppState()
+    @State private var quickAccess: QuickAccessController?
 
     var body: some Scene {
         Window("2Password", id: "main") {
             RootView(appState: appState)
                 .task {
                     await appState.bootstrap()
+                    if quickAccess == nil {
+                        quickAccess = QuickAccessController(appState: appState)
+                    }
                 }
         }
         .commands {
@@ -20,6 +24,29 @@ struct TwoPasswordApp: App {
                 }
                 .keyboardShortcut("l", modifiers: [.shift, .command])
                 .disabled(appState.phase != .unlocked)
+
+                Button("Quick Access") {
+                    quickAccess?.toggle()
+                }
+            }
+        }
+
+        MenuBarExtra("2Password", systemImage: "lock.shield.fill") {
+            Button("Open 2Password") {
+                NSApp.activate()
+                NSApp.windows.first(where: { $0.canBecomeMain })?.makeKeyAndOrderFront(nil)
+            }
+            Button("Quick Access  ⇧⌘Space") {
+                quickAccess?.toggle()
+            }
+            Divider()
+            Button("Lock  ⇧⌘L") {
+                appState.lock()
+            }
+            .disabled(appState.phase != .unlocked)
+            Divider()
+            Button("Quit 2Password") {
+                NSApp.terminate(nil)
             }
         }
     }

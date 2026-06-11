@@ -33,6 +33,17 @@ final class AppState {
     let sync = SyncController()
     var onLocked: (() -> Void)?
 
+    /// Shared by the main window and Quick Access. Created at bootstrap;
+    /// holds no decrypted data until `load()` runs after unlock.
+    private(set) var vaultStore: VaultStore?
+
+    func ensureVaultStore() -> VaultStore {
+        if let vaultStore { return vaultStore }
+        let store = VaultStore(appState: self)
+        vaultStore = store
+        return store
+    }
+
     func bootstrap() async {
         do {
             let db = try AppDatabase.open()
