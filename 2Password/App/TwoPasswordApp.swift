@@ -6,10 +6,13 @@ struct TwoPasswordApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var appState = AppState()
     @State private var quickAccess: QuickAccessController?
+    @AppStorage("showMenuBarExtra") private var showMenuBarExtra = true
+    @AppStorage(SettingsKeys.theme) private var theme = "system"
 
     var body: some Scene {
         Window("2Password", id: "main") {
             RootView(appState: appState)
+                .preferredColorScheme(theme == "light" ? .light : theme == "dark" ? .dark : nil)
                 .task {
                     await appState.bootstrap()
                     if quickAccess == nil {
@@ -48,7 +51,11 @@ struct TwoPasswordApp: App {
             }
         }
 
-        MenuBarExtra("2Password", systemImage: "lock.shield.fill") {
+        Settings {
+            SettingsScene(appState: appState)
+        }
+
+        MenuBarExtra("2Password", systemImage: "lock.shield.fill", isInserted: $showMenuBarExtra) {
             Button("Open 2Password") {
                 NSApp.activate()
                 NSApp.windows.first(where: { $0.canBecomeMain })?.makeKeyAndOrderFront(nil)
