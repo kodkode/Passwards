@@ -12,16 +12,35 @@ struct ItemListView: View {
                 emptyState
             } else {
                 List(selection: $store.selectedItemID) {
-                    ForEach(store.visibleSummaries) { summary in
-                        ItemListRow(summary: summary, store: store)
-                            .tag(summary.id)
+                    ForEach(Array(store.groupedSummaries.enumerated()), id: \.offset) { _, group in
+                        if let header = group.header {
+                            Section {
+                                rows(group.items)
+                            } header: {
+                                Text(header)
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.top, 4)
+                            }
+                        } else {
+                            rows(group.items)
+                        }
                     }
                 }
                 .listStyle(.inset)
+                .scrollContentBackground(.hidden)
             }
         }
+        .background(Theme.listBackground)
         .searchable(text: $store.searchText, placement: .toolbar, prompt: "Search items")
         .navigationTitle(store.listTitle)
+    }
+
+    private func rows(_ items: [ItemSummary]) -> some View {
+        ForEach(items) { summary in
+            ItemListRow(summary: summary, store: store)
+                .tag(summary.id)
+        }
     }
 
     private var header: some View {
@@ -109,29 +128,29 @@ struct ItemListRow: View {
     let store: VaultStore
 
     var body: some View {
-        HStack(spacing: 10) {
-            ItemIconView(summary: summary, size: 32)
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 9) {
+            ItemIconView(summary: summary, size: 28)
+            VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 4) {
                     Text(summary.overview.title.isEmpty ? "Untitled" : summary.overview.title)
-                        .font(.callout.weight(.medium))
+                        .font(.system(size: 13, weight: .semibold))
                         .lineLimit(1)
                     if summary.overview.isFavorite {
                         Image(systemName: "star.fill")
-                            .font(.system(size: 9))
+                            .font(.system(size: 8))
                             .foregroundStyle(.yellow)
                     }
                 }
                 if !summary.overview.subtitle.isEmpty {
                     Text(summary.overview.subtitle)
-                        .font(.caption)
+                        .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
             }
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 2)
         .contextMenu {
             contextMenu
         }

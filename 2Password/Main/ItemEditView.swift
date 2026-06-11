@@ -175,7 +175,11 @@ struct ItemEditView: View {
             .fixedSize()
             .padding(14)
         }
-        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+        .background(Theme.fieldCard, in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Theme.fieldCardBorder, lineWidth: 1)
+        }
     }
 
     private func firstURL(in item: VaultItem) -> String? {

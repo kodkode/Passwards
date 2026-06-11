@@ -31,7 +31,7 @@ final class VaultStore {
     var selectedItemID: String?
     var searchText = ""
     var categoryFilter: TwoPasswordCore.Category?
-    var sortKey: SortKey = .title
+    var sortKey: SortKey = .dateEdited   // 1P8 default: newest first, month groups
     var sortAscending = true
 
     /// When set, the detail pane shows the editor. `editorPrevious` is the
@@ -148,6 +148,27 @@ final class VaultStore {
             result.sort { sortAscending ? $0.createdAt > $1.createdAt : $0.createdAt < $1.createdAt }
         }
         return result
+    }
+
+    /// List sections: grouped by month for date sorts (like 1P8), flat for title sort.
+    var groupedSummaries: [(header: String?, items: [ItemSummary])] {
+        let visible = visibleSummaries
+        guard sortKey != .title else {
+            return visible.isEmpty ? [] : [(nil, visible)]
+        }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+        var groups: [(header: String?, items: [ItemSummary])] = []
+        for summary in visible {
+            let date = sortKey == .dateEdited ? summary.updatedAt : summary.createdAt
+            let header = formatter.string(from: date).uppercased()
+            if let last = groups.indices.last, groups[last].header == header {
+                groups[last].items.append(summary)
+            } else {
+                groups.append((header, [summary]))
+            }
+        }
+        return groups
     }
 
     var listTitle: String {

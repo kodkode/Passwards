@@ -71,12 +71,14 @@ struct ItemDetailView: View {
                         footer(item)
                     }
                     .padding(20)
-                    .frame(maxWidth: 640, alignment: .leading)
+                    .frame(maxWidth: 680, alignment: .leading)
                     .frame(maxWidth: .infinity)
                 }
+                .background(Theme.detailBackground)
             } else {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Theme.detailBackground)
             }
         }
         .task(id: itemID) {
@@ -126,16 +128,13 @@ struct ItemDetailView: View {
     private func header(_ item: VaultItem) -> some View {
         HStack(spacing: 14) {
             if let url = item.overview.urls.first, !url.isEmpty {
-                FaviconView(urlString: url, fallback: item.overview.category, size: 48)
+                FaviconView(urlString: url, fallback: item.overview.category, size: 54)
             } else {
-                CategoryIconView(category: item.overview.category, size: 48)
+                CategoryIconView(category: item.overview.category, size: 54)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.overview.title.isEmpty ? "Untitled" : item.overview.title)
-                    .font(.title2.bold())
-                Text(item.overview.category.displayName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 22, weight: .bold))
             }
             Spacer()
             if let summary = store.summaries.first(where: { $0.id == item.id }) {
@@ -183,7 +182,11 @@ struct ItemDetailView: View {
                 }
             }
         }
-        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+        .background(Theme.fieldCard, in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Theme.fieldCardBorder, lineWidth: 1)
+        }
     }
 
     private func copy(_ field: ItemField) {
@@ -211,7 +214,11 @@ struct ItemDetailView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+        .background(Theme.fieldCard, in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Theme.fieldCardBorder, lineWidth: 1)
+        }
     }
 
     private func tagsRow(_ tags: [String]) -> some View {
@@ -254,28 +261,39 @@ struct ItemDetailView: View {
                 .font(.callout)
         }
         .padding(14)
-        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+        .background(Theme.fieldCard, in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Theme.fieldCardBorder, lineWidth: 1)
+        }
     }
 
     private func footer(_ item: VaultItem) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 4) {
-                Image(systemName: "lock.fill").font(.caption2)
-                Text(store.vaultName(item.vaultID))
-            }
-            Text("Created \(item.createdAt.formatted(date: .abbreviated, time: .shortened))")
+        VStack(alignment: .leading, spacing: 10) {
             Button {
                 historyShown = true
             } label: {
-                Text("Last edited \(item.updatedAt.formatted(date: .abbreviated, time: .shortened))")
-                    .underline()
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Text("Last edited \(item.updatedAt.formatted(date: .complete, time: .standard))")
+                        .font(.system(size: 13))
+                }
             }
             .buttonStyle(.plain)
             .help("View previous versions")
+
+            HStack(spacing: 4) {
+                Image(systemName: "lock.fill").font(.caption2)
+                Text(store.vaultName(item.vaultID))
+                Text("·")
+                Text("Created \(item.createdAt.formatted(date: .abbreviated, time: .shortened))")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .padding(.top, 8)
+        .padding(.top, 10)
     }
 }
 
@@ -293,10 +311,10 @@ struct FieldDisplayRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(field.label)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.fieldLabel)
                 valueView
             }
             Spacer()
@@ -305,6 +323,17 @@ struct FieldDisplayRow: View {
                     .font(.caption)
                     .foregroundStyle(.green)
                     .transition(.opacity)
+            } else if !hovering, field.purpose == .password, !field.value.isEmpty {
+                // 1P8 shows the strength verdict at the right of the password row.
+                let score = PasswordStrength.score(field.value)
+                HStack(spacing: 6) {
+                    Text(Theme.strengthDisplayName(score))
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.strengthColor(score))
+                    Circle()
+                        .strokeBorder(Theme.strengthColor(score), lineWidth: 2)
+                        .frame(width: 12, height: 12)
+                }
             } else if hovering {
                 HStack(spacing: 8) {
                     if field.kind.isSecret {
@@ -358,15 +387,26 @@ struct FieldDisplayRow: View {
         case .otp:
             TOTPCodeView(secretInput: field.value)
         case .url:
-            Text(field.value)
-                .foregroundStyle(Theme.accent)
-                .underline()
+            urlText(field.value)
                 .lineLimit(1)
         default:
             Text(field.value)
                 .textSelection(.enabled)
                 .lineLimit(3)
         }
+    }
+
+    /// 1P8 styles URLs with the scheme/path dimmed and the host highlighted.
+    private func urlText(_ urlString: String) -> Text {
+        let candidate = urlString.hasPrefix("http") ? urlString : "https://\(urlString)"
+        guard let url = URL(string: candidate), let host = url.host() else {
+            return Text(urlString).foregroundStyle(Theme.accent)
+        }
+        let scheme = (url.scheme ?? "https") + "://"
+        let path = url.path.isEmpty || url.path == "/" ? "" : url.path
+        return Text(scheme).foregroundStyle(.secondary)
+            + Text(host).foregroundStyle(Theme.accent).underline()
+            + Text(path).foregroundStyle(.secondary)
     }
 }
 

@@ -18,6 +18,47 @@ enum Theme {
     static let windowDark = Color(.sRGB, red: 0x1F / 255, green: 0x20 / 255, blue: 0x23 / 255)
     static let cardDark = Color(.sRGB, red: 0x2A / 255, green: 0x2C / 255, blue: 0x30 / 255)
 
+    // MARK: Adaptive surfaces matched to 1P8's panels
+
+    /// Middle column (item list) background.
+    static let listBackground = Color(
+        light: NSColor(srgbRed: 0.965, green: 0.965, blue: 0.973, alpha: 1),
+        dark: NSColor(srgbRed: 0x1F / 255, green: 0x1F / 255, blue: 0x23 / 255, alpha: 1)
+    )
+
+    /// Detail pane background (slightly lighter than the list in dark mode).
+    static let detailBackground = Color(
+        light: NSColor.white,
+        dark: NSColor(srgbRed: 0x24 / 255, green: 0x24 / 255, blue: 0x29 / 255, alpha: 1)
+    )
+
+    /// Field-group card fill + border.
+    static let fieldCard = Color(
+        light: NSColor.white,
+        dark: NSColor(srgbRed: 0x2A / 255, green: 0x2A / 255, blue: 0x30 / 255, alpha: 1)
+    )
+    static let fieldCardBorder = Color(
+        light: NSColor(srgbRed: 0.86, green: 0.86, blue: 0.88, alpha: 1),
+        dark: NSColor(srgbRed: 0x3C / 255, green: 0x3C / 255, blue: 0x43 / 255, alpha: 1)
+    )
+
+    /// The lavender-blue field labels ("username", "password") of 1P8 dark.
+    static let fieldLabel = Color(
+        light: NSColor(srgbRed: 0.33, green: 0.35, blue: 0.75, alpha: 1),
+        dark: NSColor(srgbRed: 0x8F / 255, green: 0x93 / 255, blue: 0xE8 / 255, alpha: 1)
+    )
+
+    /// 1Password's strength wording (top grade is "Fantastic").
+    static func strengthDisplayName(_ score: PasswordStrength.Score) -> String {
+        switch score {
+        case .terrible: "Terrible"
+        case .weak: "Weak"
+        case .fair: "Fair"
+        case .good: "Good"
+        case .excellent: "Fantastic"
+        }
+    }
+
     /// Password character coloring, same rule as 1P8: digits blue, symbols red.
     static func coloredPassword(_ password: String, font: Font = .body.monospaced()) -> AttributedString {
         var result = AttributedString()
@@ -71,6 +112,15 @@ enum Theme {
         case .good: Color(.sRGB, red: 0.45, green: 0.75, blue: 0.25)
         case .excellent: Color(.sRGB, red: 0.20, green: 0.70, blue: 0.32)
         }
+    }
+}
+
+extension Color {
+    /// Appearance-adaptive color (resolves per light/dark at draw time).
+    init(light: NSColor, dark: NSColor) {
+        self.init(nsColor: NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
+        })
     }
 }
 
