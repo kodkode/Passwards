@@ -11,6 +11,7 @@ struct OnboardingFlow: View {
         case credentials
         case secretKey
         case touchID
+        case signIn
     }
 
     @State private var step: Step = .welcome
@@ -31,6 +32,7 @@ struct OnboardingFlow: View {
                 case .credentials: credentials
                 case .secretKey: secretKey
                 case .touchID: touchID
+                case .signIn: signIn
                 }
             }
             .frame(maxWidth: 460)
@@ -62,6 +64,77 @@ struct OnboardingFlow: View {
             .tint(.white)
             .foregroundStyle(Theme.accentDeep)
             .padding(.top, 12)
+
+            if SyncController.hasCloudKitEntitlement {
+                Button("Sign in to an existing account") {
+                    step = .signIn
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white.opacity(0.8))
+                .underline()
+            }
+        }
+    }
+
+    @State private var signInSecretKey = ""
+    @State private var signInError: String?
+    @State private var signInBusy = false
+
+    private var signIn: some View {
+        card {
+            Text("Sign in")
+                .font(.title2.bold())
+            Text("Your vault will be downloaded from iCloud. You need the account password and the Secret Key from your Emergency Kit.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            SecureField("Account Password", text: $password, prompt: Text("Account password"))
+                .textFieldStyle(.roundedBorder)
+            TextField("Secret Key", text: $signInSecretKey, prompt: Text("A3-XXXXXX-XXXXXX-XXXXX-XXXXX-XXXXX-XXXXX"))
+                .textFieldStyle(.roundedBorder)
+                .font(.callout.monospaced())
+
+            if let signInError {
+                Text(signInError)
+                    .font(.callout)
+                    .foregroundStyle(.red)
+            }
+
+            HStack {
+                Button("Back") { step = .welcome }
+                Spacer()
+                Button {
+                    performSignIn()
+                } label: {
+                    if signInBusy {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("Sign In")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(password.isEmpty || signInSecretKey.isEmpty || signInBusy)
+            }
+        }
+    }
+
+    private func performSignIn() {
+        signInBusy = true
+        signInError = nil
+        Task {
+            do {
+                guard let remote = try await SyncController.fetchRemoteAccount() else {
+                    signInError = "No account found in this iCloud account. Create a new one instead."
+                    signInBusy = false
+                    return
+                }
+                try await appState.signInToExistingAccount(
+                    remote: remote, password: password, typedSecretKey: signInSecretKey
+                )
+            } catch {
+                signInError = "Sign-in failed. Check your password and Secret Key."
+            }
+            signInBusy = false
         }
     }
 

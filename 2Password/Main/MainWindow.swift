@@ -25,6 +25,10 @@ struct MainWindow: View {
         }
         .task {
             await store.load()
+            appState.sync.onRemoteChanges = { [weak store] in
+                Task { await store?.reloadFromRemote() }
+            }
+            appState.sync.kick()
         }
         .focusedSceneValue(\.vaultStore, store)
         .toolbar {

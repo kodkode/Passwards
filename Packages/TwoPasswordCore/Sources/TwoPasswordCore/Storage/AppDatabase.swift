@@ -85,7 +85,31 @@ public struct AppDatabase: Sendable {
                 t.column("value", .blob).notNull()
             }
         }
+        migrator.registerMigration("v2-tombstones") { db in
+            // Deletion tombstones so sync can propagate removals.
+            try db.create(table: "tombstone") { t in
+                t.column("recordName", .text).primaryKey()
+                t.column("deletedAt", .datetime).notNull()
+            }
+        }
         return migrator
+    }
+
+    // MARK: Sync metadata helpers
+
+    public func syncMetaValue(key: String) async throws -> Data? {
+        try await writer.read { db in
+            try Data.fetchOne(db, sql: "SELECT value FROM syncMeta WHERE key = ?", arguments: [key])
+        }
+    }
+
+    public func setSyncMetaValue(_ value: Data, key: String) async throws {
+        try await writer.write { db in
+            try db.execute(
+                sql: "INSERT INTO syncMeta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                arguments: [key, value]
+            )
+        }
     }
 }
 

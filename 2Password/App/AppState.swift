@@ -30,6 +30,7 @@ final class AppState {
     private(set) var needsSecretKeyEntry = false
 
     let autoLock = AutoLockMonitor()
+    let sync = SyncController()
     var onLocked: (() -> Void)?
 
     func bootstrap() async {
@@ -44,6 +45,8 @@ final class AppState {
                 account = existing
                 needsSecretKeyEntry = KeychainStore.loadSecretKey(accountID: existing.id) == nil
                 phase = .locked
+                // Sync moves only ciphertext, so it can run while locked.
+                await sync.start(database: db)
             } else {
                 phase = .onboarding
             }
@@ -79,6 +82,29 @@ final class AppState {
     func finishOnboarding() {
         phase = .unlocked
         autoLock.start()
+        Task { await sync.start(database: database) }
+    }
+
+    /// New-device flow: adopt a remote account record after verifying the
+    /// typed credentials can actually unwrap the master key.
+    func signInToExistingAccount(remote: AccountCrypto.AccountKeyRecord, password: String, typedSecretKey: String) async throws {
+        guard let secretKey = SecretKey(parsing: typedSecretKey) else { throw UnlockError.wrongCredentials }
+        let masterKey: SymmetricKeyBox
+        do {
+            masterKey = try await Task.detached(priority: .userInitiated) {
+                SymmetricKeyBox(key: try AccountCrypto.unlock(record: remote, password: password, secretKey: secretKey))
+            }.value
+        } catch {
+            throw UnlockError.wrongCredentials
+        }
+        try KeychainStore.saveSecretKey(secretKey, accountID: remote.accountID)
+        try await vaultRepository?.saveAccount(remote)
+        account = try await vaultRepository?.account()
+        await keyStore.setMasterKey(masterKey.key)
+        UserDefaults.standard.set(Date(), forKey: SettingsKeys.lastPasswordUnlock)
+        phase = .unlocked
+        autoLock.start()
+        await sync.start(database: database)
     }
 
     // MARK: Lock / unlock

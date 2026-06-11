@@ -6,6 +6,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for window in NSApp.windows {
             window.sharingType = .none
         }
+        // CKSyncEngine listens for CloudKit pushes once the app registers.
+        if SyncController.hasCloudKitEntitlement {
+            NSApplication.shared.registerForRemoteNotifications()
+        }
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {

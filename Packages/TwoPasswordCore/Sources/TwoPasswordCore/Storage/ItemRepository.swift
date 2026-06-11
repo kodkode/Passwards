@@ -159,13 +159,16 @@ public struct ItemRepository: Sendable {
     }
 
     public func deletePermanently(itemID: String) async throws {
-        _ = try await database.writer.write { db in
-            try ItemRecord.deleteOne(db, key: itemID)
+        try await database.writer.write { db in
+            try Self.tombstoneItems(db, ids: [itemID])
+            _ = try ItemRecord.deleteOne(db, key: itemID)
         }
     }
 
     public func emptyTrash() async throws {
         try await database.writer.write { db in
+            let ids = try String.fetchAll(db, sql: "SELECT id FROM item WHERE trashedAt IS NOT NULL")
+            try Self.tombstoneItems(db, ids: ids)
             try db.execute(sql: "DELETE FROM item WHERE trashedAt IS NOT NULL")
         }
     }
@@ -175,7 +178,18 @@ public struct ItemRepository: Sendable {
     public func purgeTrash(olderThanDays days: Int = 30) async throws {
         let cutoff = Date().addingTimeInterval(-Double(days) * 86_400)
         try await database.writer.write { db in
+            let ids = try String.fetchAll(db, sql: "SELECT id FROM item WHERE trashedAt IS NOT NULL AND trashedAt < ?", arguments: [cutoff])
+            try Self.tombstoneItems(db, ids: ids)
             try db.execute(sql: "DELETE FROM item WHERE trashedAt IS NOT NULL AND trashedAt < ?", arguments: [cutoff])
+        }
+    }
+
+    static func tombstoneItems(_ db: Database, ids: [String]) throws {
+        for id in ids {
+            try db.execute(
+                sql: "INSERT INTO tombstone (recordName, deletedAt) VALUES (?, ?) ON CONFLICT(recordName) DO NOTHING",
+                arguments: ["item-\(id)", Date()]
+            )
         }
     }
 

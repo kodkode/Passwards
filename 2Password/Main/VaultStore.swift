@@ -66,6 +66,12 @@ final class VaultStore {
 
     func refresh() async {
         await load()
+        appState.sync.kick()
+    }
+
+    /// Reload from disk without pushing (used when remote changes arrive).
+    func reloadFromRemote() async {
+        await load()
     }
 
     // MARK: Derived collections

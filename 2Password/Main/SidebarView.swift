@@ -100,8 +100,33 @@ struct SidebarView: View {
                 .foregroundStyle(.secondary)
                 .help("Lock 2Password (⇧⌘L)")
                 Spacer()
+                syncIndicator
             }
             .padding(10)
+        }
+    }
+
+    @ViewBuilder
+    private var syncIndicator: some View {
+        switch appState.sync.status {
+        case .disabled:
+            EmptyView()
+        case .idle:
+            Image(systemName: "checkmark.icloud")
+                .foregroundStyle(.secondary)
+                .help("Synced with iCloud")
+        case .syncing:
+            ProgressView()
+                .controlSize(.small)
+                .help("Syncing…")
+        case .error(let message):
+            Image(systemName: "exclamationmark.icloud")
+                .foregroundStyle(.orange)
+                .help("Sync error: \(message)")
+        case .accountUnavailable:
+            Image(systemName: "icloud.slash")
+                .foregroundStyle(.secondary)
+                .help("iCloud account unavailable")
         }
     }
 
