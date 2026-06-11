@@ -177,10 +177,7 @@ struct CategoryIconView: View {
             }
             .frame(width: size, height: size)
             .overlay {
-                Image(systemName: category.symbolName)
-                    .font(.system(size: size * 0.48, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.3), radius: size / 40, y: size / 36)
+                CategoryGlyph(category: category, size: size)
             }
             .shadow(color: .black.opacity(0.25), radius: size / 28, y: size / 32)
     }

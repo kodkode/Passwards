@@ -11,8 +11,12 @@
 		2P00000000000000000000A2 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 2P0000000000000000000092 /* KeyboardShortcuts */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXFileReference section */
+		2P0000000000000000000031 /* 2Password.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = 2Password.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		2P0000000000000000000011 /* 2Password */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "2Password"; sourceTree = "<group>"; };
+		2P0000000000000000000011 /* 2Password */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = 2Password; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -62,12 +66,12 @@
 			fileSystemSynchronizedGroups = (
 				2P0000000000000000000011 /* 2Password */,
 			);
-			name = "2Password";
+			name = 2Password;
 			packageProductDependencies = (
 				2P0000000000000000000091 /* TwoPasswordCore */,
 				2P0000000000000000000092 /* KeyboardShortcuts */,
 			);
-			productName = "2Password";
+			productName = 2Password;
 			productReference = 2P0000000000000000000031 /* 2Password.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -87,6 +91,7 @@
 				};
 			};
 			buildConfigurationList = 2P0000000000000000000051 /* Build configuration list for PBXProject "2Password" */;
+			compatibilityVersion = "Xcode 16.0.Superseded.1";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -99,7 +104,6 @@
 				2P0000000000000000000081 /* XCLocalSwiftPackageReference "Packages/TwoPasswordCore" */,
 				2P0000000000000000000082 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 			);
-			preferredProjectObjectVersion = 70;
 			productRefGroup = 2P0000000000000000000012 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -128,10 +132,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXFileReference section */
-		2P0000000000000000000031 /* 2Password.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "2Password.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-/* End PBXFileReference section */
 
 /* Begin XCBuildConfiguration section */
 		2P0000000000000000000052 /* Debug */ = {
@@ -193,7 +193,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "2Password/2Password.entitlements";
+				CODE_SIGN_ENTITLEMENTS = 2Password/2Password.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -226,7 +226,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "2Password/2Password.entitlements";
+				CODE_SIGN_ENTITLEMENTS = 2Password/2Password.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -280,7 +280,7 @@
 /* Begin XCLocalSwiftPackageReference section */
 		2P0000000000000000000081 /* XCLocalSwiftPackageReference "Packages/TwoPasswordCore" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "Packages/TwoPasswordCore";
+			relativePath = Packages/TwoPasswordCore;
 		};
 /* End XCLocalSwiftPackageReference section */
 

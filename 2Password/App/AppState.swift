@@ -159,6 +159,42 @@ final class AppState {
         autoLock.start()
     }
 
+    enum PasswordChangeError: Error {
+        case wrongCurrentPassword
+        case notUnlocked
+    }
+
+    /// Changes the account password: verifies the current one by a full key
+    /// derivation, then re-wraps the (unchanged) master key under the new AUK.
+    /// Touch ID stays valid because the master key itself doesn't change.
+    func changeAccountPassword(current: String, new: String) async throws {
+        guard let account, let vaultRepository else { throw PasswordChangeError.notUnlocked }
+        guard let masterKey = await keyStore.masterKey else { throw PasswordChangeError.notUnlocked }
+        guard let secretKey = KeychainStore.loadSecretKey(accountID: account.id) else {
+            throw UnlockError.missingSecretKey
+        }
+        let record = account.keyRecord
+        let masterKeyBox = SymmetricKeyBox(key: masterKey)
+
+        let newRecord = try await Task.detached(priority: .userInitiated) {
+            guard (try? AccountCrypto.unlock(record: record, password: current, secretKey: secretKey)) != nil else {
+                throw PasswordChangeError.wrongCurrentPassword
+            }
+            return try AccountCrypto.changePassword(
+                record: record,
+                masterKey: masterKeyBox.key,
+                newPassword: new,
+                secretKey: secretKey
+            )
+        }.value
+
+        try await vaultRepository.saveAccount(newRecord)
+        self.account = try await vaultRepository.account()
+        UserDefaults.standard.set(Date(), forKey: SettingsKeys.lastPasswordUnlock)
+        // Push the re-wrapped account record to iCloud (if sync is active).
+        sync.kick()
+    }
+
     func unlockWithTouchID() async -> Bool {
         guard biometricUnlockAllowed else { return false }
         let result = await BiometricUnlock.unlock()

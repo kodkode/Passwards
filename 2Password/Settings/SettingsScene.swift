@@ -79,9 +79,21 @@ struct SecuritySettingsView: View {
     @AppStorage(SettingsKeys.requirePasswordAfterHours) private var requirePasswordAfterHours = 72
     @AppStorage(SettingsKeys.clipboardClearSeconds) private var clipboardClearSeconds = 90
     @State private var touchIDEnabled = BiometricUnlock.isEnrolled
+    @State private var changePasswordShown = false
 
     var body: some View {
         Form {
+            Section("Account Password") {
+                Button("Change Account Password…") {
+                    changePasswordShown = true
+                }
+                .disabled(appState.phase != .unlocked)
+                if appState.phase != .unlocked {
+                    Text("Unlock 2Password to change the account password.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
             Section("Unlock") {
                 if BiometricUnlock.isAvailable {
                     Toggle("Unlock with Touch ID", isOn: $touchIDEnabled)
@@ -134,6 +146,113 @@ struct SecuritySettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.vertical, 8)
+        .sheet(isPresented: $changePasswordShown) {
+            ChangePasswordSheet(appState: appState)
+        }
+    }
+}
+
+/// Change the account password: verify current, pick a strong new one.
+struct ChangePasswordSheet: View {
+    let appState: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var currentPassword = ""
+    @State private var newPassword = ""
+    @State private var confirmPassword = ""
+    @State private var isWorking = false
+    @State private var errorMessage: String?
+    @State private var succeeded = false
+
+    private var newScore: PasswordStrength.Score { PasswordStrength.score(newPassword) }
+
+    private var formValid: Bool {
+        !currentPassword.isEmpty
+            && newPassword.count >= 10
+            && newPassword == confirmPassword
+            && newPassword != currentPassword
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Change Account Password")
+                .font(.title3.bold())
+
+            if succeeded {
+                Label("Password changed.", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Text("Use the new password from the next unlock. Update the password line in your Emergency Kit if you wrote it down.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Spacer()
+                    Button("Done") { dismiss() }
+                        .buttonStyle(.borderedProminent)
+                        .keyboardShortcut(.defaultAction)
+                }
+            } else {
+                Text("Your Secret Key and your data stay the same — only the password changes.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    SecureField("Current Password", text: $currentPassword, prompt: Text("Current password"))
+                        .textFieldStyle(.roundedBorder)
+                    SecureField("New Password", text: $newPassword, prompt: Text("New password (10+ characters)"))
+                        .textFieldStyle(.roundedBorder)
+                    if !newPassword.isEmpty {
+                        StrengthBar(score: newScore)
+                    }
+                    SecureField("Confirm New Password", text: $confirmPassword, prompt: Text("Confirm new password"))
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.callout)
+                        .foregroundStyle(.red)
+                }
+
+                HStack {
+                    Button("Cancel") { dismiss() }
+                        .keyboardShortcut(.cancelAction)
+                    Spacer()
+                    Button {
+                        change()
+                    } label: {
+                        if isWorking {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Text("Change Password")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!formValid || isWorking)
+                }
+            }
+        }
+        .padding(22)
+        .frame(width: 420)
+    }
+
+    private func change() {
+        errorMessage = nil
+        guard newScore >= .fair else {
+            errorMessage = "That password is too weak to protect a vault. Add more words or characters."
+            return
+        }
+        isWorking = true
+        Task {
+            do {
+                try await appState.changeAccountPassword(current: currentPassword, new: newPassword)
+                succeeded = true
+            } catch AppState.PasswordChangeError.wrongCurrentPassword {
+                errorMessage = "The current password is incorrect."
+            } catch {
+                errorMessage = "Password change failed: \(error.localizedDescription)"
+            }
+            isWorking = false
+        }
     }
 }
 
