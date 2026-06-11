@@ -32,16 +32,22 @@ actor FaviconLoader {
             if let data = try? Data(contentsOf: cacheFile), let image = NSImage(data: data) {
                 return image
             }
-            for path in ["apple-touch-icon.png", "favicon.ico"] {
-                guard let url = URL(string: "https://\(host)/\(path)") else { continue }
-                var request = URLRequest(url: url)
-                request.timeoutInterval = 8
-                guard let (data, response) = try? await URLSession.shared.data(for: request),
-                      let http = response as? HTTPURLResponse, http.statusCode == 200,
-                      data.count > 100,
-                      let image = NSImage(data: data), image.isValid else { continue }
-                try? data.write(to: cacheFile)
-                return image
+            let hostVariants = host.hasPrefix("www.") ? [host] : [host, "www.\(host)"]
+            for hostVariant in hostVariants {
+                for path in ["apple-touch-icon.png", "favicon.ico"] {
+                    guard let url = URL(string: "https://\(hostVariant)/\(path)") else { continue }
+                    var request = URLRequest(url: url)
+                    request.timeoutInterval = 8
+                    guard let (data, response) = try? await URLSession.shared.data(for: request),
+                          let http = response as? HTTPURLResponse, http.statusCode == 200,
+                          data.count > 100,
+                          // Some sites answer 404s with a 200 HTML page; NSImage
+                          // would reject it, but skip the obvious case cheaply.
+                          !data.prefix(64).contains(UInt8(ascii: "<")) || NSImage(data: data) != nil,
+                          let image = NSImage(data: data), image.isValid else { continue }
+                    try? data.write(to: cacheFile)
+                    return image
+                }
             }
             return nil
         }
@@ -76,7 +82,6 @@ struct FaviconView: View {
     var size: CGFloat = 32
 
     @State private var image: NSImage?
-    @State private var resolved = false
 
     var body: some View {
         Group {
@@ -96,9 +101,7 @@ struct FaviconView: View {
             }
         }
         .task(id: urlString) {
-            guard !resolved else { return }
             image = await FaviconLoader.shared.icon(forURLString: urlString)
-            resolved = true
         }
     }
 }

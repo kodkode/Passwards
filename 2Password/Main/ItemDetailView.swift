@@ -6,8 +6,9 @@ struct ItemDetailContainer: View {
     @Bindable var store: VaultStore
 
     var body: some View {
-        if store.editorDraft != nil {
-            ItemEditView(store: store)
+        if let draft = store.editorDraft {
+            ItemEditView(store: store, draft: draft)
+                .id(draft.id)
         } else if let selectedID = store.selectedItemID {
             ItemDetailView(store: store, itemID: selectedID)
                 .id(selectedID)
@@ -124,7 +125,11 @@ struct ItemDetailView: View {
 
     private func header(_ item: VaultItem) -> some View {
         HStack(spacing: 14) {
-            CategoryIconView(category: item.overview.category, size: 48)
+            if let url = item.overview.urls.first, !url.isEmpty {
+                FaviconView(urlString: url, fallback: item.overview.category, size: 48)
+            } else {
+                CategoryIconView(category: item.overview.category, size: 48)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.overview.title.isEmpty ? "Untitled" : item.overview.title)
                     .font(.title2.bold())

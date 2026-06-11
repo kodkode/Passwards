@@ -3,35 +3,40 @@ import TwoPasswordCore
 
 /// In-place editor for new and existing items: title, vault, every field
 /// editable, add/remove fields and sections, tags, notes.
+///
+/// Edits happen on a local `@State` copy of the item — never through a binding
+/// into `store.editorDraft` — so clearing the draft on save/cancel can't race
+/// SwiftUI re-evaluation (force-unwrap crash).
 struct ItemEditView: View {
     @Bindable var store: VaultStore
+    @State private var draftItem: VaultItem
 
     @State private var generatorField: UUID?
     @State private var tagsText = ""
     @State private var isSaving = false
 
+    init(store: VaultStore, draft: VaultItem) {
+        self.store = store
+        _draftItem = State(initialValue: draft)
+    }
+
     private var isNew: Bool { store.editorPrevious == nil }
 
     var body: some View {
-        if store.editorDraft != nil {
-            content
-        }
-    }
-
-    private var draftBinding: Binding<VaultItem> {
-        Binding(
-            get: { store.editorDraft! },
-            set: { store.editorDraft = $0 }
-        )
+        content
     }
 
     private var content: some View {
-        let draft = draftBinding
+        let draft = $draftItem
         return ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // Title + vault
                 HStack(spacing: 14) {
-                    CategoryIconView(category: draft.wrappedValue.overview.category, size: 48)
+                    if let url = firstURL(in: draft.wrappedValue), !url.isEmpty {
+                        FaviconView(urlString: url, fallback: draft.wrappedValue.overview.category, size: 48)
+                    } else {
+                        CategoryIconView(category: draft.wrappedValue.overview.category, size: 48)
+                    }
                     VStack(alignment: .leading, spacing: 6) {
                         TextField("Title", text: draft.overview.title, prompt: Text("Title"))
                             .font(.title2.bold())
@@ -97,7 +102,7 @@ struct ItemEditView: View {
             }
         }
         .onAppear {
-            tagsText = store.editorDraft?.overview.tags.joined(separator: ", ") ?? ""
+            tagsText = draftItem.overview.tags.joined(separator: ", ")
         }
     }
 
@@ -173,12 +178,21 @@ struct ItemEditView: View {
         .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
     }
 
+    private func firstURL(in item: VaultItem) -> String? {
+        for section in item.details.sections {
+            if let field = section.fields.first(where: { $0.kind == .url && !$0.value.isEmpty }) {
+                return field.value
+            }
+        }
+        return nil
+    }
+
     private var addableKinds: [FieldKind] {
         [.text, .concealed, .email, .url, .phone, .otp, .date, .monthYear, .address, .file]
     }
 
     private func save() {
-        guard var item = store.editorDraft else { return }
+        var item = draftItem
         isSaving = true
         item.overview.tags = tagsText
             .split(separator: ",")
@@ -210,6 +224,7 @@ struct FieldEditRow: View {
     let onDelete: () -> Void
 
     @State private var hovering = false
+    @State private var revealed = false
 
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
@@ -232,6 +247,8 @@ struct FieldEditRow: View {
                 .popover(isPresented: $generatorShown, arrowEdge: .trailing) {
                     GeneratorPopover(context: .filling { newValue in
                         field.value = newValue
+                        // A freshly generated password should be visible.
+                        revealed = true
                     })
                 }
             }
@@ -254,9 +271,24 @@ struct FieldEditRow: View {
         switch field.kind {
         case .concealed, .sshKey:
             HStack(spacing: 6) {
-                TextField("Value", text: $field.value, prompt: Text(field.kind.displayName))
-                    .textFieldStyle(.plain)
-                    .font(.body.monospaced())
+                Group {
+                    if revealed {
+                        TextField("Value", text: $field.value, prompt: Text(field.kind.displayName))
+                    } else {
+                        SecureField("Value", text: $field.value, prompt: Text(field.kind.displayName))
+                    }
+                }
+                .textFieldStyle(.plain)
+                .font(.body.monospaced())
+                Button {
+                    revealed.toggle()
+                } label: {
+                    Image(systemName: revealed ? "eye.slash" : "eye")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(revealed ? "Conceal" : "Reveal")
                 if !field.value.isEmpty {
                     StrengthBar(score: PasswordStrength.score(field.value), showLabel: false)
                         .frame(width: 70)
