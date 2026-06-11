@@ -114,6 +114,8 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
+        .font(.system(size: 13.5))
+        .environment(\.defaultMinListRowHeight, 30)
         .sheet(isPresented: $newVaultShown) {
             NewVaultSheet(store: store)
         }
@@ -171,9 +173,12 @@ struct SidebarView: View {
                 .fill(Theme.accent.gradient)
                 .frame(width: 34, height: 34)
                 .overlay {
-                    Text(initials)
-                        .font(.callout.bold())
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 17, weight: .medium))
                         .foregroundStyle(.white)
+                }
+                .overlay {
+                    Circle().strokeBorder(.white.opacity(0.25), lineWidth: 1)
                 }
             VStack(alignment: .leading, spacing: 1) {
                 Text("Personal")
@@ -185,11 +190,6 @@ struct SidebarView: View {
             }
             Spacer()
         }
-    }
-
-    private var initials: String {
-        let email = appState.account?.email ?? "?"
-        return String(email.prefix(2)).uppercased()
     }
 }
 

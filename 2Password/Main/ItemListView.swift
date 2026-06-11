@@ -128,29 +128,29 @@ struct ItemListRow: View {
     let store: VaultStore
 
     var body: some View {
-        HStack(spacing: 9) {
-            ItemIconView(summary: summary, size: 28)
-            VStack(alignment: .leading, spacing: 1) {
+        HStack(spacing: 10) {
+            ItemIconView(summary: summary, size: 34)
+            VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Text(summary.overview.title.isEmpty ? "Untitled" : summary.overview.title)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .lineLimit(1)
                     if summary.overview.isFavorite {
                         Image(systemName: "star.fill")
-                            .font(.system(size: 8))
+                            .font(.system(size: 9))
                             .foregroundStyle(.yellow)
                     }
                 }
                 if !summary.overview.subtitle.isEmpty {
                     Text(summary.overview.subtitle)
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
             }
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 3)
         .contextMenu {
             contextMenu
         }

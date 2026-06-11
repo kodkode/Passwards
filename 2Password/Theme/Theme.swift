@@ -137,20 +137,52 @@ struct AppIconImage: View {
     }
 }
 
-/// The colored rounded-square category icon used in lists and headers.
+/// The colored rounded-square category icon, styled after 1P8's dimensional
+/// tiles: vertical gradient, top edge highlight, soft inner border, and a
+/// white glyph with a subtle drop shadow.
 struct CategoryIconView: View {
     let category: TwoPasswordCore.Category
     var size: CGFloat = 32
 
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: size * 0.235, style: .continuous)
+    }
+
     var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.24, style: .continuous)
-            .fill(Theme.color(token: category.colorToken).gradient)
+        let base = Theme.color(token: category.colorToken)
+        shape
+            .fill(base)
+            .overlay {
+                // Lighter top → darker bottom, like 1P's tiles.
+                shape.fill(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white.opacity(0.30), location: 0),
+                            .init(color: .white.opacity(0.05), location: 0.55),
+                            .init(color: .black.opacity(0.12), location: 1),
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+            }
+            .overlay {
+                // Inner edge highlight.
+                shape.strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.45), .white.opacity(0.06)],
+                        startPoint: .top, endPoint: .bottom
+                    ),
+                    lineWidth: max(size / 32, 0.75)
+                )
+            }
             .frame(width: size, height: size)
             .overlay {
                 Image(systemName: category.symbolName)
-                    .font(.system(size: size * 0.5, weight: .medium))
+                    .font(.system(size: size * 0.48, weight: .semibold))
                     .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.3), radius: size / 40, y: size / 36)
             }
+            .shadow(color: .black.opacity(0.25), radius: size / 28, y: size / 32)
     }
 }
 

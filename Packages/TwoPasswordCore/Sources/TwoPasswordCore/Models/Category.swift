@@ -54,29 +54,30 @@ public enum Category: String, Codable, Sendable, CaseIterable, Identifiable, Has
         }
     }
 
-    /// SF Symbol used on the colored rounded-rect category icon.
+    /// SF Symbol used on the colored rounded-rect category icon (chosen to
+    /// approximate 1Password 8's glyphs).
     public var symbolName: String {
         switch self {
-        case .login: "globe"
+        case .login: "person.badge.key.fill"
         case .secureNote: "note.text"
-        case .creditCard: "creditcard"
-        case .identity: "person.crop.circle"
+        case .creditCard: "creditcard.fill"
+        case .identity: "person.crop.rectangle.fill"
         case .password: "key.fill"
         case .document: "doc.fill"
-        case .apiCredential: "curlybraces"
-        case .bankAccount: "building.columns"
-        case .cryptoWallet: "bitcoinsign.circle"
-        case .database: "cylinder.split.1x2"
+        case .apiCredential: "chevron.left.forwardslash.chevron.right"
+        case .bankAccount: "dollarsign.circle.fill"
+        case .cryptoWallet: "wallet.pass.fill"
+        case .database: "cylinder.split.1x2.fill"
         case .driverLicense: "car.fill"
         case .emailAccount: "envelope.fill"
-        case .medicalRecord: "cross.case.fill"
-        case .membership: "person.2.fill"
-        case .outdoorLicense: "leaf.fill"
-        case .passport: "airplane"
+        case .medicalRecord: "heart.text.square.fill"
+        case .membership: "star.square.fill"
+        case .outdoorLicense: "tree.fill"
+        case .passport: "globe.americas.fill"
         case .rewardProgram: "gift.fill"
         case .server: "server.rack"
-        case .socialSecurityNumber: "shield.lefthalf.filled"
-        case .softwareLicense: "app.badge.checkmark"
+        case .socialSecurityNumber: "person.text.rectangle.fill"
+        case .softwareLicense: "checkmark.seal.fill"
         case .sshKey: "terminal.fill"
         case .wirelessRouter: "wifi.router"
         }
