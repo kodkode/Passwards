@@ -26,6 +26,12 @@ enum Theme {
         dark: NSColor(srgbRed: 0x1F / 255, green: 0x1F / 255, blue: 0x23 / 255, alpha: 1)
     )
 
+    /// Sidebar: 1P8 uses an opaque dark panel, not macOS's translucent material.
+    static let sidebarBackground = Color(
+        light: NSColor(srgbRed: 0.925, green: 0.925, blue: 0.935, alpha: 1),
+        dark: NSColor(srgbRed: 0x26 / 255, green: 0x26 / 255, blue: 0x2A / 255, alpha: 1)
+    )
+
     /// Detail pane background (slightly lighter than the list in dark mode).
     static let detailBackground = Color(
         light: NSColor.white,
@@ -121,6 +127,80 @@ extension Color {
         self.init(nsColor: NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
         })
+    }
+}
+
+/// Vector replica of 1P8's default illustrated avatar: person with brown hair
+/// and a pink shirt on a gray rounded tile.
+struct DefaultAvatarView: View {
+    var size: CGFloat = 34
+
+    var body: some View {
+        let s = size
+        ZStack {
+            RoundedRectangle(cornerRadius: s * 0.24, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(.sRGB, red: 0.42, green: 0.42, blue: 0.46),
+                            Color(.sRGB, red: 0.33, green: 0.33, blue: 0.37),
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+
+            // Hair (rim shows above/around the face)
+            Circle()
+                .fill(Color(.sRGB, red: 0.38, green: 0.26, blue: 0.18))
+                .frame(width: s * 0.48, height: s * 0.48)
+                .offset(y: -s * 0.12)
+
+            // Face
+            Ellipse()
+                .fill(Color(.sRGB, red: 0.95, green: 0.76, blue: 0.59))
+                .frame(width: s * 0.34, height: s * 0.38)
+                .offset(y: -s * 0.05)
+
+            // Ears
+            HStack(spacing: s * 0.31) {
+                Circle().fill(Color(.sRGB, red: 0.95, green: 0.76, blue: 0.59))
+                    .frame(width: s * 0.09, height: s * 0.09)
+                Circle().fill(Color(.sRGB, red: 0.95, green: 0.76, blue: 0.59))
+                    .frame(width: s * 0.09, height: s * 0.09)
+            }
+            .offset(y: -s * 0.05)
+
+            // Neck
+            Rectangle()
+                .fill(Color(.sRGB, red: 0.91, green: 0.70, blue: 0.53))
+                .frame(width: s * 0.12, height: s * 0.12)
+                .offset(y: s * 0.18)
+
+            // Shirt / shoulders
+            ShoulderShape()
+                .fill(Color(.sRGB, red: 0.91, green: 0.49, blue: 0.50))
+                .frame(width: s * 0.62, height: s * 0.34)
+                .offset(y: s * 0.36)
+        }
+        .frame(width: s, height: s)
+        .clipShape(RoundedRectangle(cornerRadius: s * 0.24, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: s * 0.24, style: .continuous)
+                .strokeBorder(.white.opacity(0.12), lineWidth: 0.75)
+        }
+    }
+
+    private struct ShoulderShape: Shape {
+        func path(in rect: CGRect) -> Path {
+            var path = Path()
+            path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.addQuadCurve(
+                to: CGPoint(x: rect.maxX, y: rect.maxY),
+                control: CGPoint(x: rect.midX, y: rect.minY - rect.height * 0.6)
+            )
+            path.closeSubpath()
+            return path
+        }
     }
 }
 

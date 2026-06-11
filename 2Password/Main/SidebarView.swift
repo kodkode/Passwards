@@ -116,6 +116,8 @@ struct SidebarView: View {
         .listStyle(.sidebar)
         .font(.system(size: 13.5))
         .environment(\.defaultMinListRowHeight, 30)
+        .scrollContentBackground(.hidden)
+        .background(Theme.sidebarBackground)
         .sheet(isPresented: $newVaultShown) {
             NewVaultSheet(store: store)
         }
@@ -134,6 +136,7 @@ struct SidebarView: View {
                 syncIndicator
             }
             .padding(10)
+            .background(Theme.sidebarBackground)
         }
     }
 
@@ -169,17 +172,7 @@ struct SidebarView: View {
 
     private var accountHeader: some View {
         HStack(spacing: 10) {
-            Circle()
-                .fill(Theme.accent.gradient)
-                .frame(width: 34, height: 34)
-                .overlay {
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(.white)
-                }
-                .overlay {
-                    Circle().strokeBorder(.white.opacity(0.25), lineWidth: 1)
-                }
+            DefaultAvatarView(size: 34)
             VStack(alignment: .leading, spacing: 1) {
                 Text("Personal")
                     .font(.callout.weight(.semibold))
