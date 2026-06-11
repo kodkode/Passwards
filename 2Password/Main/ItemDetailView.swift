@@ -15,15 +15,16 @@ struct ItemDetailContainer: View {
         } else if store.sidebarSelection == .watchtower {
             WatchtowerDashboardView(store: store)
         } else {
-            VStack(spacing: 10) {
-                Image(systemName: "lock.shield")
-                    .font(.system(size: 44))
-                    .foregroundStyle(.quaternary)
+            VStack(spacing: 12) {
+                AppIconImage(size: 72)
+                    .opacity(0.35)
+                    .grayscale(0.6)
                 Text("Select an item")
                     .font(.title3)
                     .foregroundStyle(.tertiary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Theme.detailBackground)
         }
     }
 }

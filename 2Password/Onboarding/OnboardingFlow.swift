@@ -43,9 +43,8 @@ struct OnboardingFlow: View {
 
     private var welcome: some View {
         VStack(spacing: 20) {
-            Image(systemName: "lock.shield.fill")
-                .font(.system(size: 72))
-                .foregroundStyle(.white)
+            AppIconImage(size: 110)
+                .shadow(color: .black.opacity(0.35), radius: 16, y: 8)
             Text("Welcome to 2Password")
                 .font(.system(size: 32, weight: .bold))
                 .foregroundStyle(.white)

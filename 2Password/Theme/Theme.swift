@@ -124,6 +124,19 @@ extension Color {
     }
 }
 
+/// The real app icon, for in-app branding (lock screen, onboarding, empty states).
+struct AppIconImage: View {
+    var size: CGFloat
+
+    var body: some View {
+        Image(nsImage: NSApp.applicationIconImage)
+            .resizable()
+            .interpolation(.high)
+            .aspectRatio(contentMode: .fit)
+            .frame(width: size, height: size)
+    }
+}
+
 /// The colored rounded-square category icon used in lists and headers.
 struct CategoryIconView: View {
     let category: TwoPasswordCore.Category

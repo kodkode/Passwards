@@ -33,7 +33,7 @@ struct SidebarView: View {
             }
             .tag(SidebarFilter.watchtower)
 
-            Section("Vaults") {
+            Section {
                 ForEach(store.vaults) { vault in
                     Label {
                         Text(vault.attributes.name)
@@ -43,16 +43,24 @@ struct SidebarView: View {
                     }
                     .tag(SidebarFilter.vault(vault.id))
                 }
-                Button {
-                    newVaultShown = true
-                } label: {
-                    Label("New Vault…", systemImage: "plus.circle")
-                        .foregroundStyle(.secondary)
+            } header: {
+                HStack {
+                    Text("VAULTS")
+                        .font(.system(size: 11, weight: .semibold))
+                    Spacer()
+                    Button {
+                        newVaultShown = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("New Vault")
                 }
-                .buttonStyle(.plain)
             }
 
-            Section("Categories") {
+            Section {
                 ForEach(TwoPasswordCore.Category.allCases) { category in
                     if categoryCount(category) > 0 {
                         Label {
@@ -69,14 +77,20 @@ struct SidebarView: View {
                         .tag(SidebarFilter.category(category))
                     }
                 }
+            } header: {
+                Text("CATEGORIES")
+                    .font(.system(size: 11, weight: .semibold))
             }
 
             if !store.allTags.isEmpty {
-                Section("Tags") {
+                Section {
                     ForEach(store.allTags, id: \.self) { tag in
                         Label(tag, systemImage: "tag")
                             .tag(SidebarFilter.tag(tag))
                     }
+                } header: {
+                    Text("TAGS")
+                        .font(.system(size: 11, weight: .semibold))
                 }
             }
 

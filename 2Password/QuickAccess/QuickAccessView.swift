@@ -109,9 +109,7 @@ struct QuickAccessView: View {
 
     private var searchRow: some View {
         HStack(spacing: 10) {
-            Image(systemName: "lock.shield.fill")
-                .font(.title2)
-                .foregroundStyle(Theme.accent)
+            AppIconImage(size: 26)
             TextField("Search 2Password…", text: $query)
                 .textFieldStyle(.plain)
                 .font(.title3)

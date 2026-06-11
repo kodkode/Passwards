@@ -17,9 +17,8 @@ struct LockScreenView: View {
         ZStack {
             Theme.heroGradient.ignoresSafeArea()
             VStack(spacing: 24) {
-                Image(systemName: "lock.shield.fill")
-                    .font(.system(size: 64))
-                    .foregroundStyle(.white)
+                AppIconImage(size: 96)
+                    .shadow(color: .black.opacity(0.35), radius: 16, y: 8)
                 Text("2Password")
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.white)
@@ -31,19 +30,26 @@ struct LockScreenView: View {
 
                 VStack(spacing: 12) {
                     if appState.needsSecretKeyEntry {
-                        TextField("Secret Key", text: $typedSecretKey, prompt: Text("A3-XXXXXX-XXXXXX-XXXXX-XXXXX-XXXXX-XXXXX"))
+                        TextField("Secret Key", text: $typedSecretKey, prompt: Text("A3-XXXXXX-XXXXXX-XXXXX-XXXXX-XXXXX-XXXXX").foregroundStyle(.gray))
                             .textFieldStyle(.plain)
                             .font(.system(.callout, design: .monospaced))
+                            .foregroundStyle(.black)
+                            .tint(Theme.accentDeep)
                             .padding(10)
                             .background(.white.opacity(0.95), in: RoundedRectangle(cornerRadius: 8))
                             .frame(width: 360)
+                            .environment(\.colorScheme, .light)
                     }
 
-                    SecureField("Account Password", text: $password, prompt: Text("Account password"))
+                    SecureField("Account Password", text: $password, prompt: Text("Account password").foregroundStyle(.gray))
                         .textFieldStyle(.plain)
+                        .font(.system(size: 14))
+                        .foregroundStyle(.black)
+                        .tint(Theme.accentDeep)
                         .padding(10)
                         .background(.white.opacity(0.95), in: RoundedRectangle(cornerRadius: 8))
                         .frame(width: 300)
+                        .environment(\.colorScheme, .light)
                         .focused($passwordFocused)
                         .onSubmit(unlock)
                         .modifier(ShakeEffect(animatableData: CGFloat(shake)))
