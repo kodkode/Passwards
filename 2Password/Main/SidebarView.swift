@@ -116,8 +116,6 @@ struct SidebarView: View {
         .listStyle(.sidebar)
         .font(.system(size: 13.5))
         .environment(\.defaultMinListRowHeight, 30)
-        .scrollContentBackground(.hidden)
-        .background(Theme.sidebarBackground)
         .sheet(isPresented: $newVaultShown) {
             NewVaultSheet(store: store)
         }
@@ -136,7 +134,6 @@ struct SidebarView: View {
                 syncIndicator
             }
             .padding(10)
-            .background(Theme.sidebarBackground)
         }
     }
 

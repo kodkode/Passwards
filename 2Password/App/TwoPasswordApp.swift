@@ -20,9 +20,11 @@ struct TwoPasswordApp: App {
                     }
                 }
         }
-        // 1P8-style window: no title, compact toolbar over the content area
-        // only, sidebar running full-height with the traffic lights inside it.
-        .windowToolbarStyle(.unifiedCompact(showsTitle: false))
+        // 1P8-style window: no title text, standard-height unified toolbar over
+        // the content area, sidebar running full-height with the traffic lights
+        // inside it. The sidebar keeps macOS's native translucent material —
+        // that's exactly what 1Password 8 uses.
+        .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
             CommandGroup(after: .appSettings) {
                 Button("Lock 2Password") {
