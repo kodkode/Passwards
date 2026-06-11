@@ -38,24 +38,8 @@ struct RootView: View {
         case .locked:
             LockScreenView(appState: appState)
         case .unlocked:
-            MainPlaceholderView(appState: appState)
+            MainWindow(appState: appState)
+                .frame(minWidth: 900, minHeight: 560)
         }
-    }
-}
-
-/// Temporary stand-in until the Phase 3 three-pane main window.
-struct MainPlaceholderView: View {
-    let appState: AppState
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.shield.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(Theme.accent)
-            Text("Vault unlocked")
-                .font(.title.bold())
-            Button("Lock") { appState.lock() }
-        }
-        .frame(minWidth: 760, minHeight: 560)
     }
 }

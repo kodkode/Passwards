@@ -1,0 +1,277 @@
+import SwiftUI
+import TwoPasswordCore
+
+enum SidebarFilter: Hashable {
+    case allItems
+    case favorites
+    case watchtower
+    case category(TwoPasswordCore.Category)
+    case tag(String)
+    case vault(String)
+    case archive
+    case trash
+}
+
+enum SortKey: String, CaseIterable, Identifiable {
+    case title = "Title"
+    case dateEdited = "Date Edited"
+    case dateCreated = "Date Created"
+    var id: String { rawValue }
+}
+
+/// Unlock-time cache of decrypted overviews plus all item mutations.
+/// Every mutation goes through the repository (encrypting) and then refreshes
+/// the in-memory summaries.
+@Observable
+final class VaultStore {
+    private(set) var vaults: [Vault] = []
+    private(set) var summaries: [ItemSummary] = []
+
+    var sidebarSelection: SidebarFilter = .allItems
+    var selectedItemID: String?
+    var searchText = ""
+    var categoryFilter: TwoPasswordCore.Category?
+    var sortKey: SortKey = .title
+    var sortAscending = true
+
+    /// When set, the detail pane shows the editor. `editorPrevious` is the
+    /// pre-edit snapshot (nil = creating a new item), used for password history.
+    var editorDraft: VaultItem?
+    var editorPrevious: VaultItem?
+
+    private let appState: AppState
+
+    init(appState: AppState) {
+        self.appState = appState
+    }
+
+    private var items: ItemRepository? { appState.itemRepository }
+    private var vaultRepo: VaultRepository? { appState.vaultRepository }
+
+    func load() async {
+        do {
+            vaults = try await vaultRepo?.allVaults() ?? []
+            summaries = try await items?.allSummaries() ?? []
+        } catch {
+            assertionFailure("load failed: \(error)")
+        }
+    }
+
+    func refresh() async {
+        await load()
+    }
+
+    // MARK: Derived collections
+
+    var allTags: [String] {
+        Array(Set(summaries.filter { $0.trashedAt == nil && !$0.overview.isArchived }.flatMap(\.overview.tags))).sorted()
+    }
+
+    var trashCount: Int { summaries.lazy.filter { $0.trashedAt != nil }.count }
+
+    func vaultName(_ id: String) -> String {
+        vaults.first(where: { $0.id == id })?.attributes.name ?? "Vault"
+    }
+
+    /// Items shown for the current sidebar selection + search + filter + sort.
+    var visibleSummaries: [ItemSummary] {
+        var result = summaries
+
+        switch sidebarSelection {
+        case .allItems, .watchtower:
+            result = result.filter { $0.trashedAt == nil && !$0.overview.isArchived }
+        case .favorites:
+            result = result.filter { $0.trashedAt == nil && !$0.overview.isArchived && $0.overview.isFavorite }
+        case .category(let category):
+            result = result.filter { $0.trashedAt == nil && !$0.overview.isArchived && $0.overview.category == category }
+        case .tag(let tag):
+            result = result.filter {
+                $0.trashedAt == nil && !$0.overview.isArchived &&
+                $0.overview.tags.contains(where: { $0 == tag || $0.hasPrefix(tag + "/") })
+            }
+        case .vault(let vaultID):
+            result = result.filter { $0.trashedAt == nil && !$0.overview.isArchived && $0.vaultID == vaultID }
+        case .archive:
+            result = result.filter { $0.trashedAt == nil && $0.overview.isArchived }
+        case .trash:
+            result = result.filter { $0.trashedAt != nil }
+        }
+
+        if let categoryFilter {
+            result = result.filter { $0.overview.category == categoryFilter }
+        }
+
+        if !searchText.isEmpty {
+            let query = searchText.lowercased()
+            result = result.filter {
+                $0.overview.title.lowercased().contains(query)
+                || $0.overview.subtitle.lowercased().contains(query)
+                || $0.overview.urls.contains(where: { $0.lowercased().contains(query) })
+                || $0.overview.tags.contains(where: { $0.lowercased().contains(query) })
+            }
+        }
+
+        switch sortKey {
+        case .title:
+            result.sort {
+                let l = $0.overview.title.localizedCaseInsensitiveCompare($1.overview.title)
+                return sortAscending ? l == .orderedAscending : l == .orderedDescending
+            }
+        case .dateEdited:
+            result.sort { sortAscending ? $0.updatedAt > $1.updatedAt : $0.updatedAt < $1.updatedAt }
+        case .dateCreated:
+            result.sort { sortAscending ? $0.createdAt > $1.createdAt : $0.createdAt < $1.createdAt }
+        }
+        return result
+    }
+
+    var listTitle: String {
+        switch sidebarSelection {
+        case .allItems: "All Items"
+        case .favorites: "Favorites"
+        case .watchtower: "Watchtower"
+        case .category(let c): c.displayName
+        case .tag(let t): t
+        case .vault(let id): vaultName(id)
+        case .archive: "Archive"
+        case .trash: "Recently Deleted"
+        }
+    }
+
+    // MARK: Item CRUD
+
+    /// Computes the derived overview bits (subtitle, strength, OTP flag) that
+    /// keep list and Watchtower fast without decrypting details.
+    static func reconcileOverview(_ item: inout VaultItem) {
+        if let username = item.details.firstField(withPurpose: .username)?.value, !username.isEmpty {
+            item.overview.subtitle = username
+        } else if item.overview.category == .creditCard,
+                  let number = item.details.firstField(withPurpose: .password)?.value, number.count >= 4 {
+            item.overview.subtitle = "•••• " + number.suffix(4)
+        } else {
+            item.overview.subtitle = ""
+        }
+        item.overview.urls = item.details.sections
+            .flatMap(\.fields)
+            .filter { $0.kind == .url && !$0.value.isEmpty }
+            .map(\.value)
+        item.overview.hasOTP = item.details.sections
+            .flatMap(\.fields)
+            .contains { $0.kind == .otp && !$0.value.isEmpty }
+        if let password = item.details.firstField(withPurpose: .password)?.value, !password.isEmpty {
+            item.overview.strengthBucket = PasswordStrength.score(password).rawValue
+        } else {
+            item.overview.strengthBucket = nil
+        }
+    }
+
+    func newItem(category: TwoPasswordCore.Category, vaultID: String? = nil) -> VaultItem {
+        let targetVault = vaultID
+            ?? { if case .vault(let id) = sidebarSelection { return id } else { return nil } }()
+            ?? vaults.first?.id
+            ?? ""
+        var item = VaultItem(vaultID: targetVault)
+        item.overview.category = category
+        item.details = ItemDetails(sections: CategoryTemplates.template(for: category))
+        if case .tag(let tag) = sidebarSelection {
+            item.overview.tags = [tag]
+        }
+        return item
+    }
+
+    func create(_ item: VaultItem) async {
+        var item = item
+        Self.reconcileOverview(&item)
+        do {
+            try await items?.create(item)
+            await refresh()
+            selectedItemID = item.id
+        } catch {
+            assertionFailure("create failed: \(error)")
+        }
+    }
+
+    /// Saves an edit; appends password history when the primary password changed.
+    func save(_ item: VaultItem, previous: VaultItem?) async {
+        var item = item
+        if let oldPassword = previous?.details.firstField(withPurpose: .password)?.value,
+           let newPassword = item.details.firstField(withPurpose: .password)?.value,
+           !oldPassword.isEmpty, oldPassword != newPassword {
+            item.details.passwordHistory.append(PasswordHistoryEntry(value: oldPassword, replacedAt: Date()))
+            if item.details.passwordHistory.count > 50 {
+                item.details.passwordHistory.removeFirst(item.details.passwordHistory.count - 50)
+            }
+        }
+        Self.reconcileOverview(&item)
+        do {
+            try await items?.update(item)
+            await refresh()
+        } catch {
+            assertionFailure("save failed: \(error)")
+        }
+    }
+
+    func item(id: String) async -> VaultItem? {
+        try? await items?.item(id: id)
+    }
+
+    func toggleFavorite(_ summary: ItemSummary) async {
+        var overview = summary.overview
+        overview.isFavorite.toggle()
+        try? await items?.updateOverview(overview, itemID: summary.id)
+        await refresh()
+    }
+
+    func setArchived(_ archived: Bool, summary: ItemSummary) async {
+        var overview = summary.overview
+        overview.isArchived = archived
+        try? await items?.updateOverview(overview, itemID: summary.id)
+        await refresh()
+    }
+
+    func moveToTrash(_ summary: ItemSummary) async {
+        try? await items?.moveToTrash(itemID: summary.id)
+        if selectedItemID == summary.id { selectedItemID = nil }
+        await refresh()
+    }
+
+    func restoreFromTrash(_ summary: ItemSummary) async {
+        try? await items?.restoreFromTrash(itemID: summary.id)
+        await refresh()
+    }
+
+    func deletePermanently(_ summary: ItemSummary) async {
+        try? await items?.deletePermanently(itemID: summary.id)
+        if selectedItemID == summary.id { selectedItemID = nil }
+        await refresh()
+    }
+
+    func emptyTrash() async {
+        try? await items?.emptyTrash()
+        if case .trash = sidebarSelection { selectedItemID = nil }
+        await refresh()
+    }
+
+    func move(itemID: String, toVault vaultID: String) async {
+        try? await items?.move(itemID: itemID, toVault: vaultID)
+        await refresh()
+    }
+
+    // MARK: Vaults
+
+    func createVault(name: String, symbolName: String, colorToken: String) async {
+        _ = try? await vaultRepo?.createVault(attributes: VaultAttributes(name: name, symbolName: symbolName, colorToken: colorToken))
+        await refresh()
+    }
+
+    // MARK: History
+
+    func versions(itemID: String) async -> [ItemRepository.DecryptedVersion] {
+        (try? await items?.versions(itemID: itemID)) ?? []
+    }
+
+    func restoreVersion(_ version: ItemRepository.DecryptedVersion, itemID: String) async {
+        try? await items?.restoreVersion(version, itemID: itemID)
+        await refresh()
+    }
+}
