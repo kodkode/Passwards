@@ -15,8 +15,23 @@ struct SidebarView: View {
                 .tag(SidebarFilter.allItems)
             Label("Favorites", systemImage: "star")
                 .tag(SidebarFilter.favorites)
-            Label("Watchtower", systemImage: "shield.lefthalf.filled")
-                .tag(SidebarFilter.watchtower)
+            Label {
+                HStack {
+                    Text("Watchtower")
+                    if store.watchtower.report.totalIssues > 0 {
+                        Spacer()
+                        Text("\(store.watchtower.report.totalIssues)")
+                            .font(.caption)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 1)
+                            .background(.orange.opacity(0.9), in: Capsule())
+                            .foregroundStyle(.white)
+                    }
+                }
+            } icon: {
+                Image(systemName: "shield.lefthalf.filled")
+            }
+            .tag(SidebarFilter.watchtower)
 
             Section("Vaults") {
                 ForEach(store.vaults) { vault in

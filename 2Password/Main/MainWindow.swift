@@ -29,6 +29,7 @@ struct MainWindow: View {
                 Task { await store?.reloadFromRemote() }
             }
             appState.sync.kick()
+            await store.watchtower.run()
         }
         .focusedSceneValue(\.vaultStore, store)
         .toolbar {

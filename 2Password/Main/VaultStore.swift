@@ -47,9 +47,11 @@ final class VaultStore {
     var attachments: AttachmentStore? { appState.attachmentStore }
 
     private let appState: AppState
+    let watchtower: WatchtowerState
 
     init(appState: AppState) {
         self.appState = appState
+        self.watchtower = WatchtowerState(appState: appState)
     }
 
     private var items: ItemRepository? { appState.itemRepository }
@@ -91,8 +93,18 @@ final class VaultStore {
         var result = summaries
 
         switch sidebarSelection {
-        case .allItems, .watchtower:
+        case .allItems:
             result = result.filter { $0.trashedAt == nil && !$0.overview.isArchived }
+        case .watchtower:
+            let flagged: Set<String>
+            if let focus = watchtower.focus {
+                flagged = watchtower.report.items(for: focus)
+            } else {
+                flagged = WatchtowerCheck.allCases.reduce(into: Set<String>()) {
+                    $0.formUnion(watchtower.report.items(for: $1))
+                }
+            }
+            result = result.filter { $0.trashedAt == nil && !$0.overview.isArchived && flagged.contains($0.id) }
         case .favorites:
             result = result.filter { $0.trashedAt == nil && !$0.overview.isArchived && $0.overview.isFavorite }
         case .category(let category):

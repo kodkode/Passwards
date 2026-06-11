@@ -11,6 +11,8 @@ struct ItemDetailContainer: View {
         } else if let selectedID = store.selectedItemID {
             ItemDetailView(store: store, itemID: selectedID)
                 .id(selectedID)
+        } else if store.sidebarSelection == .watchtower {
+            WatchtowerDashboardView(store: store)
         } else {
             VStack(spacing: 10) {
                 Image(systemName: "lock.shield")
@@ -40,6 +42,16 @@ struct ItemDetailView: View {
             if let item {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
+                        ForEach(store.watchtower.report.checks(for: item.id)) { check in
+                            WatchtowerBanner(check: check) {
+                                if let summary = store.summaries.first(where: { $0.id == item.id }) {
+                                    Task {
+                                        await store.watchtower.exclude(check: check, summary: summary, store: store)
+                                        self.item = await store.item(id: itemID)
+                                    }
+                                }
+                            }
+                        }
                         header(item)
                         ForEach(item.details.sections) { section in
                             if section.fields.contains(where: { !$0.value.isEmpty }) {

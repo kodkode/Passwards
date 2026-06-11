@@ -139,6 +139,29 @@ public struct ItemRepository: Sendable {
         return summaries
     }
 
+    /// Fully decrypts every item (overview + details). Used by Watchtower and
+    /// export; run off the main thread.
+    public func allItems() async throws -> [VaultItem] {
+        let records = try await database.writer.read { db in
+            try ItemRecord.fetchAll(db)
+        }
+        var items: [VaultItem] = []
+        items.reserveCapacity(records.count)
+        for record in records {
+            let key = try await itemKey(for: record)
+            items.append(VaultItem(
+                id: record.id,
+                vaultID: record.vaultId,
+                overview: try EncryptedBlob.open(ItemOverview.self, from: record.encOverview, key: key, aad: "overview:\(record.id)"),
+                details: try EncryptedBlob.open(ItemDetails.self, from: record.encDetails, key: key, aad: "details:\(record.id)"),
+                createdAt: record.createdAt,
+                updatedAt: record.updatedAt,
+                trashedAt: record.trashedAt
+            ))
+        }
+        return items
+    }
+
     // MARK: Trash
 
     public func moveToTrash(itemID: String) async throws {
