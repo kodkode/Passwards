@@ -1,0 +1,173 @@
+import SwiftUI
+import TwoPasswordCore
+
+enum AppPhase: Equatable {
+    case loading
+    case onboarding
+    case locked
+    case unlocked
+}
+
+/// Root state machine: onboarding → locked ⇄ unlocked. Owns the database,
+/// key store, and repositories; the lock screen and main window both hang off it.
+@Observable
+final class AppState {
+    private(set) var phase: AppPhase = .loading
+    private(set) var account: AccountRecord?
+
+    let keyStore = KeyStore()
+    private(set) var database: AppDatabase?
+    private(set) var vaultRepository: VaultRepository?
+    private(set) var itemRepository: ItemRepository?
+
+    /// Set when the Secret Key is missing from the Keychain (e.g. fresh machine)
+    /// and the lock screen must ask for it.
+    private(set) var needsSecretKeyEntry = false
+
+    let autoLock = AutoLockMonitor()
+    var onLocked: (() -> Void)?
+
+    func bootstrap() async {
+        do {
+            let db = try AppDatabase.open()
+            database = db
+            vaultRepository = VaultRepository(database: db, keyStore: keyStore)
+            itemRepository = ItemRepository(database: db, keyStore: keyStore)
+            try? await itemRepository?.purgeTrash()
+            if let existing = try await vaultRepository?.account() {
+                account = existing
+                needsSecretKeyEntry = KeychainStore.loadSecretKey(accountID: existing.id) == nil
+                phase = .locked
+            } else {
+                phase = .onboarding
+            }
+        } catch {
+            assertionFailure("database bootstrap failed: \(error)")
+            phase = .onboarding
+        }
+        autoLock.onShouldLock = { [weak self] in self?.lock() }
+    }
+
+    // MARK: Onboarding
+
+    struct OnboardingResult {
+        let secretKey: SecretKey
+        let email: String
+    }
+
+    /// Creates the account, default vault, and stores the Secret Key in the
+    /// Keychain. Runs key derivation off the main thread.
+    func createAccount(email: String, password: String) async throws -> OnboardingResult {
+        let new = try await Task.detached(priority: .userInitiated) {
+            try AccountCrypto.createAccount(email: email, password: password)
+        }.value
+        try KeychainStore.saveSecretKey(new.secretKey, accountID: new.record.accountID)
+        guard let vaultRepository else { throw CryptoError.decryptionFailed }
+        try await vaultRepository.saveAccount(new.record)
+        await keyStore.setMasterKey(new.masterKey)
+        try await vaultRepository.createVault(attributes: VaultAttributes(name: "Personal", symbolName: "person.fill", colorToken: "blue"))
+        account = try await vaultRepository.account()
+        return OnboardingResult(secretKey: new.secretKey, email: email)
+    }
+
+    func finishOnboarding() {
+        phase = .unlocked
+        autoLock.start()
+    }
+
+    // MARK: Lock / unlock
+
+    enum UnlockError: Error {
+        case wrongCredentials
+        case missingSecretKey
+    }
+
+    func unlock(password: String, typedSecretKey: String? = nil) async throws {
+        guard let account else { throw UnlockError.wrongCredentials }
+        let secretKey: SecretKey
+        if let typed = typedSecretKey, !typed.isEmpty {
+            guard let parsed = SecretKey(parsing: typed) else { throw UnlockError.wrongCredentials }
+            secretKey = parsed
+        } else if let stored = KeychainStore.loadSecretKey(accountID: account.id) {
+            secretKey = stored
+        } else {
+            needsSecretKeyEntry = true
+            throw UnlockError.missingSecretKey
+        }
+
+        let record = account.keyRecord
+        let masterKey: SymmetricKeyBox
+        do {
+            masterKey = try await Task.detached(priority: .userInitiated) {
+                SymmetricKeyBox(key: try AccountCrypto.unlock(record: record, password: password, secretKey: secretKey))
+            }.value
+        } catch {
+            throw UnlockError.wrongCredentials
+        }
+
+        // Successful manual unlock with a typed key: persist it again.
+        if typedSecretKey != nil {
+            try? KeychainStore.saveSecretKey(secretKey, accountID: account.id)
+            needsSecretKeyEntry = false
+        }
+        await keyStore.setMasterKey(masterKey.key)
+        UserDefaults.standard.set(Date(), forKey: SettingsKeys.lastPasswordUnlock)
+        phase = .unlocked
+        autoLock.start()
+    }
+
+    func unlockWithTouchID() async -> Bool {
+        guard biometricUnlockAllowed else { return false }
+        let result = await BiometricUnlock.unlock()
+        switch result {
+        case .success(let masterKey):
+            await keyStore.setMasterKey(masterKey)
+            phase = .unlocked
+            autoLock.start()
+            return true
+        case .invalidated:
+            BiometricUnlock.disable()
+            return false
+        case .userCancelled, .unavailable:
+            return false
+        }
+    }
+
+    /// Touch ID is disabled once "require password after N hours" has elapsed.
+    var biometricUnlockAllowed: Bool {
+        guard BiometricUnlock.isAvailable && BiometricUnlock.isEnrolled else { return false }
+        let hours = UserDefaults.standard.object(forKey: SettingsKeys.requirePasswordAfterHours) as? Int ?? 72
+        guard hours > 0 else { return true }
+        let last = UserDefaults.standard.object(forKey: SettingsKeys.lastPasswordUnlock) as? Date ?? .distantPast
+        return Date().timeIntervalSince(last) < Double(hours) * 3600
+    }
+
+    func lock() {
+        guard phase == .unlocked else { return }
+        autoLock.stop()
+        Task { await keyStore.lock() }
+        onLocked?()
+        phase = .locked
+    }
+}
+
+/// Sendable wrapper to move a SymmetricKey out of a detached task.
+struct SymmetricKeyBox: @unchecked Sendable {
+    let key: CryptoKit.SymmetricKey
+}
+
+import CryptoKit
+
+enum SettingsKeys {
+    static let lastPasswordUnlock = "lastPasswordUnlock"
+    static let requirePasswordAfterHours = "requirePasswordAfterHours"
+    static let lockOnSleep = "lockOnSleep"
+    static let lockOnScreensaver = "lockOnScreensaver"
+    static let idleLockMinutes = "idleLockMinutes"
+    static let clipboardClearSeconds = "clipboardClearSeconds"
+    static let concealPasswords = "concealPasswords"
+    static let richIconsEnabled = "richIconsEnabled"
+    static let watchtowerHIBPEnabled = "watchtowerHIBPEnabled"
+    static let watchtowerEnabled = "watchtowerEnabled"
+    static let theme = "appTheme"
+}
