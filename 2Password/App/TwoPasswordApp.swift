@@ -29,6 +29,23 @@ struct TwoPasswordApp: App {
                     quickAccess?.toggle()
                 }
             }
+            CommandGroup(replacing: .importExport) {
+                if appState.phase == .unlocked, let store = appState.vaultStore {
+                    Button("Import from 1Password (.1pux)…") {
+                        ImportExport.importOnePux(appState: appState, store: store)
+                    }
+                    Button("Import from CSV…") {
+                        ImportExport.importCSV(appState: appState, store: store)
+                    }
+                    Divider()
+                    Button("Export Logins as CSV…") {
+                        ImportExport.exportCSV(appState: appState, store: store)
+                    }
+                    Button("Export All Items as JSON…") {
+                        ImportExport.exportJSON(appState: appState, store: store)
+                    }
+                }
+            }
         }
 
         MenuBarExtra("2Password", systemImage: "lock.shield.fill") {
