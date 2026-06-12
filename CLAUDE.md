@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-2Password — a native macOS clone of 1Password 8 (Swift 6 + SwiftUI), built for the owner's daily personal use with real passwords. **Design fidelity to 1Password 8 is a hard requirement**: when touching UI, match 1P8's layout/colors/behavior, and prefer what real 1P8 does (e.g. the sidebar uses macOS's native translucent material — do not replace it with custom backgrounds). The owner verifies visually; Claude cannot take screenshots on this machine (no Screen Recording permission), so ask for side-by-side screenshots when iterating on design.
+2Password — a native macOS clone of 1Password 8 (Swift 6 + SwiftUI), built for the owner's daily personal use with real passwords. **Design fidelity to 1Password 8 is a hard requirement**: when touching UI, match 1P8's layout/colors/behavior, and prefer what real 1P8 does (e.g. the sidebar uses macOS's native translucent material — do not replace it with custom backgrounds).
+
+Screen Recording permission is granted: after UI changes, verify your own work by relaunching the app and capturing it (`screencapture -x /tmp/shot.png`, then Read the PNG; `screencapture -l <windowid>` for a single window). Look at the result before declaring a design change done.
 
 ## Commands
 
