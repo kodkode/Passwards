@@ -195,6 +195,16 @@ final class AppState {
         sync.kick()
     }
 
+    /// Verifies the account password by a full key derivation. No state change —
+    /// used to gate revealing the Secret Key / re-saving the Emergency Kit.
+    func verifyAccountPassword(_ password: String) async -> Bool {
+        guard let account, let secretKey = KeychainStore.loadSecretKey(accountID: account.id) else { return false }
+        let record = account.keyRecord
+        return await Task.detached(priority: .userInitiated) {
+            (try? AccountCrypto.unlock(record: record, password: password, secretKey: secretKey)) != nil
+        }.value
+    }
+
     func unlockWithTouchID() async -> Bool {
         guard biometricUnlockAllowed else { return false }
         let result = await BiometricUnlock.unlock()

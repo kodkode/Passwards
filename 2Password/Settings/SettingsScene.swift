@@ -80,6 +80,7 @@ struct SecuritySettingsView: View {
     @AppStorage(SettingsKeys.clipboardClearSeconds) private var clipboardClearSeconds = 90
     @State private var touchIDEnabled = BiometricUnlock.isEnrolled
     @State private var changePasswordShown = false
+    @State private var emergencyKitShown = false
 
     var body: some View {
         Form {
@@ -93,6 +94,15 @@ struct SecuritySettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+            }
+            Section("Emergency Kit") {
+                Button("View Secret Key & Save Emergency Kit…") {
+                    emergencyKitShown = true
+                }
+                .disabled(appState.phase != .unlocked)
+                Text("The Emergency Kit contains your Secret Key — you'll need it to set up 2Password on a new device. Keep a copy somewhere safe.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("Unlock") {
                 if BiometricUnlock.isAvailable {
@@ -149,6 +159,153 @@ struct SecuritySettingsView: View {
         .sheet(isPresented: $changePasswordShown) {
             ChangePasswordSheet(appState: appState)
         }
+        .sheet(isPresented: $emergencyKitShown) {
+            EmergencyKitSheet(appState: appState)
+        }
+    }
+}
+
+/// Reveals the Secret Key and re-saves the Emergency Kit, gated behind
+/// Touch ID or the account password (like 1Password's reveal flow).
+struct EmergencyKitSheet: View {
+    let appState: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var password = ""
+    @State private var isWorking = false
+    @State private var errorMessage: String?
+    @State private var revealedKey: SecretKey?
+    @State private var copied = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Emergency Kit")
+                .font(.title3.bold())
+
+            if let revealedKey {
+                revealed(revealedKey)
+            } else {
+                verify
+            }
+        }
+        .padding(22)
+        .frame(width: 420)
+        .task {
+            // Lead with Touch ID when it's enrolled and currently allowed.
+            if appState.biometricUnlockAllowed {
+                await verifyWithTouchID()
+            }
+        }
+    }
+
+    private var verify: some View {
+        Group {
+            Text("Verify it's you to reveal your Secret Key.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            SecureField("Account Password", text: $password, prompt: Text("Account password"))
+                .textFieldStyle(.roundedBorder)
+                .onSubmit { verifyWithPassword() }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.callout)
+                    .foregroundStyle(.red)
+            }
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                if appState.biometricUnlockAllowed {
+                    Button("Use Touch ID") {
+                        Task { await verifyWithTouchID() }
+                    }
+                }
+                Spacer()
+                Button {
+                    verifyWithPassword()
+                } label: {
+                    if isWorking {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("Verify")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(password.isEmpty || isWorking)
+            }
+        }
+    }
+
+    private func revealed(_ key: SecretKey) -> some View {
+        Group {
+            Text("Anyone with your Secret Key and account password can read your data. Store the kit somewhere safe — you'll need it to set up a new device.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("SECRET KEY")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Text(key.formatted)
+                        .font(.system(.callout, design: .monospaced).weight(.semibold))
+                        .textSelection(.enabled)
+                    Spacer()
+                    Button {
+                        ClipboardManager.copy(key.formatted, concealed: true)
+                        copied = true
+                    } label: {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Copy Secret Key")
+                }
+            }
+            .padding(10)
+            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+
+            HStack {
+                Button("Save Emergency Kit…") {
+                    guard let email = appState.account?.email else { return }
+                    EmergencyKitPDF.save(email: email, secretKey: key, presentingWindow: NSApp.keyWindow)
+                }
+                Spacer()
+                Button("Done") { dismiss() }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+    }
+
+    private func verifyWithPassword() {
+        guard !password.isEmpty, !isWorking else { return }
+        errorMessage = nil
+        isWorking = true
+        Task {
+            if await appState.verifyAccountPassword(password) {
+                reveal()
+            } else {
+                errorMessage = "The account password is incorrect."
+            }
+            isWorking = false
+        }
+    }
+
+    private func verifyWithTouchID() async {
+        if case .success = await BiometricUnlock.unlock(reason: "reveal your Secret Key") {
+            reveal()
+        }
+    }
+
+    private func reveal() {
+        guard let account = appState.account,
+              let key = KeychainStore.loadSecretKey(accountID: account.id) else {
+            errorMessage = "The Secret Key isn't stored on this Mac's Keychain."
+            return
+        }
+        revealedKey = key
     }
 }
 
