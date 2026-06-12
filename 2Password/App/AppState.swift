@@ -31,6 +31,7 @@ final class AppState {
 
     let autoLock = AutoLockMonitor()
     let sync = SyncController()
+    private(set) var browserBridge: BrowserBridgeController?
     var onLocked: (() -> Void)?
 
     /// Shared by the main window and Quick Access. Created at bootstrap;
@@ -66,6 +67,10 @@ final class AppState {
             phase = .onboarding
         }
         autoLock.onShouldLock = { [weak self] in self?.lock() }
+        // The bridge serves only lock-state info until unlocked.
+        let bridge = BrowserBridgeController(appState: self)
+        bridge.start()
+        browserBridge = bridge
     }
 
     // MARK: Onboarding
