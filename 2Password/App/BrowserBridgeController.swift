@@ -93,29 +93,42 @@ final class BrowserBridgeController: BrowserBridgeDelegate, BrowserPairingStore 
 
     // MARK: Handlers
 
-    private func loginSummaries(matching url: String?, in store: VaultStore) -> [ItemSummary] {
-        guard let url, let domain = WatchtowerAuditor.registrableDomain(url) else { return [] }
-        return store.summaries.filter { summary in
-            summary.trashedAt == nil
-                && !summary.overview.isArchived
-                && summary.overview.category == .login
-                && summary.overview.urls.contains { WatchtowerAuditor.registrableDomain($0) == domain }
+    private func allLoginSummaries(in store: VaultStore) -> [ItemSummary] {
+        store.summaries.filter {
+            $0.trashedAt == nil && !$0.overview.isArchived && $0.overview.category == .login
         }
     }
 
+    private func loginSummaries(matching url: String?, in store: VaultStore) -> [ItemSummary] {
+        guard let url, let domain = WatchtowerAuditor.registrableDomain(url) else { return [] }
+        return allLoginSummaries(in: store).filter { summary in
+            summary.overview.urls.contains { WatchtowerAuditor.registrableDomain($0) == domain }
+        }
+    }
+
+    /// No URL = the extension popup (user-driven, may list everything).
+    /// With a URL = a page-bound request, restricted to that page's domain.
     private func query(_ request: BrowserRequest, store: VaultStore) -> BrowserResponse {
-        let matches = loginSummaries(matching: request.url, in: store).map {
+        let summaries = request.url == nil
+            ? allLoginSummaries(in: store).sorted { $0.overview.title.localizedCaseInsensitiveCompare($1.overview.title) == .orderedAscending }
+            : loginSummaries(matching: request.url, in: store)
+        let matches = summaries.map {
             BrowserResponse.Match(itemID: $0.id, title: $0.overview.title, username: $0.overview.subtitle)
         }
         return BrowserResponse(id: request.id, matches: matches)
     }
 
     private func fill(_ request: BrowserRequest, store: VaultStore) async -> BrowserResponse {
-        guard let itemID = request.itemID,
-              // The page URL must actually match the item — a hostile page
-              // can't ask for some other site's credentials by ID.
-              loginSummaries(matching: request.url, in: store).contains(where: { $0.id == itemID }),
-              let item = await store.item(id: itemID) else {
+        let allowed: Bool
+        if let url = request.url {
+            // Page-bound: the page URL must actually match the item — a
+            // hostile page can't ask for another site's credentials by ID.
+            allowed = loginSummaries(matching: url, in: store).contains { $0.id == request.itemID }
+        } else {
+            // Popup copy: user-driven, any login.
+            allowed = allLoginSummaries(in: store).contains { $0.id == request.itemID }
+        }
+        guard allowed, let itemID = request.itemID, let item = await store.item(id: itemID) else {
             return BrowserResponse(id: request.id, error: "no such credential")
         }
         return BrowserResponse(

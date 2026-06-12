@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "2Password",
+  "version": "1.0",
+  "description": "Fill and save 2Password logins in your browser.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApT7EQXKxh1KSI15/DoNLSovgRh+rTLZFKbM+YCkm2BZ2Rxsiy5JuByUQEjQde9l99qkTzvj7oh+oRxKbeDFAvS6K0ejvKwvaO8TOBcPEGmJRai4RXFjVEne5U+klvW64iKd5dvLrZg05Ih+N14BSmzx8j5tAq1C0PzG/5/nb/sHD9PmkMdcH2UGLz8o4kZuSlKTSgX62JurNdndYd86heO0RzAuqOiv8arXPfpz0HJSd6Mpksl4781sS4QheunJkErPtU0fILrLtSWZUJ+sCYVgJzbnuC39T5JL9DO8fvEYXqeYIWjA0iWVUtmJQiMwc2Ex/hC2WeDrkx215fdBOGwIDAQAB",
+  "permissions": ["nativeMessaging", "storage", "activeTab", "tabs"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "2Password"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "128": "icon128.png"
+  }
+}
