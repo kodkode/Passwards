@@ -1,7 +1,18 @@
 import SwiftUI
 import TwoPasswordCore
 
+/// Entry point: the same binary is either the GUI app or, when Chrome
+/// launches it with `--browser-host`, a headless native-messaging host.
 @main
+enum Boot {
+    static func main() {
+        if CommandLine.arguments.contains("--browser-host") {
+            BrowserHostMode.run()
+        }
+        TwoPasswordApp.main()
+    }
+}
+
 struct TwoPasswordApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var appState = AppState()

@@ -1,6 +1,7 @@
 import Foundation
 import CryptoKit
 import Network
+import os
 
 /// App-side callbacks the bridge needs. Implemented by the app target;
 /// kept abstract here so the whole server is testable headless.
@@ -21,11 +22,12 @@ public protocol BrowserPairingStore: Sendable {
 /// Unix-socket server speaking the `BrowserWireMessage` protocol.
 /// One connection per native-messaging host process (i.e. per browser).
 public actor BrowserBridgeServer {
+    /// Lives at the home root (the sandbox container's Data directory), NOT
+    /// under Application Support: the full container path would blow the
+    /// 104-byte `sockaddr_un` limit and bind fails.
     public static func defaultSocketPath() -> String {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("2Password", isDirectory: true)
-        try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
-        return support.appendingPathComponent("browser-bridge.sock").path
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".2password-bridge.sock").path
     }
 
     private let path: String
@@ -54,9 +56,15 @@ public actor BrowserBridgeServer {
             Task { await self.adopt(connection) }
         }
         listener.stateUpdateHandler = { [path] state in
-            if case .ready = state {
+            switch state {
+            case .ready:
                 // Only this user may talk to the vault.
                 chmod(path, 0o600)
+            case .failed(let error):
+                Logger(subsystem: "com.michael.twopassword", category: "browser-bridge")
+                    .error("listener failed: \(error)")
+            default:
+                break
             }
         }
         listener.start(queue: DispatchQueue(label: "browser-bridge-listener"))
