@@ -17,7 +17,11 @@ nonisolated enum BrowserIntegration {
         let hostsPath: String
 
         var hostsDirectory: URL {
-            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(hostsPath, isDirectory: true)
+            // The *real* home, not the sandbox container's — the entitlement
+            // exceptions are rooted there. homeDirectoryForCurrentUser would
+            // resolve inside ~/Library/Containers/… and never match.
+            let home = URL(fileURLWithPath: String(cString: getpwuid(getuid()).pointee.pw_dir))
+            return home.appendingPathComponent(hostsPath, isDirectory: true)
         }
 
         var manifestURL: URL {
