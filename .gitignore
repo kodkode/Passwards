@@ -6,3 +6,4 @@ DerivedData/
 .swiftpm/
 *.pbxuser
 build/
+key.pem

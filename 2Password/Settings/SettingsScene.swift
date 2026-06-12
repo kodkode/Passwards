@@ -16,6 +16,8 @@ struct SettingsScene: View {
                 .tabItem { Label("Security", systemImage: "lock") }
             PrivacySettingsView()
                 .tabItem { Label("Privacy", systemImage: "hand.raised") }
+            BrowserSettingsView()
+                .tabItem { Label("Browser", systemImage: "globe") }
             AdvancedSettingsView(appState: appState)
                 .tabItem { Label("Advanced", systemImage: "wrench.and.screwdriver") }
         }
@@ -442,6 +444,57 @@ struct PrivacySettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.vertical, 8)
+    }
+}
+
+/// Per-browser native-messaging manifest install, so the 2Password
+/// extension can reach the app.
+struct BrowserSettingsView: View {
+    @State private var refreshToken = 0
+    @State private var installError: String?
+
+    var body: some View {
+        Form {
+            Section("Browser Extension") {
+                let browsers = BrowserIntegration.detected
+                if browsers.isEmpty {
+                    Text("No Chromium-based browsers were found on this Mac.")
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(browsers) { browser in
+                    let status = BrowserIntegration.status(for: browser)
+                    LabeledContent(browser.name) {
+                        switch status {
+                        case .installed:
+                            Label("Connected", systemImage: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                                .labelStyle(.titleAndIcon)
+                        case .stale, .notInstalled:
+                            Button(status == .stale ? "Repair…" : "Install…") {
+                                do {
+                                    try BrowserIntegration.install(for: browser)
+                                    installError = nil
+                                } catch {
+                                    installError = "Couldn't write the manifest for \(browser.name): \(error.localizedDescription)"
+                                }
+                                refreshToken += 1
+                            }
+                        }
+                    }
+                }
+                if let installError {
+                    Text(installError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+                Text("Installing registers 2Password with the browser, then load the extension from the repository's BrowserExtension folder (chrome://extensions → Load unpacked). Pairing is confirmed with a verification code on first connect.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.vertical, 8)
+        .id(refreshToken)
     }
 }
 
