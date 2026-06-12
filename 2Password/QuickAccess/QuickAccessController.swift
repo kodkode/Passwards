@@ -72,7 +72,9 @@ final class QuickAccessPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hidesOnDeactivate = false
-        sharingType = .none
+        if !AppDelegate.captureAllowed {
+            sharingType = .none
+        }
         animationBehavior = .utilityWindow
 
         let view = QuickAccessView(appState: appState, dismiss: onDismiss)
