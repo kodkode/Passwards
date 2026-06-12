@@ -1,12 +1,17 @@
 import SwiftUI
 import TwoPasswordCore
 
-/// Entry point: the same binary is either the GUI app or, when Chrome
-/// launches it with `--browser-host`, a headless native-messaging host.
+/// Entry point: the same binary is either the GUI app or a headless
+/// native-messaging host. Chromium browsers launch the manifest's binary
+/// with the extension origin as the argument (a manifest cannot pass custom
+/// flags), so the origin IS the host-mode signal; `--browser-host` remains
+/// for manual testing.
 @main
 enum Boot {
     static func main() {
-        if CommandLine.arguments.contains("--browser-host") {
+        let arguments = CommandLine.arguments.dropFirst()
+        if arguments.contains("--browser-host")
+            || arguments.contains(where: { $0.hasPrefix("chrome-extension://") }) {
             BrowserHostMode.run()
         }
         TwoPasswordApp.main()
