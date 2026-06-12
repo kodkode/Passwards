@@ -48,6 +48,55 @@
     sendResponse({ filled: true });
   });
 
+  // ----------------------------------------------------------- open & fill
+
+  // The app may have staged a one-shot fill for this domain ("Open & Fill"
+  // clicked in 2Password). Login forms often render late, so retry briefly.
+  async function checkPendingFill() {
+    let creds;
+    try {
+      creds = await chrome.runtime.sendMessage({ cmd: "pending-fill" });
+    } catch { return; }
+    if (!creds?.password) return;
+
+    const deadline = Date.now() + 8000;
+    while (Date.now() < deadline) {
+      const fields = findLoginFields();
+      if (fields) {
+        if (fields.username && creds.username) setValue(fields.username, creds.username);
+        setValue(fields.password, creds.password);
+        if (creds.submit) {
+          await new Promise((r) => setTimeout(r, 150)); // let framework state settle
+          submitLogin(fields);
+        }
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+
+  function submitLogin(fields) {
+    const scope = fields.form ?? document;
+    const button = scope.querySelector(
+      'button[type="submit"], input[type="submit"]'
+    ) ?? [...scope.querySelectorAll("button")].find((b) =>
+      /log\s*in|sign\s*in|submit|continue/i.test(b.textContent));
+    if (button) {
+      button.click();
+    } else if (fields.form) {
+      fields.form.requestSubmit();
+    } else {
+      // Last resort: Enter in the password field.
+      for (const type of ["keydown", "keyup"]) {
+        fields.password.dispatchEvent(new KeyboardEvent(type, {
+          key: "Enter", code: "Enter", keyCode: 13, bubbles: true,
+        }));
+      }
+    }
+  }
+
+  checkPendingFill();
+
   // ------------------------------------------------------------ save offer
 
   let lastCapture = null;

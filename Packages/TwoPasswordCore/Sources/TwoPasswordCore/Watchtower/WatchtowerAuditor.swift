@@ -178,7 +178,8 @@ public struct WatchtowerAuditor: Sendable {
         let candidate = urlString.hasPrefix("http") ? urlString : "https://\(urlString)"
         guard let host = URL(string: candidate)?.host()?.lowercased() else { return nil }
         let parts = host.split(separator: ".")
-        guard parts.count >= 2 else { return nil }
+        // Single-label hosts (localhost, intranet names) are their own domain.
+        guard parts.count >= 2 else { return host.isEmpty ? nil : host }
         return parts.suffix(2).joined(separator: ".")
     }
 

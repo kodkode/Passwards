@@ -10,8 +10,28 @@ final class BrowserBridgeController: BrowserBridgeDelegate, BrowserPairingStore 
     private unowned let appState: AppState
     private var server: BrowserBridgeServer?
 
+    /// Open & Fill: staged when the user clicks a website field in the app;
+    /// served once to the extension when that page loads, then cleared.
+    private struct PendingFill {
+        let itemID: String
+        let domain: String
+        let expires: Date
+    }
+    private var pendingFill: PendingFill?
+
     init(appState: AppState) {
         self.appState = appState
+    }
+
+    /// Stage an Open & Fill for `urlString`, then open it in the browser.
+    /// One-shot and short-lived: only a page on the same registrable domain
+    /// loaded within the next minute receives the credentials.
+    func openAndFill(itemID: String, urlString: String) {
+        let candidate = urlString.hasPrefix("http") ? urlString : "https://\(urlString)"
+        guard let url = URL(string: candidate),
+              let domain = WatchtowerAuditor.registrableDomain(candidate) else { return }
+        pendingFill = PendingFill(itemID: itemID, domain: domain, expires: Date().addingTimeInterval(60))
+        NSWorkspace.shared.open(url)
     }
 
     func start() {
@@ -88,7 +108,27 @@ final class BrowserBridgeController: BrowserBridgeDelegate, BrowserPairingStore 
             return await fill(request, store: store)
         case .loginSave:
             return await save(request, store: store)
+        case .fillPending:
+            return await servePendingFill(request, store: store)
         }
+    }
+
+    private func servePendingFill(_ request: BrowserRequest, store: VaultStore) async -> BrowserResponse {
+        guard let pending = pendingFill, Date() < pending.expires,
+              let url = request.url,
+              WatchtowerAuditor.registrableDomain(url) == pending.domain else {
+            return BrowserResponse(id: request.id) // nothing staged for this page
+        }
+        pendingFill = nil // one-shot
+        guard let item = await store.item(id: pending.itemID) else {
+            return BrowserResponse(id: request.id)
+        }
+        return BrowserResponse(
+            id: request.id,
+            username: item.details.firstField(withPurpose: .username)?.value ?? "",
+            password: item.details.firstField(withPurpose: .password)?.value ?? "",
+            submit: true
+        )
     }
 
     // MARK: Handlers

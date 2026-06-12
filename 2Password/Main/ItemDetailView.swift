@@ -178,7 +178,12 @@ struct ItemDetailView: View {
                             revealedFields.insert(field.id)
                         }
                     },
-                    onLargeType: { largeTypeValue = field.value }
+                    onLargeType: { largeTypeValue = field.value },
+                    onOpenAndFill: field.kind == .url && item?.overview.category == .login
+                        ? { [itemID = item?.id] in
+                            if let itemID { store.openAndFill(itemID: itemID, urlString: field.value) }
+                        }
+                        : nil
                 )
                 }
             }
@@ -307,6 +312,8 @@ struct FieldDisplayRow: View {
     let onCopy: () -> Void
     let onToggleReveal: () -> Void
     let onLargeType: () -> Void
+    /// Present on website fields when the browser extension can auto-login.
+    var onOpenAndFill: (() -> Void)? = nil
 
     @State private var hovering = false
 
@@ -337,6 +344,14 @@ struct FieldDisplayRow: View {
                 }
             } else if hovering {
                 HStack(spacing: 8) {
+                    if let onOpenAndFill {
+                        Button(action: onOpenAndFill) {
+                            Image(systemName: "bolt.fill")
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Theme.accent)
+                        .help("Open & Fill")
+                    }
                     if field.kind.isSecret {
                         Button(action: onToggleReveal) {
                             Image(systemName: revealed ? "eye.slash" : "eye")
@@ -368,6 +383,9 @@ struct FieldDisplayRow: View {
                 Button("Show in Large Type") { onLargeType() }
             }
             if field.kind == .url, let url = URL(string: field.value.hasPrefix("http") ? field.value : "https://\(field.value)") {
+                if let onOpenAndFill {
+                    Button("Open & Fill") { onOpenAndFill() }
+                }
                 Button("Open in Browser") { NSWorkspace.shared.open(url) }
             }
         }

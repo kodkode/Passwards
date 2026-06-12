@@ -28,6 +28,8 @@ private final class FakeAppSide: BrowserBridgeDelegate, BrowserPairingStore, @un
             return BrowserResponse(id: request.id, username: "michael", password: "hunter2")
         case .loginSave:
             return BrowserResponse(id: request.id, savedItemID: "item-2")
+        case .fillPending:
+            return BrowserResponse(id: request.id, username: "michael", password: "hunter2", submit: true)
         }
     }
 

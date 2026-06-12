@@ -58,6 +58,10 @@ public struct BrowserRequest: Codable, Sendable, Equatable {
         case credentialsFill = "credentials.fill"
         /// Create (or offer to update) a Login item from a submitted form.
         case loginSave = "login.save"
+        /// Open & Fill: asked by the content script on page load — returns
+        /// credentials (+ submit flag) only if the app staged a pending fill
+        /// for this domain moments ago.
+        case fillPending = "fill.pending"
         /// → app lock state + version.
         case status
     }
@@ -102,9 +106,12 @@ public struct BrowserResponse: Codable, Sendable, Equatable {
     public var username: String?
     public var password: String?
     public var savedItemID: String?
+    /// Open & Fill: also submit the form after filling.
+    public var submit: Bool?
 
     public init(id: UInt64, error: String? = nil, locked: Bool? = nil, matches: [Match]? = nil,
-                username: String? = nil, password: String? = nil, savedItemID: String? = nil) {
+                username: String? = nil, password: String? = nil, savedItemID: String? = nil,
+                submit: Bool? = nil) {
         self.id = id
         self.error = error
         self.locked = locked
@@ -112,6 +119,7 @@ public struct BrowserResponse: Codable, Sendable, Equatable {
         self.username = username
         self.password = password
         self.savedItemID = savedItemID
+        self.submit = submit
     }
 }
 

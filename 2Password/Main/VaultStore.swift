@@ -283,6 +283,12 @@ final class VaultStore {
         try? await items?.item(id: id)
     }
 
+    /// 1P8's "Open & Fill": open the site and let the browser extension
+    /// fill + submit the login automatically.
+    func openAndFill(itemID: String, urlString: String) {
+        appState.browserBridge?.openAndFill(itemID: itemID, urlString: urlString)
+    }
+
     func toggleFavorite(_ summary: ItemSummary) async {
         var overview = summary.overview
         overview.isFavorite.toggle()

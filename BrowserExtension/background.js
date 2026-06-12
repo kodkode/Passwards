@@ -217,7 +217,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     try {
       // A page's content script can only act on its own tab's URL — it must
       // not be able to request credentials (or save logins) for other sites.
-      if (sender.tab && ["query", "fill-credentials", "save-login"].includes(message.cmd)) {
+      if (sender.tab && ["query", "fill-credentials", "save-login", "pending-fill"].includes(message.cmd)) {
         message.url = sender.tab.url;
       }
       switch (message.cmd) {
@@ -239,6 +239,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         case "fill-credentials": {
           const result = await rpc("credentials.fill", { url: message.url, itemID: message.itemID });
+          return sendResponse(result);
+        }
+        case "pending-fill": {
+          // Don't trigger pairing UI from a page load; only ask when paired.
+          if (!(await getStoredPairing())) return sendResponse({});
+          const result = await rpc("fill.pending", { url: message.url });
           return sendResponse(result);
         }
         case "save-login": {
