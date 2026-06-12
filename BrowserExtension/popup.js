@@ -49,19 +49,12 @@ async function init() {
 }
 
 function showPairing() {
+  // Pairing happens in a dedicated tab: the popup dies as soon as the
+  // 2Password app takes focus for its approval alert.
   showStatus(`Connect this browser to 2Password.<button id="connect">Connect…</button>`);
-  statusEl.querySelector("#connect").addEventListener("click", async () => {
-    showStatus("Confirm this code in 2Password:<span class='code'>……</span>");
-    chrome.runtime.onMessage.addListener(function onCode(m) {
-      if (m.event === "pairing-code") {
-        statusEl.querySelector(".code").textContent = m.code;
-        chrome.runtime.onMessage.removeListener(onCode);
-      }
-    });
-    const result = await send({ cmd: "pair" });
-    if (result?.ok) init();
-    else showStatus(`Pairing failed: ${result?.error ?? "unknown"}<button id="connect">Try Again</button>`)
-      , statusEl.querySelector("#connect")?.addEventListener("click", showPairing);
+  statusEl.querySelector("#connect").addEventListener("click", () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL("pairing.html") });
+    window.close();
   });
 }
 

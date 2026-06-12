@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Connect to 2Password</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #1c1c1f; color: #f2f2f4;
+      font: 15px -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .card {
+      width: 400px; text-align: center; padding: 40px 36px;
+      background: #232327; border: 1px solid #2f2f34; border-radius: 14px;
+    }
+    .card img { width: 56px; height: 56px; border-radius: 13px; }
+    h1 { font-size: 19px; margin: 16px 0 8px; }
+    p { color: #9a9aa2; line-height: 1.5; margin: 0 0 18px; }
+    .code {
+      font: 600 34px ui-monospace, monospace; letter-spacing: 7px;
+      padding: 14px 0; margin: 0 0 18px; border-radius: 10px;
+      background: #2a2a2e; border: 1px solid #3a3a3f;
+    }
+    button {
+      font: 14px -apple-system, sans-serif; border: none; border-radius: 8px;
+      background: #2e6ee8; color: white; padding: 9px 22px; cursor: pointer;
+    }
+    .ok { color: #4cd964; font-weight: 600; }
+    .err { color: #ff6b6b; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="icon128.png" alt="">
+    <h1>Connect to 2Password</h1>
+    <div id="step-start">
+      <p>2Password will open and show a verification code. Make sure it matches the one shown here, then approve it in the app.</p>
+      <button id="start">Connect…</button>
+    </div>
+    <div id="step-code" hidden>
+      <p>Approve in 2Password if the codes match:</p>
+      <div class="code" id="code">······</div>
+      <p>Waiting for you to approve in the app…</p>
+    </div>
+    <div id="step-done" hidden>
+      <p class="ok">Connected!</p>
+      <p>This browser is now paired with 2Password. You can close this tab.</p>
+    </div>
+    <div id="step-error" hidden>
+      <p class="err" id="error-text"></p>
+      <button id="retry">Try Again</button>
+    </div>
+  </div>
+  <script src="pairing.js"></script>
+</body>
+</html>

@@ -25,6 +25,12 @@ cd Packages/TwoPasswordCore && swift test --filter "TOTPTests/rfc6238Vectors"
 # instance and the user sees stale UI:
 osascript -e 'quit app "2Password"'; until ! pgrep -f "2Password.app/Contents/MacOS"; do sleep 0.5; done
 open ~/Library/Developer/Xcode/DerivedData/2Password-*/Build/Products/Debug/2Password.app
+
+# To screenshot the app's own windows (debug builds only): set the bypass env
+# var via launchd, then relaunch with `open` as above. NEVER exec the binary
+# directly — that bypasses LaunchServices and the browser-extension host will
+# spawn duplicate app instances.
+launchctl setenv TWOPW_ALLOW_CAPTURE 1
 ```
 
 ## Naming gotcha

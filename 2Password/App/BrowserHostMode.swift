@@ -55,9 +55,15 @@ nonisolated enum BrowserHostMode {
     }
 
     private static func launchApp() {
+        // Launch the exact bundle this host binary lives in — `open -b` can
+        // resolve the bundle ID to a different (or duplicate) copy.
+        let bundle = URL(fileURLWithPath: CommandLine.arguments[0])
+            .deletingLastPathComponent() // MacOS
+            .deletingLastPathComponent() // Contents
+            .deletingLastPathComponent() // 2Password.app
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        process.arguments = ["-g", "-b", "com.michael.twopassword"]
+        process.arguments = ["-g", bundle.path]
         try? process.run()
         process.waitUntilExit()
     }
