@@ -76,6 +76,7 @@ struct AppearanceSettingsView: View {
 struct SecuritySettingsView: View {
     let appState: AppState
     @AppStorage(SettingsKeys.idleLockMinutes) private var idleLockMinutes = 10
+    @AppStorage(SettingsKeys.lockWhenBackgroundMinutes) private var lockWhenBackgroundMinutes = 0
     @AppStorage(SettingsKeys.lockOnSleep) private var lockOnSleep = true
     @AppStorage(SettingsKeys.lockOnScreensaver) private var lockOnScreensaver = true
     @AppStorage(SettingsKeys.requirePasswordAfterHours) private var requirePasswordAfterHours = 72
@@ -144,6 +145,16 @@ struct SecuritySettingsView: View {
                     Text("1 hour").tag(60)
                     Text("Never").tag(0)
                 }
+                Picker("Lock when in the background for", selection: $lockWhenBackgroundMinutes) {
+                    Text("1 minute").tag(1)
+                    Text("5 minutes").tag(5)
+                    Text("15 minutes").tag(15)
+                    Text("1 hour").tag(60)
+                    Text("Never").tag(0)
+                }
+                Text("Idle locking waits for your whole Mac to be inactive. Background locking fires while you keep working in other apps.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Toggle("Lock when the device goes to sleep", isOn: $lockOnSleep)
                 Toggle("Lock when the screensaver starts", isOn: $lockOnScreensaver)
             }

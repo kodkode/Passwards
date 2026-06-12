@@ -259,6 +259,7 @@ nonisolated enum SettingsKeys {
     static let lockOnSleep = "lockOnSleep"
     static let lockOnScreensaver = "lockOnScreensaver"
     static let idleLockMinutes = "idleLockMinutes"
+    static let lockWhenBackgroundMinutes = "lockWhenBackgroundMinutes"
     static let clipboardClearSeconds = "clipboardClearSeconds"
     static let concealPasswords = "concealPasswords"
     static let richIconsEnabled = "richIconsEnabled"
