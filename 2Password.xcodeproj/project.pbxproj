@@ -7,16 +7,76 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		17572E3DA866B938C35BB469 /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = 91E0D3AFB732AFBB5E978A6B /* popup.html */; };
+		1B9F25933EAA80C0E5BEE04D /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = C3F91B6A4D3F09C3D565450B /* content.js */; };
+		1E26D07D5C90B2BC5173CDA4 /* pairing.html in Resources */ = {isa = PBXBuildFile; fileRef = E302C64EFFC69A9252332901 /* pairing.html */; };
+		2688DAC61E68831C51AA5463 /* popup.js in Resources */ = {isa = PBXBuildFile; fileRef = 1AF8AC0BDBE2902682E6BF2D /* popup.js */; };
 		2P00000000000000000000A1 /* TwoPasswordCore in Frameworks */ = {isa = PBXBuildFile; productRef = 2P0000000000000000000091 /* TwoPasswordCore */; };
 		2P00000000000000000000A2 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 2P0000000000000000000092 /* KeyboardShortcuts */; };
+		3153234A0D049CBD744372AE /* icon128.png in Resources */ = {isa = PBXBuildFile; fileRef = 888219B247F1FF724C58FB8A /* icon128.png */; };
+		48D19478BCC651384B7EF853 /* AppGroupRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD610223516AB5E35ED409D /* AppGroupRelay.swift */; };
+		6DE1B35EA6C8DC4BEC92BFDE /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0BB4B057C85DF0A7A34A1272 /* Cocoa.framework */; };
+		881583FE32C657233834CA3D /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27F94A17EBF12379095D5B56 /* SafariWebExtensionHandler.swift */; };
+		9BBB6947548C8979559D05F6 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 5C2AAD0AC34A2B7790BABB1A /* manifest.json */; };
+		BBA149A4DFB1D37D7821A8C2 /* SafariExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C953A583FDE3A32EC5CB1235 /* SafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E5F056DC0E6B8ED953DB9D57 /* pairing.js in Resources */ = {isa = PBXBuildFile; fileRef = 30A7958388FB23B0560D9275 /* pairing.js */; };
+		F0C1160D0A282B365F51B2FC /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = B59E7DC146DD322AF69015A7 /* background.js */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		757BF3F98385BB88D1B61D86 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2P0000000000000000000002 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 311FBE36D739AE8505EEDAD4;
+			remoteInfo = SafariExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		3E1A897A7714F03D21E25307 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				BBA149A4DFB1D37D7821A8C2 /* SafariExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		0BB4B057C85DF0A7A34A1272 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
+		1AF8AC0BDBE2902682E6BF2D /* popup.js */ = {isa = PBXFileReference; includeInIndex = 1; path = popup.js; sourceTree = "<group>"; };
+		27F94A17EBF12379095D5B56 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		2DD610223516AB5E35ED409D /* AppGroupRelay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppGroupRelay.swift; sourceTree = "<group>"; };
+		2F2EE795FF81D15868668853 /* SafariExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = SafariExtension.entitlements; sourceTree = "<group>"; };
 		2P0000000000000000000031 /* 2Password.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = 2Password.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		30A7958388FB23B0560D9275 /* pairing.js */ = {isa = PBXFileReference; includeInIndex = 1; path = pairing.js; sourceTree = "<group>"; };
+		56E6AEF91A7642D16D9C8468 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5C2AAD0AC34A2B7790BABB1A /* manifest.json */ = {isa = PBXFileReference; includeInIndex = 1; path = manifest.json; sourceTree = "<group>"; };
+		888219B247F1FF724C58FB8A /* icon128.png */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = image.png; path = icon128.png; sourceTree = "<group>"; };
+		91E0D3AFB732AFBB5E978A6B /* popup.html */ = {isa = PBXFileReference; includeInIndex = 1; path = popup.html; sourceTree = "<group>"; };
+		B59E7DC146DD322AF69015A7 /* background.js */ = {isa = PBXFileReference; includeInIndex = 1; path = background.js; sourceTree = "<group>"; };
+		C3F91B6A4D3F09C3D565450B /* content.js */ = {isa = PBXFileReference; includeInIndex = 1; path = content.js; sourceTree = "<group>"; };
+		C953A583FDE3A32EC5CB1235 /* SafariExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SafariExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E302C64EFFC69A9252332901 /* pairing.html */ = {isa = PBXFileReference; includeInIndex = 1; path = pairing.html; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		2P0000000000000000000011 /* 2Password */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = 2Password; sourceTree = "<group>"; };
+		2P0000000000000000000011 /* 2Password */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = 2Password;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -29,6 +89,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CD0494B3E8723D3C4B857F8E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6DE1B35EA6C8DC4BEC92BFDE /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -37,6 +105,8 @@
 			children = (
 				2P0000000000000000000011 /* 2Password */,
 				2P0000000000000000000012 /* Products */,
+				E3478F2A3E1DDAC3797F81A2 /* Frameworks */,
+				332B7F864B7921F8059A4095 /* SafariExtension */,
 			);
 			sourceTree = "<group>";
 		};
@@ -44,8 +114,54 @@
 			isa = PBXGroup;
 			children = (
 				2P0000000000000000000031 /* 2Password.app */,
+				C953A583FDE3A32EC5CB1235 /* SafariExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		332B7F864B7921F8059A4095 /* SafariExtension */ = {
+			isa = PBXGroup;
+			children = (
+				56E6AEF91A7642D16D9C8468 /* Info.plist */,
+				2F2EE795FF81D15868668853 /* SafariExtension.entitlements */,
+				27F94A17EBF12379095D5B56 /* SafariWebExtensionHandler.swift */,
+				2DD610223516AB5E35ED409D /* AppGroupRelay.swift */,
+				A381014291F78377486DD07E /* Resources */,
+			);
+			name = SafariExtension;
+			path = SafariExtension;
+			sourceTree = "<group>";
+		};
+		A381014291F78377486DD07E /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				B59E7DC146DD322AF69015A7 /* background.js */,
+				C3F91B6A4D3F09C3D565450B /* content.js */,
+				888219B247F1FF724C58FB8A /* icon128.png */,
+				5C2AAD0AC34A2B7790BABB1A /* manifest.json */,
+				E302C64EFFC69A9252332901 /* pairing.html */,
+				30A7958388FB23B0560D9275 /* pairing.js */,
+				91E0D3AFB732AFBB5E978A6B /* popup.html */,
+				1AF8AC0BDBE2902682E6BF2D /* popup.js */,
+			);
+			name = Resources;
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		E3478F2A3E1DDAC3797F81A2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				FC731DDC69CFFEDA94D91697 /* OS X */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		FC731DDC69CFFEDA94D91697 /* OS X */ = {
+			isa = PBXGroup;
+			children = (
+				0BB4B057C85DF0A7A34A1272 /* Cocoa.framework */,
+			);
+			name = "OS X";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -58,10 +174,12 @@
 				2P0000000000000000000022 /* Sources */,
 				2P0000000000000000000021 /* Frameworks */,
 				2P0000000000000000000023 /* Resources */,
+				3E1A897A7714F03D21E25307 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				0076E76CA61B38ADA56FFDC2 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				2P0000000000000000000011 /* 2Password */,
@@ -74,6 +192,23 @@
 			productName = 2Password;
 			productReference = 2P0000000000000000000031 /* 2Password.app */;
 			productType = "com.apple.product-type.application";
+		};
+		311FBE36D739AE8505EEDAD4 /* SafariExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 415EC35F005DB393230D853E /* Build configuration list for PBXNativeTarget "SafariExtension" */;
+			buildPhases = (
+				3E20EE15B6A6167EB5CC045D /* Sources */,
+				CD0494B3E8723D3C4B857F8E /* Frameworks */,
+				DDA63BC31B671D78A1D0ADF3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SafariExtension;
+			productName = SafariExtension;
+			productReference = C953A583FDE3A32EC5CB1235 /* SafariExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -101,7 +236,7 @@
 			mainGroup = 2P0000000000000000000001;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				2P0000000000000000000081 /* XCLocalSwiftPackageReference "Packages/TwoPasswordCore" */,
+				2P0000000000000000000081 /* XCLocalSwiftPackageReference "TwoPasswordCore" */,
 				2P0000000000000000000082 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 			);
 			productRefGroup = 2P0000000000000000000012 /* Products */;
@@ -109,6 +244,7 @@
 			projectRoot = "";
 			targets = (
 				2P0000000000000000000041 /* 2Password */,
+				311FBE36D739AE8505EEDAD4 /* SafariExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -118,6 +254,21 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DDA63BC31B671D78A1D0ADF3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F0C1160D0A282B365F51B2FC /* background.js in Resources */,
+				1B9F25933EAA80C0E5BEE04D /* content.js in Resources */,
+				3153234A0D049CBD744372AE /* icon128.png in Resources */,
+				9BBB6947548C8979559D05F6 /* manifest.json in Resources */,
+				1E26D07D5C90B2BC5173CDA4 /* pairing.html in Resources */,
+				E5F056DC0E6B8ED953DB9D57 /* pairing.js in Resources */,
+				17572E3DA866B938C35BB469 /* popup.html in Resources */,
+				2688DAC61E68831C51AA5463 /* popup.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -131,7 +282,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3E20EE15B6A6167EB5CC045D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				881583FE32C657233834CA3D /* SafariWebExtensionHandler.swift in Sources */,
+				48D19478BCC651384B7EF853 /* AppGroupRelay.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0076E76CA61B38ADA56FFDC2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = SafariExtension;
+			target = 311FBE36D739AE8505EEDAD4 /* SafariExtension */;
+			targetProxy = 757BF3F98385BB88D1B61D86 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		2P0000000000000000000052 /* Debug */ = {
@@ -254,6 +423,56 @@
 			};
 			name = Release;
 		};
+		935969168012CE0C6AF84516 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = SafariExtension/SafariExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L5774582ZK;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SafariExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.michael.twopassword.SafariExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		C2EAAFDFD9551A1F94AA3915 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = SafariExtension/SafariExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L5774582ZK;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SafariExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.michael.twopassword.SafariExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -275,10 +494,19 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		415EC35F005DB393230D853E /* Build configuration list for PBXNativeTarget "SafariExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C2EAAFDFD9551A1F94AA3915 /* Release */,
+				935969168012CE0C6AF84516 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		2P0000000000000000000081 /* XCLocalSwiftPackageReference "Packages/TwoPasswordCore" */ = {
+		2P0000000000000000000081 /* XCLocalSwiftPackageReference "TwoPasswordCore" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/TwoPasswordCore;
 		};

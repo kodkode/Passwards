@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      width: 340px; margin: 0;
+      background: #1c1c1f; color: #f2f2f4;
+      font: 13px -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px; border-bottom: 1px solid #2c2c30;
+    }
+    header img { width: 20px; height: 20px; border-radius: 5px; }
+    header input {
+      flex: 1; background: #2a2a2e; color: inherit;
+      border: 1px solid #3a3a3f; border-radius: 7px;
+      padding: 6px 9px; font: inherit; outline: none;
+    }
+    header input:focus { border-color: #2e6ee8; }
+    #status {
+      padding: 26px 18px; text-align: center; color: #9a9aa2; line-height: 1.5;
+    }
+    #status .code {
+      font: 600 26px ui-monospace, monospace; letter-spacing: 4px;
+      color: #f2f2f4; display: block; margin-top: 10px;
+    }
+    #status button {
+      margin-top: 12px; font: inherit; border: none; border-radius: 7px;
+      background: #2e6ee8; color: white; padding: 7px 16px; cursor: pointer;
+    }
+    #list { max-height: 420px; overflow-y: auto; }
+    .section-title {
+      padding: 8px 12px 4px; font-size: 11px; font-weight: 600;
+      color: #9a9aa2; text-transform: uppercase; letter-spacing: .4px;
+    }
+    .item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; cursor: default;
+    }
+    .item:hover { background: #28282d; }
+    .item .glyph {
+      width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0;
+      background: #34343a; display: flex; align-items: center; justify-content: center;
+      font-weight: 600; font-size: 14px; color: #c9c9d1;
+    }
+    .item .meta { flex: 1; min-width: 0; }
+    .item .meta .title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item .meta .sub { color: #9a9aa2; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item .actions { display: none; gap: 6px; }
+    .item:hover .actions { display: flex; }
+    .item .actions button {
+      font: 12px -apple-system, sans-serif; border: none; border-radius: 6px;
+      padding: 4px 10px; cursor: pointer; background: #3a3a40; color: #e7e7ec;
+    }
+    .item .actions button.fill { background: #2e6ee8; color: white; }
+    footer {
+      padding: 7px 12px; border-top: 1px solid #2c2c30;
+      color: #9a9aa2; font-size: 11px; display: flex; justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icon128.png" alt="">
+    <input id="search" type="text" placeholder="Search logins…" autofocus>
+  </header>
+  <div id="status" hidden></div>
+  <div id="list"></div>
+  <footer><span id="footer-text"></span><span>2Password</span></footer>
+  <script src="popup.js"></script>
+</body>
+</html>

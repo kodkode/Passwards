@@ -7,26 +7,41 @@ import Foundation
 /// the extension port and the app's Unix socket, so the same codec works on
 /// both hops and the JS side never re-frames.
 ///
-/// Lifecycle:
-///   1. Pairing (once): `pairRequest` ⇄ `pairResponse`, user approves a
-///      verification code shown in both the app and the extension, then the
-///      app answers `pairConfirmed` / `pairRejected`.
-///   2. Session (every connect): `sessionStart` ⇄ `sessionAccept` derive
-///      fresh AES-GCM keys (see `BrowserChannelCrypto`).
+/// Every message carries a `cid` (connection id) the extension mints once per
+/// `connectNative` port. The app keys all session/sequence state by `cid`, not
+/// by socket-connection identity — so a relay (Safari's app-extension) that
+/// silently drops and reopens the underlying socket mid-session resumes the
+/// same `cid` and the sequence counters never reset. See `BrowserBridgeServer`.
+///
+/// Lifecycle (strictly one reply per inbound message, so it works over Safari's
+/// per-message `beginRequest`/`completeRequest` as well as a streaming socket):
+///   1. Pairing (once): `pairRequest` → `pairResponse` (the app's public key);
+///      the user approves a verification code shown in both the app and the
+///      extension; the extension then polls `pairPoll` → `pairPending` until
+///      the app answers `pairConfirmed` / `pairRejected`. (The verdict is a
+///      *pulled* reply, never an unsolicited push — Safari forbids pushes.)
+///   2. Session (every connect): `sessionStart` ⇄ `sessionAccept` derive fresh
+///      AES-GCM keys (see `BrowserChannelCrypto`); `sessionEnd` drops it.
 ///   3. RPC: `enc` envelopes carrying `BrowserRequest`/`BrowserResponse` JSON.
 public struct BrowserWireMessage: Codable, Sendable, Equatable {
     public enum Kind: String, Codable, Sendable {
         case pairRequest = "pair-request"
         case pairResponse = "pair-response"
+        case pairPoll = "pair-poll"
+        case pairPending = "pair-pending"
         case pairConfirmed = "pair-confirmed"
         case pairRejected = "pair-rejected"
         case sessionStart = "session-start"
         case sessionAccept = "session-accept"
+        case sessionEnd = "session-end"
         case enc
         case error
     }
 
     public var type: Kind
+    /// Connection id minted per extension port; routes every message to its
+    /// session/pairing state in the app, independent of socket identity.
+    public var cid: String?
     /// Base64 X25519 static public key (pairing identity).
     public var publicKey: String?
     /// Base64 X25519 ephemeral public key (session handshake).
@@ -38,9 +53,10 @@ public struct BrowserWireMessage: Codable, Sendable, Equatable {
     /// Human-readable detail for `error`.
     public var message: String?
 
-    public init(type: Kind, publicKey: String? = nil, ephemeralKey: String? = nil,
+    public init(type: Kind, cid: String? = nil, publicKey: String? = nil, ephemeralKey: String? = nil,
                 seq: UInt64? = nil, payload: String? = nil, message: String? = nil) {
         self.type = type
+        self.cid = cid
         self.publicKey = publicKey
         self.ephemeralKey = ephemeralKey
         self.seq = seq

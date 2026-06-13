@@ -8,6 +8,13 @@
 
 const HOST = "com.michael.twopassword";
 
+// chrome.* exists in Chrome/Brave and Safari alike; prefer browser.* when the
+// engine defines it. connectNative routes to the native messaging host on
+// Chrome and to the embedded app-extension on Safari — the wire protocol below
+// is identical, and every message carries a per-port `cid` so the app can
+// resume a session even if Safari's relay drops and reopens its socket.
+const api = (typeof browser !== "undefined" && browser.runtime) ? browser : chrome;
+
 const enc = new TextEncoder();
 const b64 = {
   encode: (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))),
@@ -53,7 +60,7 @@ function nonceFor(direction, seq) {
   return out;
 }
 
-async function sealRequest(keyBytes, seq, obj) {
+async function sealRequest(keyBytes, seq, obj, cid) {
   const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["encrypt"]);
   const nonce = nonceFor(1, seq); // extension → app
   const box = await crypto.subtle.encrypt(
@@ -61,7 +68,7 @@ async function sealRequest(keyBytes, seq, obj) {
     key,
     enc.encode(JSON.stringify(obj))
   );
-  return { type: "enc", seq, payload: b64.encode(concatBytes(nonce, new Uint8Array(box))) };
+  return { type: "enc", cid, seq, payload: b64.encode(concatBytes(nonce, new Uint8Array(box))) };
 }
 
 async function openResponse(keyBytes, expectedSeq, message) {
@@ -96,7 +103,7 @@ async function sessionKeysFromShared(sharedSecret, pairingSecret, extEphPub, app
 let session = null; // {port, send, receive, sendSeq, recvSeq, pending: Map, queue: []}
 
 function connectPort() {
-  return chrome.runtime.connectNative(HOST);
+  return api.runtime.connectNative(HOST);
 }
 
 function postRaw(port, message) {
@@ -127,10 +134,11 @@ async function getStoredPairing() {
 async function pair(onCode) {
   const keyPair = await x25519Generate();
   const extPub = new Uint8Array(await crypto.subtle.exportKey("raw", keyPair.publicKey));
+  const cid = crypto.randomUUID();
 
   const port = connectPort();
   try {
-    postRaw(port, { type: "pair-request", publicKey: b64.encode(extPub) });
+    postRaw(port, { type: "pair-request", cid, publicKey: b64.encode(extPub) });
     const response = await nextFromPort(port);
     if (response.type === "error") throw new Error(response.message);
     if (response.type !== "pair-response") throw new Error("unexpected " + response.type);
@@ -140,8 +148,17 @@ async function pair(onCode) {
     const { secret, code } = await pairingFromShared(shared, extPub, appPub);
     onCode?.(code);
 
-    const verdict = await nextFromPort(port);
-    if (verdict.type !== "pair-confirmed") throw new Error("pairing rejected");
+    // The app shows the same code and waits for the user. We can't be handed an
+    // unsolicited confirmation on Safari, so poll for the verdict.
+    for (;;) {
+      postRaw(port, { type: "pair-poll", cid });
+      const verdict = await nextFromPort(port);
+      if (verdict.type === "pair-confirmed") break;
+      if (verdict.type === "pair-rejected") throw new Error("pairing rejected");
+      if (verdict.type === "error") throw new Error(verdict.message || "pairing failed");
+      // pair-pending → wait briefly, then poll again.
+      await new Promise((r) => setTimeout(r, 400));
+    }
 
     await chrome.storage.local.set({
       staticKeyPair: {
@@ -161,9 +178,11 @@ async function startSession() {
 
   const eph = await x25519Generate();
   const ephPub = new Uint8Array(await crypto.subtle.exportKey("raw", eph.publicKey));
+  const cid = crypto.randomUUID();
   const port = connectPort();
   postRaw(port, {
     type: "session-start",
+    cid,
     publicKey: stored.staticKeyPair.publicRaw,
     ephemeralKey: b64.encode(ephPub),
   });
@@ -183,19 +202,19 @@ async function startSession() {
   const shared = await x25519SharedSecret(eph.privateKey, appEphPub);
   const keys = await sessionKeysFromShared(shared, b64.decode(stored.pairingSecret), ephPub, appEphPub);
 
-  session = { port, send: keys.send, receive: keys.receive, sendSeq: 0, recvSeq: 0, rpcID: 0, busy: Promise.resolve() };
+  session = { port, cid, send: keys.send, receive: keys.receive, sendSeq: 0, recvSeq: 0, rpcID: 0, busy: Promise.resolve() };
   port.onDisconnect.addListener(() => { if (session?.port === port) session = null; });
   return session;
 }
 
-async function rpc(method, params = {}) {
+async function rpc(method, params = {}, retried = false) {
   let s = session;
   if (!s) s = await startSession();
   // Serialize exchanges so seq counters match the app's expectations.
   const run = s.busy.then(async () => {
     const request = { id: ++s.rpcID, method, ...params };
     const reply = nextFromPort(s.port);
-    postRaw(s.port, await sealRequest(s.send, s.sendSeq, request));
+    postRaw(s.port, await sealRequest(s.send, s.sendSeq, request, s.cid));
     s.sendSeq += 1;
     const opened = await openResponse(s.receive, s.recvSeq, await reply);
     s.recvSeq += 1;
@@ -206,6 +225,12 @@ async function rpc(method, params = {}) {
     return await run;
   } catch (error) {
     if (session === s) { try { s.port.disconnect(); } catch {} session = null; }
+    // The app may have expired or lost this cid's session (Safari relay
+    // reconnects, idle TTL, or service-worker suspension). Re-handshake once
+    // and retry transparently before surfacing the failure.
+    if (!retried && error.message !== "not-paired") {
+      return rpc(method, params, true);
+    }
     throw error;
   }
 }

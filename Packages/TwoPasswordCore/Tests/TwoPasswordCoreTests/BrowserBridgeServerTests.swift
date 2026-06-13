@@ -80,6 +80,12 @@ private final class FakeExtensionClient: @unchecked Sendable {
             }
         }
     }
+
+    /// One round trip: send a message, await the single reply.
+    func roundTrip(_ message: BrowserWireMessage) async throws -> BrowserWireMessage {
+        try await send(message)
+        return try await receive()
+    }
 }
 
 @Suite("Browser bridge server", .serialized)
@@ -90,80 +96,158 @@ struct BrowserBridgeServerTests {
         "/tmp/2pw-test-\(UInt32.random(in: 0..<UInt32.max)).sock"
     }
 
-    @Test func pairThenSessionThenRPC() async throws {
-        let app = FakeAppSide()
+    private func makeServer(_ app: FakeAppSide) async throws -> (BrowserBridgeServer, String) {
         let path = tempSocketPath()
         let server = BrowserBridgeServer(socketPath: path, delegate: app, pairings: app)
         try await server.start()
-        defer { Task { await server.stop() } }
         try await Task.sleep(for: .milliseconds(200))
+        return (server, path)
+    }
 
-        // --- Pair ---
+    /// Drive the pairing handshake to a verdict, polling like the JS does.
+    private func pair(
+        client: FakeExtensionClient, expectConfirmed: Bool
+    ) async throws -> (staticKey: Curve25519.KeyAgreement.PrivateKey, staticPub: Data, secret: SymmetricKey, code: String) {
+        let cid = UUID().uuidString
         let staticKey = Curve25519.KeyAgreement.PrivateKey()
         let staticPub = staticKey.publicKey.rawRepresentation
-        let client = FakeExtensionClient(socketPath: path)
-        try await client.send(BrowserWireMessage(type: .pairRequest, publicKey: staticPub.base64EncodedString()))
 
-        let pairResponse = try await client.receive()
-        #expect(pairResponse.type == .pairResponse)
-        let appPub = Data(base64Encoded: pairResponse.publicKey!)!
-        let (pairingSecret, code) = try BrowserChannelCrypto.pairing(
+        let response = try await client.roundTrip(
+            BrowserWireMessage(type: .pairRequest, cid: cid, publicKey: staticPub.base64EncodedString()))
+        #expect(response.type == .pairResponse)
+        let appPub = Data(base64Encoded: response.publicKey!)!
+        let (secret, code) = try BrowserChannelCrypto.pairing(
             myPrivateKey: staticKey, peerPublicKey: appPub,
             extensionPublicKey: staticPub, appPublicKey: appPub)
 
-        let confirmed = try await client.receive()
-        #expect(confirmed.type == .pairConfirmed)
-        #expect(app.lock.withLock { app.approvedCodes } == [code])
+        // Poll until the app's async approval resolves.
+        for _ in 0..<50 {
+            let verdict = try await client.roundTrip(BrowserWireMessage(type: .pairPoll, cid: cid))
+            if verdict.type == .pairPending { try await Task.sleep(for: .milliseconds(50)); continue }
+            #expect(verdict.type == (expectConfirmed ? .pairConfirmed : .pairRejected))
+            return (staticKey, staticPub, secret, code)
+        }
+        Issue.record("pairing never resolved")
+        return (staticKey, staticPub, secret, code)
+    }
 
-        // --- Session (new connection, like a browser restart) ---
-        let client2 = FakeExtensionClient(socketPath: path)
+    /// Open a session over `client` for `cid`, returning the derived keys.
+    private func startSession(
+        client: FakeExtensionClient, cid: String,
+        staticPub: Data, secret: SymmetricKey
+    ) async throws -> (extToApp: SymmetricKey, appToExt: SymmetricKey) {
         let eph = Curve25519.KeyAgreement.PrivateKey()
         let ephPub = eph.publicKey.rawRepresentation
-        try await client2.send(BrowserWireMessage(
-            type: .sessionStart,
+        let accept = try await client.roundTrip(BrowserWireMessage(
+            type: .sessionStart, cid: cid,
             publicKey: staticPub.base64EncodedString(),
             ephemeralKey: ephPub.base64EncodedString()))
-
-        let accept = try await client2.receive()
         #expect(accept.type == .sessionAccept)
         let appEph = Data(base64Encoded: accept.ephemeralKey!)!
         let keys = try BrowserChannelCrypto.sessionKeys(
-            myEphemeral: eph, peerEphemeralPublicKey: appEph, pairingSecret: pairingSecret,
+            myEphemeral: eph, peerEphemeralPublicKey: appEph, pairingSecret: secret,
             extensionEphemeralPublicKey: ephPub, appEphemeralPublicKey: appEph)
+        return (keys.extensionToApp, keys.appToExtension)
+    }
 
-        // --- RPCs ---
+    @Test func pairThenSessionThenRPC() async throws {
+        let app = FakeAppSide()
+        let (server, path) = try await makeServer(app)
+        defer { Task { await server.stop() } }
+
+        let client = FakeExtensionClient(socketPath: path)
+        let paired = try await pair(client: client, expectConfirmed: true)
+        #expect(app.lock.withLock { app.approvedCodes } == [paired.code])
+
+        // Session over a new connection (like a browser restart).
+        let cid = UUID().uuidString
+        let client2 = FakeExtensionClient(socketPath: path)
+        let keys = try await startSession(
+            client: client2, cid: cid, staticPub: paired.staticPub, secret: paired.secret)
+
+        // RPCs.
         let query = BrowserRequest(id: 1, method: .credentialsQuery, url: "https://github.com/login")
-        try await client2.send(try BrowserChannelCrypto.seal(
-            JSONEncoder().encode(query), role: .extensionSide, seq: 0, key: keys.extensionToApp))
         let reply1 = try BrowserChannelCrypto.open(
-            try await client2.receive(), from: .app, expectedSeq: 0, key: keys.appToExtension)
-        let queryResponse = try JSONDecoder().decode(BrowserResponse.self, from: reply1)
-        #expect(queryResponse.matches?.first?.title == "GitHub")
+            try await client2.roundTrip(try BrowserChannelCrypto.seal(
+                JSONEncoder().encode(query), role: .extensionSide, seq: 0, key: keys.extToApp).with(cid: cid)),
+            from: .app, expectedSeq: 0, key: keys.appToExt)
+        #expect(try JSONDecoder().decode(BrowserResponse.self, from: reply1).matches?.first?.title == "GitHub")
 
         let fill = BrowserRequest(id: 2, method: .credentialsFill, url: "https://github.com/login", itemID: "item-1")
-        try await client2.send(try BrowserChannelCrypto.seal(
-            JSONEncoder().encode(fill), role: .extensionSide, seq: 1, key: keys.extensionToApp))
         let reply2 = try BrowserChannelCrypto.open(
-            try await client2.receive(), from: .app, expectedSeq: 1, key: keys.appToExtension)
-        let fillResponse = try JSONDecoder().decode(BrowserResponse.self, from: reply2)
-        #expect(fillResponse.password == "hunter2")
+            try await client2.roundTrip(try BrowserChannelCrypto.seal(
+                JSONEncoder().encode(fill), role: .extensionSide, seq: 1, key: keys.extToApp).with(cid: cid)),
+            from: .app, expectedSeq: 1, key: keys.appToExt)
+        #expect(try JSONDecoder().decode(BrowserResponse.self, from: reply2).password == "hunter2")
+    }
+
+    @Test func sessionResumesAcrossReconnect() async throws {
+        // The whole point of cid-keying: Safari's relay can drop and reopen the
+        // socket mid-session, so a NEW socket carrying the same cid must keep
+        // the sequence counters running rather than reset them.
+        let app = FakeAppSide()
+        let (server, path) = try await makeServer(app)
+        defer { Task { await server.stop() } }
+
+        let client = FakeExtensionClient(socketPath: path)
+        let paired = try await pair(client: client, expectConfirmed: true)
+
+        let cid = UUID().uuidString
+        let connA = FakeExtensionClient(socketPath: path)
+        let keys = try await startSession(
+            client: connA, cid: cid, staticPub: paired.staticPub, secret: paired.secret)
+
+        // First RPC on connection A (seq 0).
+        let q0 = BrowserRequest(id: 1, method: .status)
+        let r0 = try BrowserChannelCrypto.open(
+            try await connA.roundTrip(try BrowserChannelCrypto.seal(
+                JSONEncoder().encode(q0), role: .extensionSide, seq: 0, key: keys.extToApp).with(cid: cid)),
+            from: .app, expectedSeq: 0, key: keys.appToExt)
+        #expect(try JSONDecoder().decode(BrowserResponse.self, from: r0).locked == false)
+
+        // Reconnect: brand-new socket, SAME cid + SAME keys, next seq (1).
+        let connB = FakeExtensionClient(socketPath: path)
+        let q1 = BrowserRequest(id: 2, method: .credentialsFill, itemID: "item-1")
+        let r1 = try BrowserChannelCrypto.open(
+            try await connB.roundTrip(try BrowserChannelCrypto.seal(
+                JSONEncoder().encode(q1), role: .extensionSide, seq: 1, key: keys.extToApp).with(cid: cid)),
+            from: .app, expectedSeq: 1, key: keys.appToExt)
+        #expect(try JSONDecoder().decode(BrowserResponse.self, from: r1).password == "hunter2")
+    }
+
+    @Test func sessionEndDropsSession() async throws {
+        let app = FakeAppSide()
+        let (server, path) = try await makeServer(app)
+        defer { Task { await server.stop() } }
+
+        let client = FakeExtensionClient(socketPath: path)
+        let paired = try await pair(client: client, expectConfirmed: true)
+
+        let cid = UUID().uuidString
+        let conn = FakeExtensionClient(socketPath: path)
+        let keys = try await startSession(
+            client: conn, cid: cid, staticPub: paired.staticPub, secret: paired.secret)
+
+        _ = try await conn.roundTrip(BrowserWireMessage(type: .sessionEnd, cid: cid))
+
+        // After session-end the cid is gone: an enc must be refused, not served.
+        let q = BrowserRequest(id: 1, method: .status)
+        let reply = try await conn.roundTrip(try BrowserChannelCrypto.seal(
+            JSONEncoder().encode(q), role: .extensionSide, seq: 0, key: keys.extToApp).with(cid: cid))
+        #expect(reply.type == .error)
     }
 
     @Test func unpairedSessionIsRefused() async throws {
         let app = FakeAppSide()
-        let path = tempSocketPath()
-        let server = BrowserBridgeServer(socketPath: path, delegate: app, pairings: app)
-        try await server.start()
+        let (server, path) = try await makeServer(app)
         defer { Task { await server.stop() } }
-        try await Task.sleep(for: .milliseconds(200))
 
         let client = FakeExtensionClient(socketPath: path)
         let eph = Curve25519.KeyAgreement.PrivateKey()
-        try await client.send(BrowserWireMessage(
-            type: .sessionStart,
+        let reply = try await client.roundTrip(BrowserWireMessage(
+            type: .sessionStart, cid: UUID().uuidString,
             publicKey: Curve25519.KeyAgreement.PrivateKey().publicKey.rawRepresentation.base64EncodedString(),
             ephemeralKey: eph.publicKey.rawRepresentation.base64EncodedString()))
-        let reply = try await client.receive()
         #expect(reply.type == .error)
         #expect(reply.message == "not paired")
     }
@@ -171,20 +255,20 @@ struct BrowserBridgeServerTests {
     @Test func rejectedPairingIsNotStored() async throws {
         let app = FakeAppSide()
         app.approve = false
-        let path = tempSocketPath()
-        let server = BrowserBridgeServer(socketPath: path, delegate: app, pairings: app)
-        try await server.start()
+        let (server, path) = try await makeServer(app)
         defer { Task { await server.stop() } }
-        try await Task.sleep(for: .milliseconds(200))
 
         let client = FakeExtensionClient(socketPath: path)
-        let staticKey = Curve25519.KeyAgreement.PrivateKey()
-        try await client.send(BrowserWireMessage(
-            type: .pairRequest,
-            publicKey: staticKey.publicKey.rawRepresentation.base64EncodedString()))
-        _ = try await client.receive() // pair-response
-        let verdict = try await client.receive()
-        #expect(verdict.type == .pairRejected)
+        _ = try await pair(client: client, expectConfirmed: false)
         #expect(app.lock.withLock { app.pairings.isEmpty })
+    }
+}
+
+private extension BrowserWireMessage {
+    /// Stamp the connection id onto a sealed envelope (seal() doesn't know it).
+    func with(cid: String) -> BrowserWireMessage {
+        var copy = self
+        copy.cid = cid
+        return copy
     }
 }
