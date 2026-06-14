@@ -20,19 +20,16 @@ enum Theme {
 
     // MARK: Adaptive surfaces matched to 1P8's panels
 
-    /// Middle column (item list) background.
+    /// Middle column (item list) background — matched exactly to the detail
+    /// pane so the two columns read as one continuous surface (as in 1P8).
     static let listBackground = Color(
-        light: NSColor(srgbRed: 0.965, green: 0.965, blue: 0.973, alpha: 1),
-        dark: NSColor(srgbRed: 0x1F / 255, green: 0x1F / 255, blue: 0x23 / 255, alpha: 1)
+        light: NSColor.white,
+        dark: NSColor(srgbRed: 0x24 / 255, green: 0x24 / 255, blue: 0x29 / 255, alpha: 1)
     )
 
-    /// Sidebar: 1P8 uses an opaque dark panel, not macOS's translucent material.
-    static let sidebarBackground = Color(
-        light: NSColor(srgbRed: 0.925, green: 0.925, blue: 0.935, alpha: 1),
-        dark: NSColor(srgbRed: 0x26 / 255, green: 0x26 / 255, blue: 0x2A / 255, alpha: 1)
-    )
-
-    /// Detail pane background (slightly lighter than the list in dark mode).
+    /// Detail pane background — also used by the item list, so the two columns
+    /// read as one surface. The sidebar takes NO color here: it uses macOS's
+    /// native frosted `.sidebar` material (see `WindowConfigurator`).
     static let detailBackground = Color(
         light: NSColor.white,
         dark: NSColor(srgbRed: 0x24 / 255, green: 0x24 / 255, blue: 0x29 / 255, alpha: 1)

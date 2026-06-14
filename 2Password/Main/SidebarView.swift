@@ -1,5 +1,24 @@
 import SwiftUI
+import AppKit
 import TwoPasswordCore
+
+/// The native frosted sidebar material (behind-window vibrancy). SwiftUI's bare
+/// `.listStyle(.sidebar)` doesn't reliably render it on every macOS build, so we
+/// back the sidebar list with this explicitly. Requires the window to be
+/// non-opaque (see `WindowConfigurator`) for `.behindWindow` to reveal the
+/// desktop — exactly the material 1Password 8, Finder, and Mail use.
+struct SidebarMaterial: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .sidebar
+        view.blendingMode = .behindWindow
+        view.state = .followsWindowActiveState
+        view.isEmphasized = true
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
+}
 
 struct SidebarView: View {
     @Bindable var store: VaultStore
@@ -72,7 +91,7 @@ struct SidebarView: View {
                                     .font(.caption)
                             }
                         } icon: {
-                            CategoryIconView(category: category, size: 18)
+                            CategoryIconView(category: category, size: 16)
                         }
                         .tag(SidebarFilter.category(category))
                     }
@@ -114,8 +133,11 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
-        .font(.system(size: 13.5))
-        .environment(\.defaultMinListRowHeight, 30)
+        // Transparent so the window-level frosted material (see MainWindow)
+        // shows through FLUSH to the window frame — not as an inset card.
+        .scrollContentBackground(.hidden)
+        .font(.system(size: 14.5))
+        .environment(\.defaultMinListRowHeight, 40)
         .sheet(isPresented: $newVaultShown) {
             NewVaultSheet(store: store)
         }
@@ -169,10 +191,10 @@ struct SidebarView: View {
 
     private var accountHeader: some View {
         HStack(spacing: 10) {
-            DefaultAvatarView(size: 34)
+            DefaultAvatarView(size: 30)
             VStack(alignment: .leading, spacing: 1) {
                 Text("Personal")
-                    .font(.callout.weight(.semibold))
+                    .font(.system(size: 14, weight: .semibold))
                 Text(appState.account?.email ?? "")
                     .font(.caption)
                     .foregroundStyle(.secondary)

@@ -25,6 +25,8 @@ struct WatchtowerDashboardView: View {
             .frame(maxWidth: 680, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        // The window is non-opaque (frosted sidebar); keep this pane solid.
+        .background(Theme.detailBackground)
         .task {
             await watchtower.runIfStale()
         }

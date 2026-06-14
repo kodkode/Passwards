@@ -89,7 +89,7 @@ struct FaviconView: View {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: size * 0.7, height: size * 0.7)
+                    .frame(width: size * 0.78, height: size * 0.78)
                     .frame(width: size, height: size)
                     .background(.white, in: RoundedRectangle(cornerRadius: size * 0.24, style: .continuous))
                     .overlay {

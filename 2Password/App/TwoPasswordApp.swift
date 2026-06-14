@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import TwoPasswordCore
 
 /// Entry point: the same binary is either the GUI app or a headless
@@ -29,6 +30,7 @@ struct TwoPasswordApp: App {
         Window("2Password", id: "main") {
             RootView(appState: appState)
                 .preferredColorScheme(theme == "light" ? .light : theme == "dark" ? .dark : nil)
+                .background(WindowConfigurator())
                 .task {
                     await appState.bootstrap()
                     if quickAccess == nil {
@@ -38,8 +40,12 @@ struct TwoPasswordApp: App {
         }
         // 1P8-style window: no title text, standard-height unified toolbar over
         // the content area, sidebar running full-height with the traffic lights
-        // inside it. The sidebar keeps macOS's native translucent material —
-        // that's exactly what 1Password 8 uses.
+        // inside it. The sidebar uses macOS's native `.sidebar` material — but
+        // that's behind-window vibrancy, so it only frosts when the window is
+        // non-opaque. WindowConfigurator (on RootView) sets isOpaque=false with
+        // a clear backing so the desktop shows through the sidebar, exactly like
+        // 1Password 8, Finder, and Mail. The content columns paint their own
+        // opaque backgrounds, so only the sidebar frosts.
         .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
             CommandGroup(after: .appSettings) {
@@ -103,8 +109,13 @@ struct RootView: View {
     var body: some View {
         switch appState.phase {
         case .loading:
-            ProgressView()
-                .frame(minWidth: 760, minHeight: 560)
+            // The window is non-opaque (see WindowConfigurator), so every phase
+            // must paint its own backdrop or the desktop bleeds through.
+            ZStack {
+                Theme.detailBackground.ignoresSafeArea()
+                ProgressView()
+            }
+            .frame(minWidth: 760, minHeight: 560)
         case .onboarding:
             OnboardingFlow(appState: appState)
         case .locked:
@@ -113,5 +124,29 @@ struct RootView: View {
             MainWindow(appState: appState)
                 .frame(minWidth: 900, minHeight: 560)
         }
+    }
+}
+
+/// Makes the main window non-opaque so the sidebar's native behind-window
+/// `.sidebar` material can sample the desktop and frost, like 1Password 8,
+/// Finder, and Mail. `window` is nil while `makeNSView` runs, so configuration
+/// hops to the next runloop and repeats in `updateNSView` so the first
+/// appearance isn't missed. Only the sidebar shows through — the item-list and
+/// detail columns paint their own opaque backgrounds.
+private struct WindowConfigurator: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async { Self.configure(view.window) }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async { Self.configure(nsView.window) }
+    }
+
+    private static func configure(_ window: NSWindow?) {
+        guard let window else { return }
+        window.isOpaque = false
+        window.backgroundColor = .clear
     }
 }

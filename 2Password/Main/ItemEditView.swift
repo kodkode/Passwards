@@ -90,6 +90,8 @@ struct ItemEditView: View {
             .frame(maxWidth: 640, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        // The window is non-opaque (frosted sidebar); keep this pane solid.
+        .background(Theme.detailBackground)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") { close() }

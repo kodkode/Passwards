@@ -129,8 +129,8 @@ struct ItemListRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            ItemIconView(summary: summary, size: 34)
-            VStack(alignment: .leading, spacing: 2) {
+            ItemIconView(summary: summary, size: 30)
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
                     Text(summary.overview.title.isEmpty ? "Untitled" : summary.overview.title)
                         .font(.system(size: 14, weight: .semibold))
@@ -143,14 +143,14 @@ struct ItemListRow: View {
                 }
                 if !summary.overview.subtitle.isEmpty {
                     Text(summary.overview.subtitle)
-                        .font(.system(size: 12))
+                        .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
             }
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 8)
         .contextMenu {
             contextMenu
         }

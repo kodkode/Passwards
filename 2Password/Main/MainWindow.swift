@@ -15,8 +15,15 @@ struct MainWindow: View {
 
     var body: some View {
         NavigationSplitView {
-            SidebarView(store: store, appState: appState)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 300)
+            ZStack {
+                // Frosted material fills the whole sidebar column FLUSH to the
+                // window frame; the List (which macOS 26 insets) floats on top.
+                // Putting it here, not as the List's background, avoids the
+                // inset "floating card" look and matches 1P8's flush frame.
+                SidebarMaterial().ignoresSafeArea()
+                SidebarView(store: store, appState: appState)
+            }
+            .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 300)
         } content: {
             ItemListView(store: store)
                 .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 400)
