@@ -37,6 +37,42 @@ struct StorageTests {
         return item
     }
 
+    @Test func remoteAccountAdoptionBacksUpPriorKeyMaterial() async throws {
+        let env = try await TestEnvironment.make()
+        let original = try await env.database.writer.read { try AccountRecord.fetchOne($0)! }
+
+        func incoming(salt: UInt8, key: UInt8) -> AccountCrypto.AccountKeyRecord {
+            .init(accountID: original.id, email: original.email,
+                  kdfSalt: Data(repeating: salt, count: 16), kdfIterations: 650_000,
+                  encMasterKey: Data(repeating: key, count: 60))
+        }
+
+        // Re-adopting identical key material makes no backup.
+        try await env.database.adoptRemoteAccount(original.keyRecord)
+        #expect(try await env.database.accountKeyBackups().isEmpty)
+
+        // A password-change-style record backs up the OLD material, adopts NEW.
+        let adopted = try await env.database.adoptRemoteAccount(incoming(salt: 9, key: 9))
+        #expect(adopted)
+        let backups = try await env.database.accountKeyBackups()
+        #expect(backups.count == 1)
+        #expect(backups[0].encMasterKey == original.encMasterKey)  // prior key recoverable
+        #expect(backups[0].kdfSalt == original.kdfSalt)
+        let active = try await env.database.writer.read { try AccountRecord.fetchOne($0)! }
+        #expect(active.encMasterKey == Data(repeating: 9, count: 60))
+
+        // A record for a different account is refused outright.
+        let foreign = AccountCrypto.AccountKeyRecord(
+            accountID: "OTHER", email: "x", kdfSalt: Data([1]), kdfIterations: 1, encMasterKey: Data([1]))
+        #expect(try await env.database.adoptRemoteAccount(foreign) == false)
+
+        // Backup history is capped.
+        for i in 0..<(AppDatabase.maxAccountKeyBackups + 5) {
+            try await env.database.adoptRemoteAccount(incoming(salt: UInt8(20 + i), key: UInt8(100 + i)))
+        }
+        #expect(try await env.database.accountKeyBackups().count <= AppDatabase.maxAccountKeyBackups)
+    }
+
     @Test func vaultRoundTrip() async throws {
         let env = try await TestEnvironment.make()
         let all = try await env.vaults.allVaults()

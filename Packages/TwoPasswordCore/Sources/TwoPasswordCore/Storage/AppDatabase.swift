@@ -92,6 +92,20 @@ public struct AppDatabase: Sendable {
                 t.column("deletedAt", .datetime).notNull()
             }
         }
+        migrator.registerMigration("v3-account-backup") { db in
+            // Snapshots of the account's key material taken before an incoming
+            // (unauthenticated) CloudKit Account record overwrites it, so a
+            // rolled-back or hostile record can't permanently lock the user out.
+            try db.create(table: "accountKeyBackup") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("accountId", .text).notNull()
+                t.column("email", .text).notNull()
+                t.column("kdfSalt", .blob).notNull()
+                t.column("kdfIterations", .integer).notNull()
+                t.column("encMasterKey", .blob).notNull()
+                t.column("replacedAt", .datetime).notNull()
+            }
+        }
         return migrator
     }
 
@@ -111,6 +125,53 @@ public struct AppDatabase: Sendable {
             )
         }
     }
+
+    // MARK: Account key adoption (with recovery backup)
+
+    public static let maxAccountKeyBackups = 10
+
+    /// Adopts a remote account key record (bootstrap, or a password change that
+    /// re-wrapped the master key). Because the record is unauthenticated, the
+    /// prior key material is snapshotted into `accountKeyBackup` BEFORE it is
+    /// overwritten, so a rolled-back or hostile record can't permanently lock
+    /// the user out — their last working KDF params + wrapped master key stay
+    /// recoverable on-device. Returns true if the record was adopted.
+    @discardableResult
+    public func adoptRemoteAccount(_ incoming: AccountCrypto.AccountKeyRecord) async throws -> Bool {
+        try await writer.write { db in
+            let local = try AccountRecord.fetchOne(db)
+            guard local == nil || local?.id == incoming.accountID else { return false }
+            if let local, local.encMasterKey != incoming.encMasterKey
+                || local.kdfSalt != incoming.kdfSalt
+                || local.kdfIterations != incoming.kdfIterations {
+                var backup = AccountKeyBackupRecord(
+                    id: nil, accountId: local.id, email: local.email,
+                    kdfSalt: local.kdfSalt, kdfIterations: local.kdfIterations,
+                    encMasterKey: local.encMasterKey, replacedAt: Date())
+                try backup.insert(db)
+                try db.execute(sql: """
+                    DELETE FROM accountKeyBackup WHERE id NOT IN
+                    (SELECT id FROM accountKeyBackup ORDER BY replacedAt DESC, id DESC LIMIT ?)
+                    """, arguments: [Self.maxAccountKeyBackups])
+            }
+            let row = AccountRecord(
+                id: incoming.accountID, email: incoming.email,
+                kdfSalt: incoming.kdfSalt, kdfIterations: incoming.kdfIterations,
+                encMasterKey: incoming.encMasterKey,
+                createdAt: local?.createdAt ?? Date())
+            try row.save(db)
+            return true
+        }
+    }
+
+    /// Recovery snapshots of prior account key material, newest first.
+    public func accountKeyBackups() async throws -> [AccountKeyBackupRecord] {
+        try await writer.read { db in
+            try AccountKeyBackupRecord
+                .order(sql: "replacedAt DESC, id DESC")
+                .fetchAll(db)
+        }
+    }
 }
 
 // MARK: - Records
@@ -126,6 +187,23 @@ public struct AccountRecord: Codable, Sendable, FetchableRecord, PersistableReco
 
     public var keyRecord: AccountCrypto.AccountKeyRecord {
         .init(accountID: id, email: email, kdfSalt: kdfSalt, kdfIterations: kdfIterations, encMasterKey: encMasterKey)
+    }
+}
+
+/// A recovery snapshot of the account's key material, captured before an
+/// incoming remote Account record overwrote it.
+public struct AccountKeyBackupRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "accountKeyBackup"
+    public var id: Int64?
+    public var accountId: String
+    public var email: String
+    public var kdfSalt: Data
+    public var kdfIterations: Int
+    public var encMasterKey: Data
+    public var replacedAt: Date
+
+    public mutating func didInsert(_ inserted: InsertionSuccess) {
+        id = inserted.rowID
     }
 }
 

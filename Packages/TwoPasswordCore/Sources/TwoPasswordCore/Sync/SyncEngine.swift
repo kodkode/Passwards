@@ -280,21 +280,10 @@ extension SyncEngine: CKSyncEngineDelegate {
             switch record.recordType {
             case "Account":
                 guard let incoming = RecordCoder.accountKeyRecord(from: record) else { return }
-                // Only adopt if we have no local account (bootstrap) — the
-                // account key record never changes except password change,
-                // where newest wins by modification date.
-                let local = try await database.writer.read { try AccountRecord.fetchOne($0) }
-                if local == nil || local?.id == incoming.accountID {
-                    let row = AccountRecord(
-                        id: incoming.accountID,
-                        email: incoming.email,
-                        kdfSalt: incoming.kdfSalt,
-                        kdfIterations: incoming.kdfIterations,
-                        encMasterKey: incoming.encMasterKey,
-                        createdAt: local?.createdAt ?? Date()
-                    )
-                    try await database.writer.write { try row.save($0) }
-                }
+                // Adopt on bootstrap, or a password change that re-wrapped the
+                // master key. The prior key material is backed up first so an
+                // unauthenticated/rolled-back record can't lock the user out.
+                try await database.adoptRemoteAccount(incoming)
 
             case "Vault":
                 guard let vault = RecordCoder.vaultRecord(from: record) else { return }
