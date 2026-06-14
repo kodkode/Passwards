@@ -1,6 +1,7 @@
 import Foundation
 import CloudKit
 import GRDB
+import os
 
 /// CloudKit sync over `CKSyncEngine`. Only ciphertext crosses the wire:
 /// records carry the same encrypted blobs stored locally, in one custom zone.
@@ -9,6 +10,7 @@ import GRDB
 public actor SyncEngine {
     public static let zoneName = "Main"
     static let stateKey = "ckStateSerialization"
+    static let log = Logger(subsystem: "com.michael.twopassword", category: "sync")
 
     public enum Status: Sendable, Equatable {
         case idle
@@ -47,6 +49,7 @@ public actor SyncEngine {
 
     public func start() async {
         guard engine == nil else { return }
+        Self.log.info("starting CKSyncEngine for container \(self.containerIdentifier, privacy: .public)")
         var state: CKSyncEngine.State.Serialization?
         if let data = try? await database.syncMetaValue(key: Self.stateKey) {
             state = try? JSONDecoder().decode(CKSyncEngine.State.Serialization.self, from: data)
@@ -74,6 +77,7 @@ public actor SyncEngine {
             try await engine.fetchChanges()
             setStatus(.idle)
         } catch {
+            Self.log.error("manualSync failed: \(String(describing: error), privacy: .public)")
             setStatus(.error(error.localizedDescription))
         }
     }
@@ -170,6 +174,7 @@ extension SyncEngine: CKSyncEngineDelegate {
             }
 
         case .sentRecordZoneChanges(let sent):
+            Self.log.info("sent: \(sent.savedRecords.count) saved, \(sent.failedRecordSaves.count) failed, \(sent.deletedRecordIDs.count) deleted")
             for save in sent.savedRecords {
                 await markSynced(recordName: save.recordID.recordName)
             }
@@ -386,6 +391,7 @@ extension SyncEngine: CKSyncEngineDelegate {
     }
 
     func handleSaveFailure(_ failure: CKSyncEngine.Event.SentRecordZoneChanges.FailedRecordSave, syncEngine: CKSyncEngine) async {
+        Self.log.error("save failed [\(failure.record.recordType, privacy: .public) \(failure.record.recordID.recordName, privacy: .public)] code=\(failure.error.code.rawValue): \(String(describing: failure.error), privacy: .public)")
         switch failure.error.code {
         case .serverRecordChanged:
             guard let serverRecord = failure.error.serverRecord else { return }
