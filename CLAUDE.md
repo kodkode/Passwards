@@ -66,9 +66,13 @@ Every DB column and CKRecord field that carries item/vault data is AES-256-GCM c
 
 `SyncEngine` (CKSyncEngine, single "Main" zone, LWW conflicts with the losing payload preserved into local history, tombstone table for deletions) only activates when the binary has the iCloud entitlement — checked at runtime via `SecTaskCopyValueForEntitlement` in `SyncController` (CloudKit APIs crash uncatchably without it). Activation requires the owner's Apple ID in Xcode: swap `2Password/2Password.entitlements` for `2Password/2Password+CloudKit.entitlements` contents, build once, deploy schema to Production (steps in README). Sync runs while locked (ciphertext only); local mutations propagate via `VaultStore.refresh()` → `sync.kick()`.
 
+### SSH agent + CLI (implemented)
+
+`TwoPasswordCore/SSH/` is a vault-backed OpenSSH agent: `SSHKey` parses unencrypted OpenSSH private keys (Ed25519, ECDSA P-256/384/521) and produces SSH signature blobs; `SSHAgentProtocol`/`SSHAgentServer` serve REQUEST_IDENTITIES + SIGN_REQUEST over a 0600 Unix socket in the App Group container (`SSHAgentServer.defaultSocketPath()`). App side: `SSHAgentController` implements `SSHAgentBackend`, serving `.sshKey` items only while unlocked (locking sheds them); toggled in Settings → SSH Agent. The same binary is also a CLI (`CLIMode`, dispatched from `Boot.main` alongside `--browser-host`): `ssh-agent` (print SSH_AUTH_SOCK line), `ssh-keys` (list public keys via `SSHAgentClient`), `version`, `help`. Interop verified against real `ssh-add`.
+
 ### Deferred features
 
-Browser extension/autofill, passkeys, SSH agent + CLI, item sharing are deferred **by the owner's explicit decision** — don't build them unprompted. Protocol seams live in `TwoPasswordCore/ExtensionPoints.swift`; `FieldKind.unknown(String)` preserves unrecognized field kinds for forward compatibility.
+Passkeys and item sharing are deferred **by the owner's explicit decision** — don't build them unprompted. Protocol seams live in `TwoPasswordCore/ExtensionPoints.swift`; `FieldKind.unknown(String)` preserves unrecognized field kinds for forward compatibility.
 
 ## Testing conventions
 

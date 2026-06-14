@@ -15,6 +15,10 @@ enum Boot {
             || arguments.contains(where: { $0.hasPrefix("chrome-extension://") }) {
             BrowserHostMode.run()
         }
+        // A recognized first-argument subcommand runs the CLI instead of the GUI.
+        if let first = arguments.first, CLIMode.commands.contains(first) {
+            CLIMode.run(Array(arguments))
+        }
         TwoPasswordApp.main()
     }
 }

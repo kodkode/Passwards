@@ -32,6 +32,7 @@ final class AppState {
     let autoLock = AutoLockMonitor()
     let sync = SyncController()
     private(set) var browserBridge: BrowserBridgeController?
+    private(set) var sshAgent: SSHAgentController?
 
     /// Shared by the main window and Quick Access. Created at bootstrap;
     /// holds no decrypted data until `load()` runs after unlock.
@@ -70,6 +71,12 @@ final class AppState {
         let bridge = BrowserBridgeController(appState: self)
         bridge.start()
         browserBridge = bridge
+
+        // SSH agent: serves vault SSH Key items over a Unix socket when enabled.
+        // It exposes nothing while locked (keys are decrypted on demand).
+        let agent = SSHAgentController(appState: self)
+        agent.startIfEnabled()
+        sshAgent = agent
     }
 
     // MARK: Onboarding
@@ -269,4 +276,5 @@ nonisolated enum SettingsKeys {
     static let watchtowerHIBPEnabled = "watchtowerHIBPEnabled"
     static let watchtowerEnabled = "watchtowerEnabled"
     static let theme = "appTheme"
+    static let sshAgentEnabled = "sshAgentEnabled"
 }

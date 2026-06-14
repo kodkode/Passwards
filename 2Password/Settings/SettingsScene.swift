@@ -18,6 +18,8 @@ struct SettingsScene: View {
                 .tabItem { Label("Privacy", systemImage: "hand.raised") }
             BrowserSettingsView()
                 .tabItem { Label("Browser", systemImage: "globe") }
+            SSHAgentSettingsView(appState: appState)
+                .tabItem { Label("SSH Agent", systemImage: "terminal") }
             AdvancedSettingsView(appState: appState)
                 .tabItem { Label("Advanced", systemImage: "wrench.and.screwdriver") }
         }
@@ -533,7 +535,7 @@ struct AdvancedSettingsView: View {
                     .foregroundStyle(.secondary)
             }
             Section("Coming Soon") {
-                Text("Browser extension & autofill, passkeys, SSH agent, and item sharing have reserved extension points and can be added later.")
+                Text("Passkeys and item sharing have reserved extension points and can be added later.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -550,5 +552,53 @@ struct AdvancedSettingsView: View {
         case .error(let message): "Error: \(message)"
         case .accountUnavailable: "iCloud account unavailable"
         }
+    }
+}
+
+struct SSHAgentSettingsView: View {
+    let appState: AppState
+    @State private var enabled = SSHAgentController.isEnabled
+    @State private var copied = false
+
+    private var socketPath: String { SSHAgentController.socketPath() }
+    private var exportLine: String { "export SSH_AUTH_SOCK=\"\(socketPath)\"" }
+
+    var body: some View {
+        Form {
+            Section("SSH Agent") {
+                Toggle("Use 2Password as my SSH agent", isOn: $enabled)
+                    .onChange(of: enabled) { _, newValue in
+                        appState.sshAgent?.setEnabled(newValue)
+                    }
+                Text("Serves the private keys from your SSH Key items to ssh, git, and other tools — keys are only offered while 2Password is unlocked, and the private keys never leave the app.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            if enabled {
+                Section("Setup") {
+                    Text("Add this line to your shell profile (~/.zshrc), then open a new terminal:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    LabeledContent {
+                        Button {
+                            ClipboardManager.copy(exportLine)
+                            copied = true
+                        } label: {
+                            Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                        }
+                    } label: {
+                        Text(exportLine)
+                            .font(.system(.caption, design: .monospaced))
+                            .textSelection(.enabled)
+                            .lineLimit(3)
+                    }
+                    Text("Verify with “ssh-add -l” — your SSH Key items should be listed.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.vertical, 8)
     }
 }
