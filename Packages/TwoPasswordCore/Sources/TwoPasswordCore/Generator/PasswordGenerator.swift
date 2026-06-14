@@ -87,8 +87,19 @@ public enum PasswordGenerator {
     }
 
     public static func memorable(_ options: MemorableOptions = MemorableOptions()) -> String {
+        memorable(options, wordlist: Wordlist.words)
+    }
+
+    static func memorable(_ options: MemorableOptions, wordlist: [String]) -> String {
+        // If the bundled EFF list (7,776 words) somehow failed to load, NEVER
+        // emit a low-entropy passphrase from a tiny fallback list — fall back to
+        // a strong random password instead. 2^128 needs ~10 words; require a
+        // list large enough that the requested word count is actually secure.
+        guard wordlist.count >= 2048 else {
+            return random(RandomOptions(length: 24))
+        }
         let words = (0..<options.wordCount).map { _ -> String in
-            var word = SecureRandom.element(of: Wordlist.words)
+            var word = SecureRandom.element(of: wordlist)
             if !options.fullWords {
                 // Truncated mode: random 3-4 character syllable-ish chunks.
                 word = String(word.prefix(3 + SecureRandom.int(below: 2)))
@@ -127,7 +138,9 @@ public enum Wordlist {
     public static let words: [String] = {
         guard let url = Bundle.module.url(forResource: "eff_large_wordlist", withExtension: "txt"),
               let content = try? String(contentsOf: url, encoding: .utf8) else {
-            return ["correct", "horse", "battery", "staple"]
+            // Empty, not a tiny stub: `memorable` detects this and degrades to a
+            // strong random password rather than a guessable 4-word passphrase.
+            return []
         }
         return content.split(separator: "\n").compactMap { line in
             let parts = line.split(separator: "\t")

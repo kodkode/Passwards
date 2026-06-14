@@ -22,11 +22,15 @@ let package = Package(
                 .copy("Resources/eff_large_wordlist.txt"),
                 .copy("Resources/top100k_passwords.txt"),
                 .copy("Resources/2fa_directory.json"),
+                .copy("Resources/public_suffix_list.dat"),
             ]
         ),
         .testTarget(
             name: "TwoPasswordCoreTests",
-            dependencies: ["TwoPasswordCore"],
+            dependencies: [
+                "TwoPasswordCore",
+                .product(name: "ZIPFoundation", package: "ZIPFoundation"),
+            ],
             resources: [
                 .copy("Fixtures")
             ]

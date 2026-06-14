@@ -173,14 +173,20 @@ public struct WatchtowerAuditor: Sendable {
         return report
     }
 
-    /// "https://www.login.github.com/x" → "github.com" (public-suffix-naive).
+    /// The registrable domain (eTLD+1) of a URL or bare host, e.g.
+    /// "https://www.login.github.com/x" → "github.com", "x.bank.co.uk" →
+    /// "bank.co.uk", "a.github.io" → "a.github.io".
+    ///
+    /// This is the credential-release boundary for the browser bridge, so it is
+    /// computed against the bundled Public Suffix List (`PublicSuffixList`), NOT
+    /// a last-two-labels guess: `evil.co.uk` and `bank.co.uk` must resolve to
+    /// different registrable domains, and unrelated tenants on `github.io` /
+    /// `*.vercel.app` / `*.pages.dev` must not collapse together. Returns nil for
+    /// an unparseable input or a bare public suffix (`co.uk`, `github.io`).
     public static func registrableDomain(_ urlString: String) -> String? {
         let candidate = urlString.hasPrefix("http") ? urlString : "https://\(urlString)"
         guard let host = URL(string: candidate)?.host()?.lowercased() else { return nil }
-        let parts = host.split(separator: ".")
-        // Single-label hosts (localhost, intranet names) are their own domain.
-        guard parts.count >= 2 else { return host.isEmpty ? nil : host }
-        return parts.suffix(2).joined(separator: ".")
+        return PublicSuffixList.shared.registrableDomain(host: host)
     }
 
     /// Earliest date among fields whose label suggests expiry.

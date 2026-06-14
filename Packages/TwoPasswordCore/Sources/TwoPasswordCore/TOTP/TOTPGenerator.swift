@@ -16,7 +16,11 @@ public struct TOTPGenerator: Sendable, Equatable {
 
     public init(secret: Data, digits: Int = 6, period: Int = 30, algorithm: Algorithm = .sha1) {
         self.secret = secret
-        self.digits = max(min(digits, 10), 4)
+        // Clamp to 4...9. 10^10 overflows the UInt32 used in `hotp` (the old
+        // ceiling of 10 trapped at code-generation time on any otpauth URI with
+        // digits=10); 10^9 < UInt32.max is the largest safe value, and dynamic
+        // truncation only yields 31 bits anyway so >9 digits is meaningless.
+        self.digits = max(min(digits, 9), 4)
         self.period = max(period, 1)
         self.algorithm = algorithm
     }
@@ -59,7 +63,11 @@ public struct TOTPGenerator: Sendable, Equatable {
             | (UInt32(mac[offset + 1]) << 16)
             | (UInt32(mac[offset + 2]) << 8)
             | UInt32(mac[offset + 3])
-        let modulo = UInt32(pow(10, Double(digits)))
+        // Integer power, not `UInt32(pow(10, Double(digits)))`: exact, and with
+        // digits clamped to 4...9 the result is ≤ 10^9 < UInt32.max so it can
+        // never overflow/trap.
+        var modulo: UInt32 = 1
+        for _ in 0..<digits { modulo *= 10 }
         return String(format: "%0\(digits)d", truncated % modulo)
     }
 }

@@ -13,15 +13,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Block screen capture of vault windows, like 1Password.
+        // Block screen capture of every window, like 1Password. A launch-time
+        // sweep alone misses windows created later (Settings, the Emergency Kit
+        // / Secret Key sheet, Large Type, the change-password sheet), which is
+        // exactly where the most sensitive material is shown — so also re-sweep
+        // whenever any window gains focus. Default-deny: a window added in the
+        // future is protected automatically.
         if !Self.captureAllowed {
-            for window in NSApp.windows {
-                window.sharingType = .none
+            protectAllWindowsFromCapture()
+            NotificationCenter.default.addObserver(
+                forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                self?.protectAllWindowsFromCapture()
             }
         }
         // CKSyncEngine listens for CloudKit pushes once the app registers.
         if SyncController.hasCloudKitEntitlement {
             NSApplication.shared.registerForRemoteNotifications()
+        }
+    }
+
+    /// Excludes every current app window from screen capture / screen sharing
+    /// (`NSWindow.sharingType = .none`). Cheap to run repeatedly — a handful of
+    /// windows — and idempotent.
+    private func protectAllWindowsFromCapture() {
+        guard !Self.captureAllowed else { return }
+        for window in NSApp.windows where window.sharingType != .none {
+            window.sharingType = .none
         }
     }
 

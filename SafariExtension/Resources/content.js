@@ -131,16 +131,18 @@
 
   window.addEventListener("pagehide", () => {
     if (!lastCapture) return;
-    // Stash for the next page load on this site.
-    sessionStorage.setItem("__2pw_pending_save", JSON.stringify(lastCapture));
+    // Hand the captured login (incl. password) to the background worker instead
+    // of page-readable sessionStorage. The background returns it only to a later
+    // page load on the SAME origin, mirroring sessionStorage's scoping without
+    // exposing the plaintext password to any script running on the page.
+    chrome.runtime.sendMessage({ cmd: "stash-pending-save", captured: lastCapture }).catch(() => {});
     lastCapture = null;
   });
 
-  const pendingRaw = sessionStorage.getItem("__2pw_pending_save");
-  if (pendingRaw) {
-    sessionStorage.removeItem("__2pw_pending_save");
-    try { maybeOfferSave(JSON.parse(pendingRaw)); } catch {}
-  }
+  // On load, reclaim any pending save the background is holding for this origin.
+  chrome.runtime.sendMessage({ cmd: "pop-pending-save" })
+    .then((captured) => { if (captured) maybeOfferSave(captured); })
+    .catch(() => {});
 
   async function maybeOfferSave(captured) {
     let state;
@@ -174,32 +176,44 @@
     const host = document.createElement("div");
     host.id = "__2pw-banner";
     const shadow = host.attachShadow({ mode: "closed" });
-    shadow.innerHTML = `
-      <style>
-        .banner {
-          position: fixed; top: 16px; right: 16px; z-index: 2147483647;
-          display: flex; align-items: center; gap: 12px;
-          background: #1c1c1f; color: #f2f2f4;
-          border: 1px solid #3a3a3f; border-radius: 10px;
-          box-shadow: 0 8px 30px rgba(0,0,0,.35);
-          padding: 12px 14px; font: 13px -apple-system, sans-serif;
-        }
-        button {
-          font: inherit; border-radius: 6px; padding: 5px 12px; cursor: pointer;
-          border: none; background: #2e6ee8; color: white;
-        }
-        .dismiss { background: transparent; color: #9a9aa2; padding: 5px 6px; }
-      </style>
-      <div class="banner">
-        <span>${text.replace(/</g, "&lt;")}</span>
-        <button class="action">${actionTitle}</button>
-        <button class="dismiss">✕</button>
-      </div>`;
-    shadow.querySelector(".action").addEventListener("click", async () => {
+
+    // Static CSS only — no interpolation.
+    const style = document.createElement("style");
+    style.textContent = `
+      .banner {
+        position: fixed; top: 16px; right: 16px; z-index: 2147483647;
+        display: flex; align-items: center; gap: 12px;
+        background: #1c1c1f; color: #f2f2f4;
+        border: 1px solid #3a3a3f; border-radius: 10px;
+        box-shadow: 0 8px 30px rgba(0,0,0,.35);
+        padding: 12px 14px; font: 13px -apple-system, sans-serif;
+      }
+      button {
+        font: inherit; border-radius: 6px; padding: 5px 12px; cursor: pointer;
+        border: none; background: #2e6ee8; color: white;
+      }
+      .dismiss { background: transparent; color: #9a9aa2; padding: 5px 6px; }`;
+
+    // Build the nodes and set page-controlled values via textContent (not
+    // innerHTML), so an item title can never inject markup or script.
+    const banner = document.createElement("div");
+    banner.className = "banner";
+    const label = document.createElement("span");
+    label.textContent = text;
+    const action = document.createElement("button");
+    action.className = "action";
+    action.textContent = actionTitle;
+    const dismiss = document.createElement("button");
+    dismiss.className = "dismiss";
+    dismiss.textContent = "✕";
+    banner.append(label, action, dismiss);
+    shadow.append(style, banner);
+
+    action.addEventListener("click", async () => {
       await onAction();
       host.remove();
     });
-    shadow.querySelector(".dismiss").addEventListener("click", () => host.remove());
+    dismiss.addEventListener("click", () => host.remove());
     document.documentElement.appendChild(host);
     setTimeout(() => host.remove(), 20000);
   }

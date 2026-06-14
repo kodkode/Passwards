@@ -34,6 +34,18 @@ struct GeneratorTests {
         #expect(Wordlist.words.count == 7776)
     }
 
+    @Test func memorableDegradesWhenWordlistInadequate() {
+        // If the bundled list ever failed to load, a passphrase must NOT fall
+        // back to a tiny guessable word set — it degrades to a strong random
+        // password (length 24) instead.
+        let degraded = PasswordGenerator.memorable(
+            .init(wordCount: 4, separator: .hyphens), wordlist: ["correct", "horse", "battery", "staple"])
+        #expect(degraded.count == 24)
+        // The real list still yields a proper multi-word passphrase.
+        let real = PasswordGenerator.memorable(.init(wordCount: 4, separator: .hyphens))
+        #expect(real.split(separator: "-").count == 4)
+    }
+
     @Test func pinIsNumeric() {
         for length in [3, 6, 12] {
             let pin = PasswordGenerator.pin(length: length)

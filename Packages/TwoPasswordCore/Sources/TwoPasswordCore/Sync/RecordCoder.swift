@@ -112,6 +112,11 @@ public enum RecordCoder {
 
     static func attachmentRecord(from record: CKRecord) -> AttachmentRecord? {
         guard let id = record.recordID.recordName.dropPrefixOrNil("attach-"),
+              // The id is used to build an on-disk path, and the recordName is
+              // attacker-influenceable (a compromised/foreign CloudKit record).
+              // Require a canonical UUID so it can carry no `/` or `..` and
+              // cannot escape the Attachments directory.
+              UUID(uuidString: id) != nil,
               let itemId = record["itemId"] as? String,
               let encMetadata = record["encMetadata"] as? Data else { return nil }
         return AttachmentRecord(

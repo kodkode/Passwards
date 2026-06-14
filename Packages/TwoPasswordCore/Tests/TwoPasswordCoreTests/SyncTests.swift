@@ -94,6 +94,27 @@ struct RecordCoderTests {
         }
     }
 
+    @Test func attachmentRecordRejectsPathTraversalID() {
+        // A remote attachment's id is used to build an on-disk write path, so a
+        // malicious/foreign CloudKit recordName must NOT decode into a record.
+        func decode(_ recordName: String) -> AttachmentRecord? {
+            let record = CKRecord(recordType: "Attachment",
+                                  recordID: CKRecord.ID(recordName: recordName, zoneID: zoneID))
+            record["itemId"] = "item-1"
+            record["encMetadata"] = Data([1, 2, 3])
+            return RecordCoder.attachmentRecord(from: record)
+        }
+        // Traversal / non-canonical ids are rejected.
+        #expect(decode("attach-../../../../tmp/evil") == nil)
+        #expect(decode("attach-..") == nil)
+        #expect(decode("attach-not-a-uuid") == nil)
+        #expect(decode("attach-") == nil)
+        // A canonical UUID is accepted and preserved.
+        let id = UUID().uuidString
+        let valid = decode("attach-\(id)")
+        #expect(valid?.id == id)
+    }
+
     @Test func systemFieldsArchiving() throws {
         let record = CKRecord(recordType: "Item", recordID: CKRecord.ID(recordName: "item-x", zoneID: zoneID))
         let archived = RecordCoder.archiveSystemFields(record)

@@ -1,5 +1,6 @@
 import SwiftUI
 import TwoPasswordCore
+import os
 
 enum SidebarFilter: Hashable {
     case allItems
@@ -58,17 +59,44 @@ final class VaultStore {
     private var vaultRepo: VaultRepository? { appState.vaultRepository }
 
     func load() async {
+        // Decryption requires the unlocked key store. Sync delivers remote
+        // changes (onRemoteChanges → reloadFromRemote → load) that can arrive
+        // while the vault is locked — decrypting then fails, and a locked vault
+        // simply has nothing to load.
+        guard appState.phase == .unlocked else { return }
         do {
             vaults = try await vaultRepo?.allVaults() ?? []
             summaries = try await items?.allSummaries() ?? []
         } catch {
-            assertionFailure("load failed: \(error)")
+            // A lock/unlock race or a single undecryptable record (e.g. a
+            // foreign/corrupt CloudKit record) must never crash a password
+            // manager. Log and keep whatever state we already had.
+            Logger(subsystem: "com.michael.twopassword", category: "vault-store")
+                .error("VaultStore.load failed: \(String(describing: error), privacy: .public)")
         }
     }
 
     func refresh() async {
         await load()
         appState.sync.kick()
+    }
+
+    /// Drops every piece of decrypted/sensitive state so locking the vault
+    /// actually sheds secrets from memory. Called from `AppState.lock()`; the
+    /// next unlock re-runs `load()`. Without this the shared store keeps
+    /// decrypted overviews (titles, usernames, URLs) — and, if locked mid-edit,
+    /// a full plaintext item including its password — resident after lock.
+    func clearSecrets() {
+        vaults = []
+        summaries = []
+        editorDraft = nil
+        editorPrevious = nil
+        pendingAttachments = [:]
+        selectedItemID = nil
+        searchText = ""
+        categoryFilter = nil
+        sidebarSelection = .allItems
+        watchtower.clear()
     }
 
     /// Reload from disk without pushing (used when remote changes arrive).

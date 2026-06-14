@@ -24,10 +24,21 @@ public enum Exporters {
     }
 
     static func escape(_ field: String) -> String {
-        if field.contains(where: { $0 == "," || $0 == "\"" || $0.isNewline }) {
-            return "\"" + field.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+        let value = neutralizeFormula(field)
+        if value.contains(where: { $0 == "," || $0 == "\"" || $0.isNewline }) {
+            return "\"" + value.replacingOccurrences(of: "\"", with: "\"\"") + "\""
         }
-        return field
+        return value
+    }
+
+    /// Defuses CSV/spreadsheet formula injection: a cell beginning with a
+    /// formula trigger (`= + - @`, tab, or CR) is prefixed with a single quote
+    /// so Excel/Numbers/Sheets treat it as literal text rather than executing
+    /// it. A malicious value like `=HYPERLINK(...)` or `=cmd|...` in a saved
+    /// note/title would otherwise run when the export is opened in a spreadsheet.
+    static func neutralizeFormula(_ field: String) -> String {
+        guard let first = field.first, "=+-@\t\r".contains(first) else { return field }
+        return "'" + field
     }
 
     // MARK: Full JSON export (every category, full structure)

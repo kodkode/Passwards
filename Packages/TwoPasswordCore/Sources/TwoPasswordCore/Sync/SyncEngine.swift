@@ -253,10 +253,19 @@ extension SyncEngine: CKSyncEngineDelegate {
     }
 
     private func attachmentFileURL(_ id: String) throws -> URL {
+        // Defense in depth: `id` ultimately comes from a CloudKit recordName.
+        // Require a canonical UUID (no `/`, no `..`) and verify the resolved
+        // path stays inside the Attachments directory before any file op.
+        guard UUID(uuidString: id) != nil else { throw AttachmentPathError.invalidID }
         let appSupport = try FileManager.default.url(
             for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false
         )
-        return appSupport.appendingPathComponent("2Password/Attachments/\(id)")
+        let directory = appSupport.appendingPathComponent("2Password/Attachments", isDirectory: true)
+        let destination = directory.appendingPathComponent(id)
+        guard destination.standardizedFileURL.path.hasPrefix(directory.standardizedFileURL.path + "/") else {
+            throw AttachmentPathError.invalidID
+        }
+        return destination
     }
 
     private func archivedRecord(_ data: Data?) -> CKRecord? {
@@ -434,3 +443,7 @@ extension String {
         hasPrefix(prefix) ? String(dropFirst(prefix.count)) : nil
     }
 }
+
+/// Thrown when an attachment id (from a CloudKit recordName) is not a canonical
+/// UUID or would resolve outside the Attachments directory.
+private enum AttachmentPathError: Error { case invalidID }

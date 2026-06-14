@@ -63,7 +63,18 @@ final class AutoLockMonitor {
                 self.onShouldLock?()
             }
         }
-        observers = [resignObserver, becomeActiveObserver, sleepObserver, screensaverObserver]
+        // Locking the Mac screen (⌃⌘Q, hot corner, lid close) is a distinct
+        // signal from the screensaver, and CGEventSource idle time does not
+        // reliably advance while the screen is locked — so observe it directly.
+        let screenLockObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("com.apple.screenIsLocked"), object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.lockOnScreensaver else { return }
+                self.onShouldLock?()
+            }
+        }
+        observers = [resignObserver, becomeActiveObserver, sleepObserver, screensaverObserver, screenLockObserver]
     }
 
     func stop() {

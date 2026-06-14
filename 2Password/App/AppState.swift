@@ -32,7 +32,6 @@ final class AppState {
     let autoLock = AutoLockMonitor()
     let sync = SyncController()
     private(set) var browserBridge: BrowserBridgeController?
-    var onLocked: (() -> Void)?
 
     /// Shared by the main window and Quick Access. Created at bootstrap;
     /// holds no decrypted data until `load()` runs after unlock.
@@ -241,7 +240,11 @@ final class AppState {
         autoLock.stop()
         Task { await keyStore.lock() }
         try? FileManager.default.removeItem(at: Self.previewTempDirectory)
-        onLocked?()
+        // Shed every decrypted secret the app holds outside the key store:
+        // the in-memory overview cache + any in-progress edit draft, and a
+        // password/Secret Key still sitting in the clipboard.
+        vaultStore?.clearSecrets()
+        ClipboardManager.clearOnLock()
         phase = .locked
     }
 }

@@ -102,6 +102,11 @@ async function sessionKeysFromShared(sharedSecret, pairingSecret, extEphPub, app
 
 let session = null; // {port, send, receive, sendSeq, recvSeq, pending: Map, queue: []}
 
+// Origin-scoped "offer to save" stash: a captured login (incl. password) handed
+// over on pagehide, kept in the worker's memory (NOT page-readable storage),
+// and returned only to a later page load on the same origin in the same tab.
+const pendingSaves = new Map(); // tabId -> { origin, captured }
+
 function connectPort() {
   return api.runtime.connectNative(HOST);
 }
@@ -278,6 +283,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             password: message.password, title: message.title,
           });
           return sendResponse(result);
+        }
+        case "stash-pending-save": {
+          if (sender.tab) {
+            try {
+              pendingSaves.set(sender.tab.id, {
+                origin: new URL(sender.tab.url).origin,
+                captured: message.captured,
+              });
+            } catch {}
+          }
+          return sendResponse({ ok: true });
+        }
+        case "pop-pending-save": {
+          const entry = sender.tab ? pendingSaves.get(sender.tab.id) : undefined;
+          if (sender.tab) pendingSaves.delete(sender.tab.id);
+          // Only return it to a page on the same origin it was captured on —
+          // never leak credentials across a cross-origin redirect.
+          let captured = null;
+          try {
+            if (entry && sender.tab && new URL(sender.tab.url).origin === entry.origin) {
+              captured = entry.captured;
+            }
+          } catch {}
+          return sendResponse(captured);
         }
         default:
           return sendResponse({ error: "unknown command" });

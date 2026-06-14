@@ -1,9 +1,63 @@
 import Testing
 import Foundation
+import ZIPFoundation
 @testable import TwoPasswordCore
 
 @Suite("1PUX import")
 struct OnePuxTests {
+
+    /// Builds a real .1pux (ZIP) at a temp URL with the given entries.
+    private func makeOnePux(exportData: Data, files: [(name: String, data: Data)] = []) throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("test-\(UUID().uuidString).1pux")
+        let archive = try Archive(url: url, accessMode: .create)
+        func add(_ path: String, _ payload: Data) throws {
+            try archive.addEntry(with: path, type: .file, uncompressedSize: Int64(payload.count)) { position, size in
+                let start = Int(position)
+                return payload.subdata(in: start..<min(start + size, payload.count))
+            }
+        }
+        try add("export.data", exportData)
+        for file in files { try add("files/\(file.name)", file.data) }
+        return url
+    }
+
+    @Test func importArchiveRoundTrip() throws {
+        let url = try makeOnePux(exportData: Data(Self.fixture.utf8))
+        defer { try? FileManager.default.removeItem(at: url) }
+        let summary = try OnePuxImporter().importArchive(at: url)
+        #expect(summary.vaults.first?.items.count == 3)
+    }
+
+    @Test func oversizedExportDataIsRejected() throws {
+        // A decompression bomb: export.data far larger than the cap must throw
+        // rather than allocate unbounded memory.
+        let url = try makeOnePux(exportData: Data(count: 4096))
+        defer { try? FileManager.default.removeItem(at: url) }
+        let importer = OnePuxImporter(maxExportDataSize: 1024)
+        #expect(throws: OnePuxImporter.ImportError.self) {
+            _ = try importer.importArchive(at: url)
+        }
+    }
+
+    @Test func oversizedAttachmentIsSkippedNotFatal() throws {
+        // An over-cap file entry is skipped (best-effort), import still succeeds.
+        let url = try makeOnePux(exportData: Data(Self.fixture.utf8),
+                                 files: [(name: "doc__big.bin", data: Data(count: 8192))])
+        defer { try? FileManager.default.removeItem(at: url) }
+        let summary = try OnePuxImporter(maxAttachmentSize: 1024).importArchive(at: url)
+        #expect(summary.vaults.first?.items.count == 3)
+    }
+
+    @Test func tooManyFileEntriesIsRejected() throws {
+        let files = (0..<5).map { (name: "doc\($0)__f.bin", data: Data([0x01])) }
+        let url = try makeOnePux(exportData: Data(Self.fixture.utf8), files: files)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let importer = OnePuxImporter(maxFileEntries: 2)
+        #expect(throws: OnePuxImporter.ImportError.self) {
+            _ = try importer.importArchive(at: url)
+        }
+    }
     static let fixture = """
     {
       "accounts": [{
@@ -170,6 +224,26 @@ struct CSVTests {
         #expect(reimported.items[0].overview.title == "Site, with comma")
         #expect(reimported.items[0].details.firstField(withPurpose: .password)?.value == "p\"w,x")
         #expect(reimported.items[0].details.notes == "line1\nline2")
+    }
+
+    @Test func csvNeutralizesFormulaInjection() {
+        #expect(Exporters.neutralizeFormula("=1+1") == "'=1+1")
+        #expect(Exporters.neutralizeFormula("+44") == "'+44")
+        #expect(Exporters.neutralizeFormula("-2") == "'-2")
+        #expect(Exporters.neutralizeFormula("@SUM(A1)") == "'@SUM(A1)")
+        #expect(Exporters.neutralizeFormula("\tx") == "'\tx")
+        #expect(Exporters.neutralizeFormula("normal") == "normal")
+        #expect(Exporters.neutralizeFormula("a=b") == "a=b")   // only a leading trigger counts
+
+        // End to end: a malicious title is neutralized in the exported CSV.
+        var item = VaultItem(vaultID: "v")
+        item.overview = ItemOverview(title: "=HYPERLINK(\"http://evil\")", category: .login)
+        item.details = ItemDetails(sections: [ItemSection(fields: [
+            ItemField(label: "password", kind: .concealed, value: "@cmd|'/c calc'", purpose: .password),
+        ])])
+        let csv = String(decoding: Exporters.csv(items: [item]), as: UTF8.self)
+        #expect(csv.contains("'=HYPERLINK"))
+        #expect(csv.contains("'@cmd"))
     }
 
     @Test func jsonExportStructure() throws {

@@ -57,6 +57,37 @@ struct TOTPTests {
         #expect(TOTPGenerator(userInput: "not a secret!!") == nil)
     }
 
+    @Test func largeDigitsClampInsteadOfCrashing() throws {
+        // Regression: digits >= 10 previously trapped — UInt32(pow(10,10))
+        // overflows — at code-generation time, so a single malformed otpauth
+        // URI crashed the app whenever that item was viewed.
+        let seed = Data("12345678901234567890".utf8)
+        for d in [10, 99, 1_000_000] {
+            let gen = TOTPGenerator(secret: seed, digits: d, period: 30, algorithm: .sha1)
+            #expect(gen.digits == 9)
+            let code = gen.code(at: Date(timeIntervalSince1970: 59))
+            #expect(code.count == 9)
+            #expect(code.allSatisfy { $0.isNumber })
+        }
+        // Lower bound still clamps up to the 4-digit floor.
+        #expect(TOTPGenerator(secret: seed, digits: 1).digits == 4)
+        // The exact crashing input — an otpauth URI with digits=10 — must now
+        // parse and generate a code rather than trap.
+        let gen = try #require(TOTPGenerator(userInput:
+            "otpauth://totp/x?secret=JBSWY3DPEHPK3PXP&digits=10"))
+        #expect(gen.digits == 9)
+        #expect(gen.code().count == 9)
+    }
+
+    @Test func nineDigitBoundaryDoesNotOverflow() {
+        // 10^9 (1_000_000_000) is < UInt32.max; must produce a full 9-digit code.
+        let gen = TOTPGenerator(secret: Data("12345678901234567890".utf8),
+                                digits: 9, period: 30, algorithm: .sha1)
+        let code = gen.code(at: Date(timeIntervalSince1970: 59))
+        #expect(code.count == 9)
+        #expect(code.allSatisfy { $0.isNumber })
+    }
+
     @Test func countdown() {
         let generator = TOTPGenerator(secret: Data("x".utf8))
         let remaining = generator.secondsRemaining(at: Date(timeIntervalSince1970: 59))

@@ -62,7 +62,14 @@ struct AttachmentDisplayRow: View {
             guard let data = try? await store.attachments?.decrypt(attachmentID: field.value) else { return }
             let dir = AppState.previewTempDirectory
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            let url = dir.appendingPathComponent(field.value + "-" + metadata.filename)
+            // metadata.filename is untrusted (it came from an import). Strip path
+            // separators so it can't escape the preview dir, then verify
+            // containment as a backstop.
+            let safeName = metadata.filename
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: "\u{0}", with: "_")
+            let url = dir.appendingPathComponent(field.value + "-" + safeName)
+            guard url.standardizedFileURL.path.hasPrefix(dir.standardizedFileURL.path + "/") else { return }
             try? data.write(to: url, options: .atomic)
             NSWorkspace.shared.open(url)
         }

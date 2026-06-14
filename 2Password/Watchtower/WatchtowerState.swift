@@ -38,6 +38,13 @@ final class WatchtowerState {
         }
     }
 
+    /// Discards the audit report (which item IDs are weak/breached/reused) on
+    /// lock, so the locked app holds no derived view of the vault's contents.
+    func clear() {
+        report = WatchtowerReport()
+        focus = nil
+    }
+
     /// Dismiss a specific check for an item ("not an issue").
     func exclude(check: WatchtowerCheck, summary: ItemSummary, store: VaultStore) async {
         var overview = summary.overview

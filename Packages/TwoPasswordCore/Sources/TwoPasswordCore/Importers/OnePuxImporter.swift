@@ -18,29 +18,70 @@ public struct OnePuxImporter: Sendable {
         public var skippedItems: Int
     }
 
-    public init() {}
+    /// Decompression-bomb / resource-exhaustion guards for untrusted archives.
+    /// A `.1pux` is an ordinary ZIP, so a few-MB file can declare or deflate to
+    /// gigabytes; every extracted entry is bounded and the running total capped.
+    /// Configurable so tests can drive the limits with small inputs; production
+    /// defaults are generous enough for any real export.
+    let maxExportDataSize: Int
+    let maxAttachmentSize: Int
+    let maxTotalUncompressed: Int
+    let maxFileEntries: Int
+
+    public init(
+        maxExportDataSize: Int = 256 * 1024 * 1024,
+        maxAttachmentSize: Int = 50 * 1024 * 1024,
+        maxTotalUncompressed: Int = 512 * 1024 * 1024,
+        maxFileEntries: Int = 10_000
+    ) {
+        self.maxExportDataSize = maxExportDataSize
+        self.maxAttachmentSize = maxAttachmentSize
+        self.maxTotalUncompressed = maxTotalUncompressed
+        self.maxFileEntries = maxFileEntries
+    }
 
     public func importArchive(at url: URL) throws -> Summary {
         let archive = try Archive(url: url, accessMode: .read)
         guard let entry = archive["export.data"] else {
             throw ImportError.missingExportData
         }
-        var jsonData = Data()
-        _ = try archive.extract(entry) { jsonData.append($0) }
+        let jsonData = try extractBounded(entry, from: archive, limit: maxExportDataSize)
+        var totalExtracted = jsonData.count
 
         // Stash archived files for attachment import: files/<documentId>__<name>
         var files: [String: Data] = [:]
+        var fileCount = 0
         for entry in archive where entry.path.hasPrefix("files/") {
-            var data = Data()
-            _ = try? archive.extract(entry) { data.append($0) }
+            fileCount += 1
+            guard fileCount <= maxFileEntries else { throw ImportError.archiveTooLarge }
+            // A single unreadable/oversized attachment is skipped (best-effort,
+            // as before) — but the bound still prevents it exhausting memory.
+            guard let data = try? extractBounded(entry, from: archive, limit: maxAttachmentSize) else { continue }
+            totalExtracted += data.count
+            guard totalExtracted <= maxTotalUncompressed else { throw ImportError.archiveTooLarge }
             files[String(entry.path.dropFirst("files/".count))] = data
         }
         return try parse(jsonData: jsonData, files: files)
     }
 
+    /// Extracts one entry fully into memory, refusing to allocate more than
+    /// `limit` bytes. The up-front `uncompressedSize` check is a cheap early-out;
+    /// the running check inside the consumer is the real backstop against an
+    /// archive that lies about its declared size (a decompression bomb).
+    private func extractBounded(_ entry: Entry, from archive: Archive, limit: Int) throws -> Data {
+        guard entry.uncompressedSize <= UInt64(limit) else { throw ImportError.archiveTooLarge }
+        var data = Data()
+        _ = try archive.extract(entry) { chunk in
+            guard data.count + chunk.count <= limit else { throw ImportError.archiveTooLarge }
+            data.append(chunk)
+        }
+        return data
+    }
+
     public enum ImportError: Error {
         case missingExportData
         case malformed
+        case archiveTooLarge
     }
 
     func parse(jsonData: Data, files: [String: Data] = [:]) throws -> Summary {
