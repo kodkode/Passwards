@@ -277,4 +277,6 @@ nonisolated enum SettingsKeys {
     static let watchtowerEnabled = "watchtowerEnabled"
     static let theme = "appTheme"
     static let sshAgentEnabled = "sshAgentEnabled"
+    static let sshApprovalRequired = "sshApprovalRequired"
+    static let sshApprovalCacheSeconds = "sshApprovalCacheSeconds"
 }

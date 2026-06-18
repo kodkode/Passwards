@@ -559,6 +559,8 @@ struct SSHAgentSettingsView: View {
     let appState: AppState
     @State private var enabled = SSHAgentController.isEnabled
     @State private var copied = false
+    @AppStorage(SettingsKeys.sshApprovalRequired) private var approvalRequired = true
+    @AppStorage(SettingsKeys.sshApprovalCacheSeconds) private var approvalCacheSeconds = 0
 
     private var socketPath: String { SSHAgentController.socketPath() }
     private var exportLine: String { "export SSH_AUTH_SOCK=\"\(socketPath)\"" }
@@ -575,6 +577,19 @@ struct SSHAgentSettingsView: View {
                     .foregroundStyle(.secondary)
             }
             if enabled {
+                Section("Authorization") {
+                    Toggle("Require approval for each key use", isOn: $approvalRequired)
+                    Text("Touch ID (or your login password) confirms each SSH signature, so a program can't use your keys without you noticing — even while 2Password is unlocked.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if approvalRequired {
+                        Picker("Remember approval", selection: $approvalCacheSeconds) {
+                            Text("Ask every time").tag(0)
+                            Text("For 1 minute").tag(60)
+                            Text("For 5 minutes").tag(300)
+                        }
+                    }
+                }
                 Section("Setup") {
                     Text("Add this line to your shell profile (~/.zshrc), then open a new terminal:")
                         .font(.caption)
