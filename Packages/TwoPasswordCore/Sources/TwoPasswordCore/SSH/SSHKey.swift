@@ -105,11 +105,17 @@ public struct SSHKey: Sendable, Equatable {
     /// `SSHWireError.encryptedKeyUnsupported` for passphrase-protected keys and
     /// `.unsupportedKeyType` for RSA / unknown types.
     public static func parseOpenSSHPrivateKey(_ pem: String) throws -> SSHKey {
-        let body = pem
-            .split(whereSeparator: \.isNewline)
-            .filter { !$0.hasPrefix("-----") }
-            .joined()
-        guard let raw = Data(base64Encoded: body) else { throw SSHWireError.malformedKey }
+        // Take the base64 between the armor markers and drop ALL whitespace, so
+        // a key whose newlines were stripped (e.g. pasted into a single-line
+        // field) still parses.
+        let begin = "-----BEGIN OPENSSH PRIVATE KEY-----"
+        let end = "-----END OPENSSH PRIVATE KEY-----"
+        guard let beginRange = pem.range(of: begin),
+              let endRange = pem.range(of: end, range: beginRange.upperBound..<pem.endIndex) else {
+            throw SSHWireError.malformedKey
+        }
+        let base64 = pem[beginRange.upperBound..<endRange.lowerBound].filter { !$0.isWhitespace }
+        guard let raw = Data(base64Encoded: String(base64)) else { throw SSHWireError.malformedKey }
 
         var reader = SSHWireReader(raw)
         let magic = "openssh-key-v1\0"

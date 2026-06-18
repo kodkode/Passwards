@@ -275,7 +275,15 @@ struct FieldEditRow: View {
     @ViewBuilder
     private var valueEditor: some View {
         switch field.kind {
-        case .concealed, .sshKey:
+        case .sshKey:
+            // A private key is multi-line — a single-line field would strip the
+            // pasted newlines. Monospaced TextEditor, paste the whole key here.
+            TextEditor(text: $field.value)
+                .font(.body.monospaced())
+                .frame(minHeight: 96)
+                .scrollContentBackground(.hidden)
+                .textContentType(nil)
+        case .concealed:
             HStack(spacing: 6) {
                 Group {
                     if revealed {

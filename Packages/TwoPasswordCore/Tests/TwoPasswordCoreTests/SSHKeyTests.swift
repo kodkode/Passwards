@@ -40,6 +40,13 @@ struct SSHKeyTests {
         #expect(key.fingerprintSHA256 == Self.ed25519Fingerprint)
     }
 
+    @Test func parsesKeyWithStrippedNewlines() throws {
+        // A key pasted into a single-line field loses its newlines — must still parse.
+        let collapsed = Self.ed25519PEM.replacingOccurrences(of: "\n", with: "")
+        let key = try SSHKey.parseOpenSSHPrivateKey(collapsed)
+        #expect(key.publicKeyBlob.base64EncodedString() == Self.ed25519Blob)
+    }
+
     @Test func ed25519SignatureVerifies() throws {
         let key = try SSHKey.parseOpenSSHPrivateKey(Self.ed25519PEM)
         let message = Data("the quick brown fox".utf8)
