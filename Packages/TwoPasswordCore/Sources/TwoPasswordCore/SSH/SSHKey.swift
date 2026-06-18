@@ -1,19 +1,26 @@
 import Foundation
 import CryptoKit
+import Security
 
 /// A parsed SSH key usable by the agent: it carries the public-key blob and the
-/// private scalar, and can produce an SSH signature blob for a challenge.
+/// private material, and can produce an SSH signature blob for a challenge.
 ///
-/// Supports the modern key types CryptoKit can sign with — Ed25519 and ECDSA
-/// (NIST P-256/384/521) — parsed from an unencrypted OpenSSH private key
-/// (`-----BEGIN OPENSSH PRIVATE KEY-----`). RSA and passphrase-encrypted keys
-/// are reported as unsupported rather than mishandled.
+/// Supports Ed25519, ECDSA (NIST P-256/384/521) via CryptoKit, and RSA via the
+/// Security framework, parsed from an UNENCRYPTED OpenSSH private key
+/// (`-----BEGIN OPENSSH PRIVATE KEY-----`). Passphrase-encrypted keys are
+/// reported as unsupported rather than mishandled.
 public struct SSHKey: Sendable, Equatable {
     public enum Algorithm: String, Sendable {
         case ed25519 = "ssh-ed25519"
         case ecdsaP256 = "ecdsa-sha2-nistp256"
         case ecdsaP384 = "ecdsa-sha2-nistp384"
         case ecdsaP521 = "ecdsa-sha2-nistp521"
+        case rsa = "ssh-rsa"
+    }
+
+    enum Material: Sendable, Equatable {
+        case raw(Data)   // Ed25519 seed or EC private scalar
+        case rsa(n: Data, e: Data, d: Data, p: Data, q: Data, iqmp: Data)
     }
 
     public let algorithm: Algorithm
@@ -21,8 +28,7 @@ public struct SSHKey: Sendable, Equatable {
     /// appears in an `authorized_keys` line and the agent identities answer.
     public let publicKeyBlob: Data
     public let comment: String
-    /// Raw private material: the 32-byte Ed25519 seed, or the EC private scalar.
-    let privateScalar: Data
+    let material: Material
 
     // MARK: Public surface
 
@@ -39,28 +45,49 @@ public struct SSHKey: Sendable, Equatable {
     }
 
     /// Produces an SSH signature blob (`string sig-format` + `string signature`)
-    /// over `challenge`, as required by an agent SIGN_REQUEST response.
-    public func sign(_ challenge: Data) throws -> Data {
+    /// over `challenge`, as required by an agent SIGN_REQUEST response. `flags`
+    /// are the agent SIGN_REQUEST flags (SSH_AGENT_RSA_SHA2_256/512); they only
+    /// affect RSA, which can sign as ssh-rsa / rsa-sha2-256 / rsa-sha2-512.
+    public func sign(_ challenge: Data, flags: UInt32 = 0) throws -> Data {
         var writer = SSHWireWriter()
         switch algorithm {
         case .ed25519:
-            let key = try Curve25519.Signing.PrivateKey(rawRepresentation: privateScalar)
+            let key = try Curve25519.Signing.PrivateKey(rawRepresentation: rawScalar())
             writer.writeString("ssh-ed25519")
             writer.writeString(try key.signature(for: challenge))
         case .ecdsaP256:
-            let key = try P256.Signing.PrivateKey(rawRepresentation: privateScalar)
+            let key = try P256.Signing.PrivateKey(rawRepresentation: rawScalar())
             writer.writeString("ecdsa-sha2-nistp256")
             writer.writeString(Self.encodeECDSASignature(try key.signature(for: challenge).rawRepresentation))
         case .ecdsaP384:
-            let key = try P384.Signing.PrivateKey(rawRepresentation: privateScalar)
+            let key = try P384.Signing.PrivateKey(rawRepresentation: rawScalar())
             writer.writeString("ecdsa-sha2-nistp384")
             writer.writeString(Self.encodeECDSASignature(try key.signature(for: challenge).rawRepresentation))
         case .ecdsaP521:
-            let key = try P521.Signing.PrivateKey(rawRepresentation: privateScalar)
+            let key = try P521.Signing.PrivateKey(rawRepresentation: rawScalar())
             writer.writeString("ecdsa-sha2-nistp521")
             writer.writeString(Self.encodeECDSASignature(try key.signature(for: challenge).rawRepresentation))
+        case .rsa:
+            guard case let .rsa(n, e, d, p, q, iqmp) = material else { throw SSHWireError.malformedKey }
+            let (secAlgorithm, format) = Self.rsaVariant(flags: flags)
+            let signature = try SSHRSA.sign(data: challenge, n: n, e: e, d: d, p: p, q: q, iqmp: iqmp,
+                                            algorithm: secAlgorithm)
+            writer.writeString(format)
+            writer.writeString(signature)
         }
         return writer.data
+    }
+
+    private func rawScalar() throws -> Data {
+        guard case let .raw(scalar) = material else { throw SSHWireError.malformedKey }
+        return scalar
+    }
+
+    /// Map the agent SIGN_REQUEST flags to the RSA hash + SSH signature format.
+    private static func rsaVariant(flags: UInt32) -> (SecKeyAlgorithm, String) {
+        if flags & 0x04 != 0 { return (.rsaSignatureMessagePKCS1v15SHA512, "rsa-sha2-512") }
+        if flags & 0x02 != 0 { return (.rsaSignatureMessagePKCS1v15SHA256, "rsa-sha2-256") }
+        return (.rsaSignatureMessagePKCS1v15SHA1, "ssh-rsa")
     }
 
     /// ECDSA raw signature (r||s) → SSH ECDSA signature blob (mpint r, mpint s).
@@ -117,7 +144,7 @@ public struct SSHKey: Sendable, Equatable {
             guard privateBlob.count == 64 else { throw SSHWireError.malformedKey }
             let comment = try priv.readStringUTF8()
             return SSHKey(algorithm: .ed25519, publicKeyBlob: publicKeyBlob,
-                          comment: comment, privateScalar: Data(privateBlob.prefix(32)))
+                          comment: comment, material: .raw(Data(privateBlob.prefix(32))))
 
         case "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521":
             _ = try priv.readString()                // curve name
@@ -131,7 +158,19 @@ public struct SSHKey: Sendable, Equatable {
             guard d.count <= width else { throw SSHWireError.malformedKey }
             if d.count < width { d = Data(repeating: 0, count: width - d.count) + d }
             return SSHKey(algorithm: algorithm, publicKeyBlob: publicKeyBlob,
-                          comment: comment, privateScalar: d)
+                          comment: comment, material: .raw(d))
+
+        case "ssh-rsa":
+            // OpenSSH private order: n, e, d, iqmp, p, q.
+            let n = try priv.readString()
+            let e = try priv.readString()
+            let d = try priv.readString()
+            let iqmp = try priv.readString()
+            let p = try priv.readString()
+            let q = try priv.readString()
+            let comment = try priv.readStringUTF8()
+            return SSHKey(algorithm: .rsa, publicKeyBlob: publicKeyBlob, comment: comment,
+                          material: .rsa(n: n, e: e, d: d, p: p, q: q, iqmp: iqmp))
 
         default:
             throw SSHWireError.unsupportedKeyType(keyType)
@@ -144,6 +183,7 @@ public struct SSHKey: Sendable, Equatable {
         case .ecdsaP256: 32
         case .ecdsaP384: 48
         case .ecdsaP521: 66
+        case .rsa: 0   // not a fixed-width scalar; never reached for RSA
         }
     }
 }

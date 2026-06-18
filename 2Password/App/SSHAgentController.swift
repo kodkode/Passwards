@@ -76,7 +76,7 @@ final class SSHAgentController: SSHAgentBackend {
         }
     }
 
-    func sign(keyBlob: Data, data: Data) async -> Data? {
+    func sign(keyBlob: Data, data: Data, flags: UInt32) async -> Data? {
         guard appState.phase == .unlocked, let store = appState.vaultStore else { return nil }
         // Locate the requested key (and its item title for the approval prompt).
         var match: (key: SSHKey, title: String)?
@@ -91,7 +91,7 @@ final class SSHAgentController: SSHAgentBackend {
         guard await approve(keyTitle: match.title, fingerprint: match.key.fingerprintSHA256, keyBlob: keyBlob) else {
             return nil  // user declined → SSH_AGENT_FAILURE
         }
-        return try? match.key.sign(data)
+        return try? match.key.sign(data, flags: flags)
     }
 
     private func sshSummaries(in store: VaultStore) -> [ItemSummary] {

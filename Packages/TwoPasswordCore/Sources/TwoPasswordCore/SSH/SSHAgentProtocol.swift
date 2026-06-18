@@ -5,9 +5,10 @@ import Foundation
 public protocol SSHAgentBackend: Sendable {
     /// Public-key blob + comment for every available SSH Key item.
     func identities() async -> [(blob: Data, comment: String)]
-    /// Sign `data` with the key whose public blob is `keyBlob`. Returns the SSH
-    /// signature blob, or nil if there is no such key or the user declined.
-    func sign(keyBlob: Data, data: Data) async -> Data?
+    /// Sign `data` with the key whose public blob is `keyBlob`. `flags` are the
+    /// SIGN_REQUEST flags (SSH_AGENT_RSA_SHA2_256/512). Returns the SSH signature
+    /// blob, or nil if there is no such key or the user declined.
+    func sign(keyBlob: Data, data: Data, flags: UInt32) async -> Data?
 }
 
 /// The OpenSSH agent protocol (draft-miller-ssh-agent): length-prefixed
@@ -47,9 +48,8 @@ public enum SSHAgentProtocol {
         case signRequest:
             guard let keyBlob = try? reader.readString(),
                   let data = try? reader.readString() else { return failure }
-            // A trailing uint32 of flags (RSA SHA2 selection) is ignored — the
-            // supported key types have a single signature format.
-            guard let signature = await backend.sign(keyBlob: keyBlob, data: data) else {
+            let flags = (try? reader.readUInt32()) ?? 0   // RSA SHA2 selection
+            guard let signature = await backend.sign(keyBlob: keyBlob, data: data, flags: flags) else {
                 return failure
             }
             var writer = SSHWireWriter()

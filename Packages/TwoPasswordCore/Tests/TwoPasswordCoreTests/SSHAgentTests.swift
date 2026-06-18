@@ -11,8 +11,8 @@ struct SSHAgentTests {
         func identities() async -> [(blob: Data, comment: String)] {
             [(key.publicKeyBlob, key.comment)]
         }
-        func sign(keyBlob: Data, data: Data) async -> Data? {
-            keyBlob == key.publicKeyBlob ? try? key.sign(data) : nil
+        func sign(keyBlob: Data, data: Data, flags: UInt32) async -> Data? {
+            keyBlob == key.publicKeyBlob ? try? key.sign(data, flags: flags) : nil
         }
     }
 

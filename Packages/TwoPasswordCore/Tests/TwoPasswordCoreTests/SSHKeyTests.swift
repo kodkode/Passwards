@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 import CryptoKit
+import Security
 @testable import TwoPasswordCore
 
 @Suite("SSH key")
@@ -76,6 +77,64 @@ struct SSHKeyTests {
         let publicKey = try P256.Signing.PublicKey(x963Representation: point)
         let signature = try P256.Signing.ECDSASignature(rawRepresentation: r + s)
         #expect(publicKey.isValidSignature(signature, for: message))
+    }
+
+    static let rsaPEM = """
+    -----BEGIN OPENSSH PRIVATE KEY-----
+    b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABFwAAAAdzc2gtcn
+    NhAAAAAwEAAQAAAQEAmoOhKUu3PHQeNZzxifvPzVEaHl1O+lUf7rmcy/VHbnt7fR3HLo2t
+    3nUjuFIxiMa4plglvu4IMn1KGZJxoVIMuEMZJ/QNvhiEpg2BHVDrT5PSXqTQxcilU/jomX
+    hYglUlrFg/P7ND9eWJAsyR89XZNNxGMLxysc9IGY3G76ddLvR5En5xeYHoUOE9NYQd7Gt7
+    dUkGDTMie4c8BK0Iim++Vrm3xMFSQuHwCBe9BJ/Frs3p7k6hhHm2o6fgAXpUUOFpz9J1N4
+    DMrb9hpbGubuLnI3otUFxNhmeRnKUfuRrUaWu3c/gEuqEc+zdlAdsTVNzeANwod9kmQpND
+    5euRB3MX3QAAA8je7T6c3u0+nAAAAAdzc2gtcnNhAAABAQCag6EpS7c8dB41nPGJ+8/NUR
+    oeXU76VR/uuZzL9Udue3t9Hccuja3edSO4UjGIxrimWCW+7ggyfUoZknGhUgy4Qxkn9A2+
+    GISmDYEdUOtPk9JepNDFyKVT+OiZeFiCVSWsWD8/s0P15YkCzJHz1dk03EYwvHKxz0gZjc
+    bvp10u9HkSfnF5gehQ4T01hB3sa3t1SQYNMyJ7hzwErQiKb75WubfEwVJC4fAIF70En8Wu
+    zenuTqGEebajp+ABelRQ4WnP0nU3gMytv2Glsa5u4ucjei1QXE2GZ5GcpR+5GtRpa7dz+A
+    S6oRz7N2UB2xNU3N4A3Ch32SZCk0Pl65EHcxfdAAAAAwEAAQAAAQBhVNd5TvO/BhpdhV51
+    oAT3fcYpKHfuox65X3zQ0dJMW0afutlUjvTedAWrP0NquFtqlY45ZnINc/TwhNpFV40hqU
+    q4azkY7RLqEwmpMOb5utFCwymr3UefzOSggDmo6AASP4igFMmTpSKYe8rYwXXQoY0peBv7
+    u+ncBv4wysmdIHJfe6G2HuPtXZ4CJRNEHqjLcFgG2ktVZR5O3cZskiTfCTqeZvAKxHsP1J
+    oOy2g3xL0pkCly3DJGz8NDkT108J9hFUleGHu00rcLu9DxFGXDhHN5Nx5VH8NKNaqfEVXl
+    3SFM0dSq52pIgdb4dl3aeN1oymyvq9B9PGewOtUd5/IBAAAAgQCbAR6c+Plcimf8FQM5Vm
+    lPiwV7qpJnQ2paga1DeFgEdo3721xEOsS9+ixWmygwa5eU1VvNHqOIGqmX+HkLOEjApW1p
+    cRtJuKqNpuXzjovOpsri+PlFKYQCKW6lXTTjN1DaKnbt4/1lajthr/xALxxl32traC+nUS
+    h8+NDDYbRllwAAAIEAyzvnsqeh77CgV2kduiqu+8WUuRsFSEs1u2kHtyMVUWydAJWjkKUE
+    +YF2gZEwuz2OwJEwH8jn7Ut1UODmpxlnCOn7mpbwG/jARfVktFKrT18BT0PnLWkz0cXPGp
+    9NgpMIDMKGaiIRLmcEZ3FYhsmk+nc5maGHxrduwxD28nG9n10AAACBAMKhhqiVjyuqaFP/
+    6XdJ/llJ3N8ZOCBZk+MRs6jJl/5RF9y75w28qr3IrggwrqbO5va5Q/ewm66/egBh0MUL4k
+    HhuUv5iIZO5iSyMvcj+pTJB1NGvOyxa5TdofgMk0o9aHP3/8LWJqrIYwozUVdgaF0RpQ3V
+    yaR+RQ8636OVolKBAAAADnRlc3RAMnBhc3N3b3JkAQIDBA==
+    -----END OPENSSH PRIVATE KEY-----
+    """
+    static let rsaFingerprint = "SHA256:jYojQWAg4Y2snoQacHYS7YwxKJ7sWs7m8+ZtT7URnHU"
+
+    @Test func parsesAndSignsRSA() throws {
+        let key = try SSHKey.parseOpenSSHPrivateKey(Self.rsaPEM)
+        #expect(key.algorithm == .rsa)
+        #expect(key.comment == "test@2password")
+        #expect(key.fingerprintSHA256 == Self.rsaFingerprint)
+        guard case let .rsa(n, e, _, _, _, _) = key.material else {
+            Issue.record("expected RSA material"); return
+        }
+        let publicKey = try SSHRSA.publicKey(n: n, e: e)
+        let message = Data("rsa sign me".utf8)
+
+        // Honors the SIGN_REQUEST flags: rsa-sha2-256 (2) and rsa-sha2-512 (4),
+        // and the resulting signature verifies under the corresponding hash.
+        for (flags, format, secAlg): (UInt32, String, SecKeyAlgorithm) in [
+            (2, "rsa-sha2-256", .rsaSignatureMessagePKCS1v15SHA256),
+            (4, "rsa-sha2-512", .rsaSignatureMessagePKCS1v15SHA512),
+        ] {
+            let blob = try key.sign(message, flags: flags)
+            var reader = SSHWireReader(blob)
+            #expect(try reader.readStringUTF8() == format)
+            let rawSignature = try reader.readString()
+            var error: Unmanaged<CFError>?
+            let valid = SecKeyVerifySignature(publicKey, secAlg, message as CFData, rawSignature as CFData, &error)
+            #expect(valid, "RSA \(format) signature should verify")
+        }
     }
 
     @Test func rejectsMalformedKeys() {
