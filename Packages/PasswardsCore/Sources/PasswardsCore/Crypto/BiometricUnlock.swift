@@ -2,6 +2,7 @@ import Foundation
 import CryptoKit
 import LocalAuthentication
 import Security
+import os
 
 /// Touch ID unlock: the master key is wrapped to a Secure Enclave P-256 key
 /// gated on the current biometric set. Re-enrolling fingerprints invalidates
@@ -10,6 +11,7 @@ import Security
 public enum BiometricUnlock {
     static let keyTag = "com.michael.passwards.se-unlock-key"
     static let wrappedService = "com.michael.passwards.biometric-wrapped"
+    static let log = Logger(subsystem: "com.michael.passwards", category: "biometric")
 
     public enum UnlockResult: Sendable {
         case success(SymmetricKey)
@@ -31,12 +33,16 @@ public enum BiometricUnlock {
     /// Wraps and stores the master key. Replaces any previous enrollment.
     public static func enroll(masterKey: SymmetricKey) throws {
         disable()
+        var acError: Unmanaged<CFError>?
         guard let access = SecAccessControlCreateWithFlags(
             nil,
             kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
             [.privateKeyUsage, .biometryCurrentSet],
-            nil
-        ) else { throw CryptoError.secureEnclaveFailed }
+            &acError
+        ) else {
+            log.error("enroll: SecAccessControlCreateWithFlags failed: \(acError?.takeRetainedValue().localizedDescription ?? "nil", privacy: .public)")
+            throw CryptoError.secureEnclaveFailed
+        }
 
         let attributes: [String: Any] = [
             kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
@@ -49,8 +55,12 @@ public enum BiometricUnlock {
             ],
         ]
         var error: Unmanaged<CFError>?
-        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error),
-              let publicKey = SecKeyCopyPublicKey(privateKey) else {
+        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
+            log.error("enroll: SecKeyCreateRandomKey (Secure Enclave) failed: \(error?.takeRetainedValue().localizedDescription ?? "nil", privacy: .public)")
+            throw CryptoError.secureEnclaveFailed
+        }
+        guard let publicKey = SecKeyCopyPublicKey(privateKey) else {
+            log.error("enroll: SecKeyCopyPublicKey returned nil")
             throw CryptoError.secureEnclaveFailed
         }
         let keyData = masterKey.withUnsafeBytes { Data($0) }
@@ -59,8 +69,17 @@ public enum BiometricUnlock {
             .eciesEncryptionCofactorVariableIVX963SHA256AESGCM,
             keyData as CFData,
             &error
-        ) else { throw CryptoError.secureEnclaveFailed }
-        try KeychainStore.saveBlob(wrapped as Data, service: wrappedService, account: "master")
+        ) else {
+            log.error("enroll: SecKeyCreateEncryptedData failed: \(error?.takeRetainedValue().localizedDescription ?? "nil", privacy: .public)")
+            throw CryptoError.secureEnclaveFailed
+        }
+        do {
+            try KeychainStore.saveBlob(wrapped as Data, service: wrappedService, account: "master")
+        } catch {
+            log.error("enroll: saveBlob(biometric-wrapped) failed: \(String(describing: error), privacy: .public)")
+            throw error
+        }
+        log.info("enroll: Touch ID enrollment succeeded")
     }
 
     /// Prompts Touch ID and unwraps the master key.

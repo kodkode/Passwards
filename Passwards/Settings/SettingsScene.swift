@@ -84,6 +84,7 @@ struct SecuritySettingsView: View {
     @AppStorage(SettingsKeys.requirePasswordAfterHours) private var requirePasswordAfterHours = 72
     @AppStorage(SettingsKeys.clipboardClearSeconds) private var clipboardClearSeconds = 90
     @State private var touchIDEnabled = BiometricUnlock.isEnrolled
+    @State private var touchIDError: String?
     @State private var changePasswordShown = false
     @State private var emergencyKitShown = false
 
@@ -115,17 +116,31 @@ struct SecuritySettingsView: View {
                         .onChange(of: touchIDEnabled) {
                             if touchIDEnabled {
                                 Task {
-                                    if let masterKey = await appState.keyStore.masterKey {
-                                        try? BiometricUnlock.enroll(masterKey: masterKey)
-                                    } else {
+                                    guard let masterKey = await appState.keyStore.masterKey else {
                                         touchIDEnabled = false
+                                        return
                                     }
+                                    do {
+                                        try BiometricUnlock.enroll(masterKey: masterKey)
+                                        touchIDError = nil
+                                    } catch {
+                                        touchIDError = "Couldn’t enable Touch ID. Open Console.app and filter on subsystem “com.michael.passwards”, category “biometric” for the reason."
+                                    }
+                                    // Reflect the real enrolled state — reverts the
+                                    // toggle if Secure Enclave enrollment failed.
+                                    touchIDEnabled = BiometricUnlock.isEnrolled
                                 }
                             } else {
                                 BiometricUnlock.disable()
+                                touchIDError = nil
                             }
                         }
                         .disabled(appState.phase != .unlocked && !touchIDEnabled)
+                    if let touchIDError {
+                        Text(touchIDError)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
                 } else {
                     Text("Touch ID is not available on this Mac.")
                         .foregroundStyle(.secondary)
