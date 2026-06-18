@@ -260,6 +260,53 @@ struct CategoryIconView: View {
     }
 }
 
+/// A user-chosen custom item icon: the same 1P-style tile in a chosen color,
+/// with an SF Symbol instead of the category glyph.
+struct CustomIconView: View {
+    let symbol: String
+    let colorToken: String
+    var size: CGFloat = 32
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: size * 0.235, style: .continuous)
+    }
+
+    var body: some View {
+        let base = Theme.color(token: colorToken)
+        shape
+            .fill(base)
+            .overlay {
+                shape.fill(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white.opacity(0.30), location: 0),
+                            .init(color: .white.opacity(0.05), location: 0.55),
+                            .init(color: .black.opacity(0.12), location: 1),
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+            }
+            .overlay {
+                shape.strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.45), .white.opacity(0.06)],
+                        startPoint: .top, endPoint: .bottom
+                    ),
+                    lineWidth: max(size / 32, 0.75)
+                )
+            }
+            .frame(width: size, height: size)
+            .overlay {
+                Image(systemName: symbol)
+                    .font(.system(size: size * 0.46, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.2), radius: size / 40, y: size / 60)
+            }
+            .shadow(color: .black.opacity(0.25), radius: size / 28, y: size / 32)
+    }
+}
+
 /// Five-segment password strength bar with label, as in the 1P8 generator.
 struct StrengthBar: View {
     let score: PasswordStrength.Score

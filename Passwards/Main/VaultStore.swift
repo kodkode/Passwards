@@ -349,8 +349,12 @@ final class VaultStore {
     }
 
     func moveToTrash(_ summary: ItemSummary) async {
-        try? await items?.moveToTrash(itemID: summary.id)
-        if selectedItemID == summary.id { selectedItemID = nil }
+        await moveToTrash(itemID: summary.id)
+    }
+
+    func moveToTrash(itemID: String) async {
+        try? await items?.moveToTrash(itemID: itemID)
+        if selectedItemID == itemID { selectedItemID = nil }
         await refresh()
     }
 

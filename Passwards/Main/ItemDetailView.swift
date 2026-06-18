@@ -123,6 +123,30 @@ struct ItemDetailView: View {
             toggleRevealAll()
             return .handled
         }
+        // Match both "c" and "C": SwiftUI folds Shift into the key equivalent,
+        // so ⇧⌘C arrives as key "C". Plain ⌘C falls through to text-copy.
+        .onKeyPress(keys: ["c", "C"], phases: .down) { press in
+            guard press.modifiers.contains(.command) else { return .ignored }
+            if press.modifiers.contains(.shift) { copyPrimary(.password); return .handled }
+            if press.modifiers.contains(.option) { copyOTP(); return .handled }
+            return .ignored
+        }
+        .onKeyPress(.delete, phases: .down) { press in
+            guard press.modifiers.contains(.command), let item, item.trashedAt == nil else { return .ignored }
+            Task { await store.moveToTrash(itemID: item.id) }
+            return .handled
+        }
+    }
+
+    private func copyPrimary(_ purpose: FieldPurpose) {
+        guard let item, let field = item.details.firstField(withPurpose: purpose), !field.value.isEmpty else { return }
+        ClipboardManager.copy(field.value, concealed: field.kind.isSecret)
+    }
+
+    private func copyOTP() {
+        guard let item, let field = item.details.firstField(ofKind: .otp),
+              let generator = TOTPGenerator(userInput: field.value) else { return }
+        ClipboardManager.copy(generator.code(), concealed: true)
     }
 
     private func toggleRevealAll() {
@@ -137,7 +161,9 @@ struct ItemDetailView: View {
 
     private func header(_ item: VaultItem) -> some View {
         HStack(spacing: 14) {
-            if let url = item.overview.urls.first, !url.isEmpty {
+            if let symbol = item.overview.iconSymbol, !symbol.isEmpty {
+                CustomIconView(symbol: symbol, colorToken: item.overview.iconColor ?? item.overview.category.colorToken, size: 54)
+            } else if let url = item.overview.urls.first, !url.isEmpty {
                 FaviconView(urlString: url, fallback: item.overview.category, size: 54)
             } else {
                 CategoryIconView(category: item.overview.category, size: 54)

@@ -14,6 +14,7 @@ struct ItemEditView: View {
     @State private var generatorField: UUID?
     @State private var tagsText = ""
     @State private var isSaving = false
+    @State private var iconPickerShown = false
 
     init(store: VaultStore, draft: VaultItem) {
         self.store = store
@@ -32,10 +33,19 @@ struct ItemEditView: View {
             VStack(alignment: .leading, spacing: 16) {
                 // Title + vault
                 HStack(spacing: 14) {
-                    if let url = firstURL(in: draft.wrappedValue), !url.isEmpty {
-                        FaviconView(urlString: url, fallback: draft.wrappedValue.overview.category, size: 48)
-                    } else {
-                        CategoryIconView(category: draft.wrappedValue.overview.category, size: 48)
+                    Button {
+                        iconPickerShown = true
+                    } label: {
+                        editorIcon(size: 48)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Change icon")
+                    .popover(isPresented: $iconPickerShown, arrowEdge: .bottom) {
+                        ItemIconPicker(
+                            symbol: draft.overview.iconSymbol,
+                            colorToken: draft.overview.iconColor,
+                            categoryColorToken: draft.wrappedValue.overview.category.colorToken
+                        )
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         TextField("Title", text: draft.overview.title, prompt: Text("Title"))
@@ -191,6 +201,19 @@ struct ItemEditView: View {
             }
         }
         return nil
+    }
+
+    /// The editor's header icon: custom icon if chosen, else the live URL's
+    /// favicon, else the category tile.
+    @ViewBuilder
+    private func editorIcon(size: CGFloat) -> some View {
+        if let symbol = draftItem.overview.iconSymbol, !symbol.isEmpty {
+            CustomIconView(symbol: symbol, colorToken: draftItem.overview.iconColor ?? draftItem.overview.category.colorToken, size: size)
+        } else if let url = firstURL(in: draftItem), !url.isEmpty {
+            FaviconView(urlString: url, fallback: draftItem.overview.category, size: size)
+        } else {
+            CategoryIconView(category: draftItem.overview.category, size: size)
+        }
     }
 
     private var addableKinds: [FieldKind] {
@@ -360,5 +383,75 @@ struct DateValueEditor: View {
                 .help("Clear date")
             }
         }
+    }
+}
+
+/// Popover for choosing a custom item icon (SF Symbol + color), with a reset to
+/// the default favicon/category icon.
+struct ItemIconPicker: View {
+    @Binding var symbol: String?
+    @Binding var colorToken: String?
+    let categoryColorToken: String
+    @Environment(\.dismiss) private var dismiss
+
+    private let symbols = [
+        "globe", "person.fill", "envelope.fill", "creditcard.fill",
+        "key.fill", "lock.fill", "wifi", "house.fill",
+        "briefcase.fill", "cart.fill", "gamecontroller.fill", "banknote.fill",
+        "heart.fill", "star.fill", "bolt.fill", "cloud.fill",
+    ]
+    private let colors = ["blue", "teal", "green", "orange", "red", "purple", "pink", "steel"]
+
+    private var selectedColor: String { colorToken ?? categoryColorToken }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Item Icon").font(.headline)
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(34), spacing: 6), count: 8), spacing: 6) {
+                ForEach(symbols, id: \.self) { name in
+                    Button {
+                        symbol = name
+                        if colorToken == nil { colorToken = categoryColorToken }
+                    } label: {
+                        Image(systemName: name)
+                            .frame(width: 30, height: 30)
+                            .background(
+                                symbol == name ? Theme.accent.opacity(0.2) : Color.clear,
+                                in: RoundedRectangle(cornerRadius: 6)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            HStack(spacing: 8) {
+                ForEach(colors, id: \.self) { token in
+                    Button {
+                        colorToken = token
+                        if symbol == nil { symbol = symbols.first }
+                    } label: {
+                        Circle()
+                            .fill(Theme.color(token: token))
+                            .frame(width: 20, height: 20)
+                            .overlay {
+                                if selectedColor == token {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.white)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Divider()
+            Button("Use Default Icon") {
+                symbol = nil
+                colorToken = nil
+                dismiss()
+            }
+            .disabled(symbol == nil && colorToken == nil)
+        }
+        .padding(16)
+        .frame(width: 320)
     }
 }

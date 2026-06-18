@@ -233,7 +233,9 @@ struct ItemIconView: View {
     var size: CGFloat = 32
 
     var body: some View {
-        if let url = summary.overview.urls.first, !url.isEmpty {
+        if let symbol = summary.overview.iconSymbol, !symbol.isEmpty {
+            CustomIconView(symbol: symbol, colorToken: summary.overview.iconColor ?? summary.overview.category.colorToken, size: size)
+        } else if let url = summary.overview.urls.first, !url.isEmpty {
             FaviconView(urlString: url, fallback: summary.overview.category, size: size)
         } else {
             CategoryIconView(category: summary.overview.category, size: size)

@@ -15,6 +15,11 @@ public struct ItemOverview: Codable, Sendable, Equatable, Hashable {
     public var strengthBucket: Int?
     /// Watchtower checks the user dismissed for this item.
     public var watchtowerExclusions: Set<String>
+    /// User-chosen custom icon (SF Symbol name). Overrides the favicon/category
+    /// icon when set. Optional so older items decode with no custom icon.
+    public var iconSymbol: String?
+    /// Color token for the custom icon; falls back to the category color.
+    public var iconColor: String?
 
     public init(
         title: String = "",
@@ -26,7 +31,9 @@ public struct ItemOverview: Codable, Sendable, Equatable, Hashable {
         category: Category = .login,
         hasOTP: Bool = false,
         strengthBucket: Int? = nil,
-        watchtowerExclusions: Set<String> = []
+        watchtowerExclusions: Set<String> = [],
+        iconSymbol: String? = nil,
+        iconColor: String? = nil
     ) {
         self.title = title
         self.subtitle = subtitle
@@ -38,6 +45,8 @@ public struct ItemOverview: Codable, Sendable, Equatable, Hashable {
         self.hasOTP = hasOTP
         self.strengthBucket = strengthBucket
         self.watchtowerExclusions = watchtowerExclusions
+        self.iconSymbol = iconSymbol
+        self.iconColor = iconColor
     }
 }
 

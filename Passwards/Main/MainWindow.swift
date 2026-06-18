@@ -7,6 +7,7 @@ struct MainWindow: View {
     @State private var store: VaultStore
     @State private var newItemCategoryPickerShown = false
     @State private var generatorShown = false
+    @State private var emptyTrashConfirm = false
 
     init(appState: AppState) {
         self.appState = appState
@@ -60,9 +61,27 @@ struct MainWindow: View {
                     GeneratorPopover(context: .standalone)
                 }
             }
+            if store.sidebarSelection == .trash {
+                ToolbarItem {
+                    Button(role: .destructive) {
+                        emptyTrashConfirm = true
+                    } label: {
+                        Label("Empty Trash", systemImage: "trash")
+                    }
+                    .help("Empty Recently Deleted")
+                }
+            }
         }
         .sheet(isPresented: $newItemCategoryPickerShown) {
             NewItemCategoryPicker(store: store)
+        }
+        .confirmationDialog("Empty Recently Deleted?", isPresented: $emptyTrashConfirm, titleVisibility: .visible) {
+            Button("Empty Trash", role: .destructive) {
+                Task { await store.emptyTrash() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently deletes every item in Recently Deleted. This can’t be undone.")
         }
     }
 }
