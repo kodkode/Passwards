@@ -101,10 +101,9 @@ struct LockScreenView: View {
         .frame(minWidth: 760, minHeight: 560)
         .task {
             passwordFocused = true
-            // Offer Touch ID immediately on lock-screen appearance, like 1P8.
-            if appState.biometricUnlockAllowed {
-                _ = await appState.unlockWithTouchID()
-            }
+            // Touch ID is offered on app launch/activation (AppState observes
+            // didBecomeActive), NOT on lock-screen appearance — otherwise a
+            // manual lock would immediately re-prompt to unlock.
         }
     }
 

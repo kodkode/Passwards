@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import PasswardsCore
 
 enum AppPhase: Equatable {
@@ -28,6 +29,9 @@ final class AppState {
     /// Set when the Secret Key is missing from the Keychain (e.g. fresh machine)
     /// and the lock screen must ask for it.
     private(set) var needsSecretKeyEntry = false
+
+    /// Guards the Touch ID auto-prompt against re-entrancy.
+    private var biometricPromptInFlight = false
 
     let autoLock = AutoLockMonitor()
     let sync = SyncController()
@@ -84,6 +88,31 @@ final class AppState {
         let cli = CLIControlController(appState: self)
         cli.startIfEnabled()
         cliControl = cli
+
+        // Offer Touch ID when the app is launched or brought back to the
+        // foreground while locked — NOT the instant you manually lock (locking
+        // keeps the app active, so no activation fires). Mirrors 1Password 8.
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.promptBiometricIfAppropriate() }
+        }
+        // Cover the launch case directly, in case the first activation fired
+        // before this observer was registered.
+        if phase == .locked, NSApp.isActive {
+            promptBiometricIfAppropriate()
+        }
+    }
+
+    /// Auto-prompts Touch ID when the app activates while locked. Guarded so the
+    /// system prompt can't re-enter and so a manual lock (no activation) is silent.
+    func promptBiometricIfAppropriate() {
+        guard phase == .locked, biometricUnlockAllowed, !biometricPromptInFlight else { return }
+        biometricPromptInFlight = true
+        Task {
+            _ = await unlockWithTouchID()
+            biometricPromptInFlight = false
+        }
     }
 
     // MARK: Onboarding
