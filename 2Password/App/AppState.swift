@@ -33,6 +33,7 @@ final class AppState {
     let sync = SyncController()
     private(set) var browserBridge: BrowserBridgeController?
     private(set) var sshAgent: SSHAgentController?
+    private(set) var cliControl: CLIControlController?
 
     /// Shared by the main window and Quick Access. Created at bootstrap;
     /// holds no decrypted data until `load()` runs after unlock.
@@ -77,6 +78,12 @@ final class AppState {
         let agent = SSHAgentController(appState: self)
         agent.startIfEnabled()
         sshAgent = agent
+
+        // CLI control channel: serves `2password item get/list` to the local
+        // CLI when enabled; secret reads are gated on Touch ID, locked otherwise.
+        let cli = CLIControlController(appState: self)
+        cli.startIfEnabled()
+        cliControl = cli
     }
 
     // MARK: Onboarding
@@ -279,4 +286,5 @@ nonisolated enum SettingsKeys {
     static let sshAgentEnabled = "sshAgentEnabled"
     static let sshApprovalRequired = "sshApprovalRequired"
     static let sshApprovalCacheSeconds = "sshApprovalCacheSeconds"
+    static let cliAccessEnabled = "cliAccessEnabled"
 }

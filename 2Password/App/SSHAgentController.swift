@@ -1,6 +1,4 @@
 import Foundation
-import AppKit
-import LocalAuthentication
 import TwoPasswordCore
 
 /// Owns the vault-backed SSH agent. When enabled it listens on a Unix socket
@@ -65,26 +63,9 @@ final class SSHAgentController: SSHAgentBackend {
             return true
         }
         let reason = "use the SSH key “\(keyTitle)” (\(fingerprint))"
-        let approved = await requestAuthorization(reason: reason)
+        let approved = await LocalAuthorization.request(reason: reason)
         if approved { lastApproved[keyBlob] = Date() }
         return approved
-    }
-
-    private func requestAuthorization(reason: String) async -> Bool {
-        let context = LAContext()
-        var error: NSError?
-        // Touch ID, falling back to the login password.
-        if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) {
-            return (try? await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)) ?? false
-        }
-        // No device-auth available — require an explicit click instead.
-        NSApp.activate()
-        let alert = NSAlert()
-        alert.messageText = "Allow SSH key use?"
-        alert.informativeText = "A program is requesting to \(reason)."
-        alert.addButton(withTitle: "Allow")
-        alert.addButton(withTitle: "Deny")
-        return alert.runModal() == .alertFirstButtonReturn
     }
 
     // MARK: SSHAgentBackend

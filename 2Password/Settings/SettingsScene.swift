@@ -529,6 +529,22 @@ struct AdvancedSettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            Section("Command-Line Access") {
+                Toggle("Enable the 2password command-line tool", isOn: Binding(
+                    get: { CLIControlController.isEnabled },
+                    set: { appState.cliControl?.setEnabled($0) }
+                ))
+                Text("Lets the `2password` CLI list items and read a field (`item get`, `read op://…`). Each secret read prompts for Touch ID, and it only works while unlocked.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                LabeledContent("CLI binary") {
+                    Text(verbatim: cliBinaryPath)
+                        .font(.system(.caption, design: .monospaced))
+                        .textSelection(.enabled)
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                }
+            }
             Section("Recently Deleted") {
                 Text("Items in Recently Deleted are permanently removed after 30 days.")
                     .font(.caption)
@@ -552,6 +568,10 @@ struct AdvancedSettingsView: View {
         case .error(let message): "Error: \(message)"
         case .accountUnavailable: "iCloud account unavailable"
         }
+    }
+
+    private var cliBinaryPath: String {
+        Bundle.main.executablePath ?? "(unknown)"
     }
 }
 

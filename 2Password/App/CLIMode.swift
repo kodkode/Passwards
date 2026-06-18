@@ -8,13 +8,15 @@ import TwoPasswordCore
 nonisolated enum CLIMode {
     /// First-argument subcommands that switch the binary into CLI mode.
     static let commands: Set<String> = [
-        "ssh-agent", "ssh-keys", "help", "--help", "-h", "version", "--version", "-v",
+        "ssh-agent", "ssh-keys", "item", "read", "help", "--help", "-h", "version", "--version", "-v",
     ]
 
     static func run(_ arguments: [String]) -> Never {
         switch arguments.first {
         case "ssh-agent":            printAgentInfo()
         case "ssh-keys":             listKeys()
+        case "item":                 runItem(Array(arguments.dropFirst()))
+        case "read":                 runRead(Array(arguments.dropFirst()))
         case "version", "--version", "-v": print("2password \(appVersion)")
         default:                     printHelp()
         }
@@ -32,11 +34,18 @@ nonisolated enum CLIMode {
         Usage: 2password <command>
 
         Commands:
-          ssh-agent    Print the SSH agent socket path and the SSH_AUTH_SOCK export line.
-          ssh-keys     List the public keys the SSH agent is serving (authorized_keys form).
-                       Requires the agent enabled in Settings → SSH Agent and the vault unlocked.
-          version      Print the version.
-          help         Show this help.
+          ssh-agent          Print the SSH agent socket path and the SSH_AUTH_SOCK export line.
+          ssh-keys           List the public keys the SSH agent is serving (authorized_keys form).
+          item list          List vault items (id, title, username, category).
+          item get <item> [field]
+                             Read a field (default: password) from an item by id or title.
+                             Prompts Touch ID. e.g. 2password item get GitHub
+          read op://item/field
+                             Read a field via a secret reference. Prompts Touch ID.
+          version            Print the version.
+          help               Show this help.
+
+        item/read require Command-Line Access (Settings → Advanced) and the vault unlocked.
         """)
     }
 
@@ -58,6 +67,49 @@ nonisolated enum CLIMode {
             print(identity.authorizedKeyLine)                                  // stdout: pipeable
             FileHandle.standardError.write(Data("  \(identity.fingerprintSHA256)\n".utf8))  // stderr: human note
         }
+    }
+
+    // MARK: item / read (control channel)
+
+    private static func runItem(_ args: [String]) {
+        switch args.first {
+        case "list":
+            let response = control(CLIRequest(command: .list))
+            guard let items = response.items else { errorOut(response.error ?? "no response") }
+            if items.isEmpty { print("# No items."); return }
+            for item in items {
+                print("\(item.id)\t\(item.title)\t\(item.username)\t\(item.category)")
+            }
+        case "get":
+            guard args.count >= 2 else { errorOut("usage: 2password item get <item> [field]") }
+            let response = control(CLIRequest(command: .get, query: args[1], field: args.count >= 3 ? args[2] : nil))
+            emitValue(response)
+        default:
+            errorOut("usage: 2password item <list|get>")
+        }
+    }
+
+    private static func runRead(_ args: [String]) {
+        guard let refString = args.first, let ref = SecretReference.parse(refString) else {
+            errorOut("usage: 2password read op://[vault/]item/field")
+        }
+        emitValue(control(CLIRequest(command: .get, query: ref.item, field: ref.field)))
+    }
+
+    /// Print a `get` value to stdout (pipeable); the item/field context to stderr.
+    private static func emitValue(_ response: CLIResponse) {
+        guard let value = response.value else { errorOut(response.error ?? "no value") }
+        if let title = response.itemTitle, let label = response.fieldLabel {
+            FileHandle.standardError.write(Data("# \(label) for \(title)\n".utf8))
+        }
+        print(value)
+    }
+
+    private static func control(_ request: CLIRequest) -> CLIResponse {
+        guard let response = CLIControlClient.send(request, socketPath: CLIControlServer.defaultSocketPath()) else {
+            errorOut("Couldn't reach 2Password. Enable Settings → Advanced → Command-Line Access, and unlock the app.")
+        }
+        return response
     }
 
     private static func errorOut(_ message: String) -> Never {
