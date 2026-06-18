@@ -268,6 +268,23 @@ final class VaultStore {
         }
     }
 
+    /// Clones an item into the same vault: new ID, "(copy)" title, not a
+    /// favorite, fresh timestamps. Attachment references are dropped (files are
+    /// stored per originating item), and the new item is selected.
+    func duplicate(itemID: String) async {
+        guard let original = await item(id: itemID) else { return }
+        var overview = original.overview
+        overview.title = (overview.title.isEmpty ? "Untitled" : overview.title) + " (copy)"
+        overview.isFavorite = false
+        var details = original.details
+        for s in details.sections.indices {
+            for f in details.sections[s].fields.indices where details.sections[s].fields[f].kind == .file {
+                details.sections[s].fields[f].value = ""
+            }
+        }
+        await create(VaultItem(vaultID: original.vaultID, overview: overview, details: details))
+    }
+
     /// Encrypts files picked in the editor and writes their attachment IDs
     /// into the corresponding `.file` fields. Returns true if anything changed.
     private func attachPendingFiles(to item: inout VaultItem) async throws -> Bool {

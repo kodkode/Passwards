@@ -166,6 +166,17 @@ struct ItemListRow: View {
                 Task { await store.deletePermanently(summary) }
             }
         } else {
+            if summary.overview.category == .login {
+                Button("Copy Username") { copyField(.username) }
+                Button("Copy Password") { copyField(.password) }
+            }
+            if summary.overview.hasOTP {
+                Button("Copy One-Time Password") { copyOTP() }
+            }
+            if let url = summary.overview.urls.first {
+                Button("Open in Browser") { openInBrowser(url) }
+            }
+            Divider()
             Button(summary.overview.isFavorite ? "Remove from Favorites" : "Add to Favorites") {
                 Task { await store.toggleFavorite(summary) }
             }
@@ -181,11 +192,38 @@ struct ItemListRow: View {
             Button(summary.overview.isArchived ? "Unarchive" : "Archive") {
                 Task { await store.setArchived(!summary.overview.isArchived, summary: summary) }
             }
+            Button("Duplicate") {
+                Task { await store.duplicate(itemID: summary.id) }
+            }
             Divider()
             Button("Move to Recently Deleted", role: .destructive) {
                 Task { await store.moveToTrash(summary) }
             }
         }
+    }
+
+    /// Fetches the item's details on demand and copies the field for `purpose`.
+    private func copyField(_ purpose: FieldPurpose) {
+        Task {
+            guard let item = await store.item(id: summary.id),
+                  let field = item.details.firstField(withPurpose: purpose),
+                  !field.value.isEmpty else { return }
+            ClipboardManager.copy(field.value, concealed: field.kind.isSecret)
+        }
+    }
+
+    private func copyOTP() {
+        Task {
+            guard let item = await store.item(id: summary.id),
+                  let field = item.details.firstField(ofKind: .otp),
+                  let generator = TOTPGenerator(userInput: field.value) else { return }
+            ClipboardManager.copy(generator.code(), concealed: true)
+        }
+    }
+
+    private func openInBrowser(_ raw: String) {
+        let candidate = raw.hasPrefix("http") ? raw : "https://\(raw)"
+        if let url = URL(string: candidate) { NSWorkspace.shared.open(url) }
     }
 }
 

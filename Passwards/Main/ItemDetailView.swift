@@ -97,6 +97,14 @@ struct ItemDetailView: View {
                     .keyboardShortcut("e", modifiers: .command)
                     .help("Edit (⌘E)")
                 }
+                ToolbarItem {
+                    Button {
+                        Task { await store.duplicate(itemID: itemID) }
+                    } label: {
+                        Label("Duplicate", systemImage: "plus.square.on.square")
+                    }
+                    .help("Duplicate item")
+                }
             }
         }
         .sheet(item: $largeTypeValue) { value in
