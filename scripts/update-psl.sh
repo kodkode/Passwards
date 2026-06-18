@@ -11,7 +11,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DEST="$REPO_ROOT/Packages/TwoPasswordCore/Sources/TwoPasswordCore/Resources/public_suffix_list.dat"
+DEST="$REPO_ROOT/Packages/PasswardsCore/Sources/PasswardsCore/Resources/public_suffix_list.dat"
 URL="https://publicsuffix.org/list/public_suffix_list.dat"
 
 echo "Downloading $URL"

@@ -6,7 +6,7 @@
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>L5774582ZK.com.michael.twopassword</string>
+		<string>L5774582ZK.com.michael.passwards</string>
 	</array>
 </dict>
 </plist>

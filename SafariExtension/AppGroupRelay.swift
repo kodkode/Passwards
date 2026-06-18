@@ -2,7 +2,7 @@ import Foundation
 import Network
 import os
 
-/// Forwards one Safari native message to the running 2Password app over the
+/// Forwards one Safari native message to the running Passwards app over the
 /// shared App Group Unix socket and returns the single reply.
 ///
 /// A process-global actor: every (per-message) `SafariWebExtensionHandler`
@@ -15,17 +15,17 @@ actor AppGroupRelay {
     static let shared = AppGroupRelay()
 
     /// Must match `BrowserBridgeServer.appGroupIdentifier` / `defaultSocketPath`.
-    private static let appGroupIdentifier = "L5774582ZK.com.michael.twopassword"
+    private static let appGroupIdentifier = "L5774582ZK.com.michael.passwards"
     private static let socketFilename = "2pw.sock"
 
     private static let queue = DispatchQueue(label: "2pw-appgroup-relay")
-    private static let log = Logger(subsystem: "com.michael.twopassword.SafariExtension", category: "relay")
+    private static let log = Logger(subsystem: "com.michael.passwards.SafariExtension", category: "relay")
 
     private enum RelayError: Error { case noContainer, closed }
 
     private static func unreachableData() -> Data {
         (try? JSONSerialization.data(withJSONObject:
-            ["type": "error", "message": "Couldn’t reach 2Password. Make sure the app is running."])) ?? Data()
+            ["type": "error", "message": "Couldn’t reach Passwards. Make sure the app is running."])) ?? Data()
     }
 
     private var connection: NWConnection?
@@ -87,7 +87,7 @@ actor AppGroupRelay {
         buffer = Data()
     }
 
-    // MARK: Framing — must match TwoPasswordCore.NativeMessageFraming
+    // MARK: Framing — must match PasswardsCore.NativeMessageFraming
     // (4-byte little-endian length prefix + UTF-8 JSON body).
 
     private static func frame(_ body: Data) -> Data {

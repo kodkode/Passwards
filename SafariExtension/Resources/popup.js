@@ -1,4 +1,4 @@
-// 2Password popup: suggestions for the current tab, search across all
+// Passwards popup: suggestions for the current tab, search across all
 // logins, fill / copy actions, and the first-run pairing flow.
 
 const statusEl = document.getElementById("status");
@@ -28,9 +28,9 @@ async function init() {
   [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
   const state = await send({ cmd: "state" });
-  if (state?.error) return showStatus(`Can't reach 2Password.<br>${state.error}`);
+  if (state?.error) return showStatus(`Can't reach Passwards.<br>${state.error}`);
   if (!state.paired) return showPairing();
-  if (state.locked) return showStatus("2Password is locked.<br>Unlock the app to use the extension.");
+  if (state.locked) return showStatus("Passwards is locked.<br>Unlock the app to use the extension.");
 
   const url = activeTab?.url ?? "";
   const isWebPage = /^https?:/.test(url);
@@ -50,8 +50,8 @@ async function init() {
 
 function showPairing() {
   // Pairing happens in a dedicated tab: the popup dies as soon as the
-  // 2Password app takes focus for its approval alert.
-  showStatus(`Connect this browser to 2Password.<button id="connect">Connect…</button>`);
+  // Passwards app takes focus for its approval alert.
+  showStatus(`Connect this browser to Passwards.<button id="connect">Connect…</button>`);
   statusEl.querySelector("#connect").addEventListener("click", () => {
     chrome.tabs.create({ url: chrome.runtime.getURL("pairing.html") });
     window.close();

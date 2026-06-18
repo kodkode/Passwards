@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-2Password — a native macOS clone of 1Password 8 (Swift 6 + SwiftUI), built for the owner's daily personal use with real passwords. **Design fidelity to 1Password 8 is a hard requirement**: when touching UI, match 1P8's layout/colors/behavior, and prefer what real 1P8 does (e.g. the sidebar uses macOS's native translucent material — do not replace it with custom backgrounds).
+Passwards — a native macOS clone of 1Password 8 (Swift 6 + SwiftUI), built for the owner's daily personal use with real passwords. **Design fidelity to 1Password 8 is a hard requirement**: when touching UI, match 1P8's layout/colors/behavior, and prefer what real 1P8 does (e.g. the sidebar uses macOS's native translucent material — do not replace it with custom backgrounds).
 
 Screen Recording permission is granted: after UI changes, verify your own work by relaunching the app and capturing it (`screencapture -x /tmp/shot.png`, then Read the PNG; `screencapture -l <windowid>` for a single window). Look at the result before declaring a design change done.
 
@@ -12,19 +12,19 @@ Screen Recording permission is granted: after UI changes, verify your own work b
 
 ```bash
 # Build the app
-xcodebuild -project 2Password.xcodeproj -scheme 2Password -configuration Debug build
+xcodebuild -project Passwards.xcodeproj -scheme Passwards -configuration Debug -allowProvisioningUpdates build
 
 # All unit tests live in the SPM package (no signing needed)
-cd Packages/TwoPasswordCore && swift test
+cd Packages/PasswardsCore && swift test
 
 # Single suite / single test
-cd Packages/TwoPasswordCore && swift test --filter Watchtower
-cd Packages/TwoPasswordCore && swift test --filter "TOTPTests/rfc6238Vectors"
+cd Packages/PasswardsCore && swift test --filter Watchtower
+cd Packages/PasswardsCore && swift test --filter "TOTPTests/rfc6238Vectors"
 
 # Relaunch after build — MUST fully kill first, or macOS re-activates the old
 # instance and the user sees stale UI:
-osascript -e 'quit app "2Password"'; until ! pgrep -f "2Password.app/Contents/MacOS"; do sleep 0.5; done
-open ~/Library/Developer/Xcode/DerivedData/2Password-*/Build/Products/Debug/2Password.app
+osascript -e 'quit app "Passwards"'; until ! pgrep -f "Passwards.app/Contents/MacOS"; do sleep 0.5; done
+open ~/Library/Developer/Xcode/DerivedData/Passwards-*/Build/Products/Debug/Passwards.app
 
 # To screenshot the app's own windows (debug builds only): set the bypass env
 # var via launchd, then relaunch with `open` as above. NEVER exec the binary
@@ -35,14 +35,16 @@ launchctl setenv TWOPW_ALLOW_CAPTURE 1
 
 ## Naming gotcha
 
-Product/bundle is `2Password` / `com.michael.twopassword`, but Swift modules can't start with a digit: the app module is **`TwoPassword`**, the package is **`TwoPasswordCore`**. The app target uses Xcode 16 filesystem-synchronized groups — new files under `2Password/` are picked up automatically, no pbxproj edits needed.
+Product/bundle is `Passwards` / `com.michael.passwards`; the app module is **`Passwards`** and the package is **`PasswardsCore`**. The app target uses Xcode 16 filesystem-synchronized groups — new files under `Passwards/` are picked up automatically, no pbxproj edits needed.
+
+**Legacy identifiers kept on purpose** (the app was renamed from "2Password" — renaming these too would orphan live data): the on-disk vault is still `…/Application Support/2Password/2password.sqlite` (+ `Attachments/`), the IPC sockets are still `.2password-*.sock`, and the CloudKit container is still `iCloud.com.michael.twopassword`. These stayed at the old names so the existing vault and any cloud data remain reachable after the rename. Everything user-visible plus the bundle id are `Passwards` / `com.michael.passwards`. Building the renamed bundle id the first time needs `-allowProvisioningUpdates` (Xcode registers its iCloud/Push profile).
 
 ## Architecture
 
 Two layers with a strict boundary:
 
-- **`Packages/TwoPasswordCore`** (SPM, fully testable headless): Crypto, Models, Storage (GRDB), Sync (CKSyncEngine), Generator, TOTP, Watchtower (+ `PublicSuffixList`), Importers, BrowserBridge, SSH agent, CLI control. Deps: GRDB, ZIPFoundation. Crypto is CryptoKit + CommonCrypto only — no third-party code may touch key material.
-- **`2Password/`** (app target, SwiftUI, `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`): all UI + AppKit integration (Quick Access NSPanel, hotkeys via KeyboardShortcuts, clipboard, Touch ID prompts).
+- **`Packages/PasswardsCore`** (SPM, fully testable headless): Crypto, Models, Storage (GRDB), Sync (CKSyncEngine), Generator, TOTP, Watchtower (+ `PublicSuffixList`), Importers, BrowserBridge, SSH agent, CLI control. Deps: GRDB, ZIPFoundation. Crypto is CryptoKit + CommonCrypto only — no third-party code may touch key material.
+- **`Passwards/`** (app target, SwiftUI, `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`): all UI + AppKit integration (Quick Access NSPanel, hotkeys via KeyboardShortcuts, clipboard, Touch ID prompts).
 
 ### Encryption layering (the core invariant)
 
@@ -64,21 +66,21 @@ Every DB column and CKRecord field that carries item/vault data is AES-256-GCM c
 
 ### CloudKit sync (code-complete, dormant)
 
-`SyncEngine` (CKSyncEngine, single "Main" zone, LWW conflicts with the losing payload preserved into local history, tombstone table for deletions) only activates when the binary has the iCloud entitlement — checked at runtime via `SecTaskCopyValueForEntitlement` in `SyncController` (CloudKit APIs crash uncatchably without it). Activation requires the owner's Apple ID in Xcode: swap `2Password/2Password.entitlements` for `2Password/2Password+CloudKit.entitlements` contents, build once, deploy schema to Production (steps in README). Sync runs while locked (ciphertext only); local mutations propagate via `VaultStore.refresh()` → `sync.kick()`.
+`SyncEngine` (CKSyncEngine, single "Main" zone, LWW conflicts with the losing payload preserved into local history, tombstone table for deletions) only activates when the binary has the iCloud entitlement — checked at runtime via `SecTaskCopyValueForEntitlement` in `SyncController` (CloudKit APIs crash uncatchably without it). Activation requires the owner's Apple ID in Xcode: swap `Passwards/Passwards.entitlements` for `Passwards/Passwards+CloudKit.entitlements` contents, build once, deploy schema to Production (steps in README). Sync runs while locked (ciphertext only); local mutations propagate via `VaultStore.refresh()` → `sync.kick()`.
 
 ### Browser extension + bridge (implemented)
 
-`BrowserExtension/` is the single source of truth for the extension (Chrome/Brave/Edge load it unpacked); `scripts/sync-safari-extension.sh` copies it verbatim into `SafariExtension/Resources/` (only the manifest differs — edit `BrowserExtension/` then re-run the script, never edit the Safari copy). The same app binary is the native-messaging host in `--browser-host` mode (`BrowserHostMode`): a dumb byte pipe between the extension's stdio and the bridge socket. `TwoPasswordCore/BrowserBridge/`: `BrowserChannelCrypto` (one-time X25519 pairing the user approves via a 6-digit code → per-connection ephemeral session keys → AES-256-GCM, nonce = direction+counter, strict per-direction sequence for replay protection), `BrowserWire` (native-messaging framing + `BrowserRequest`/`BrowserResponse`), `BrowserBridgeServer` (actor, 0600 socket in the App Group container, state keyed by `cid`). App side: `BrowserBridgeController` serves credentials **only while unlocked**, pairings in the Keychain; which item is released is matched on the page's registrable domain (eTLD+1) via `WatchtowerAuditor.registrableDomain` → `PublicSuffixList` (bundled Mozilla PSL; `scripts/update-psl.sh` refreshes it) — never a last-two-labels guess. "Open & Fill" stages a one-shot same-domain auto-submit fill. Settings → Browser installs/repairs the per-browser native-messaging manifest (`BrowserIntegration`).
+`BrowserExtension/` is the single source of truth for the extension (Chrome/Brave/Edge load it unpacked); `scripts/sync-safari-extension.sh` copies it verbatim into `SafariExtension/Resources/` (only the manifest differs — edit `BrowserExtension/` then re-run the script, never edit the Safari copy). The same app binary is the native-messaging host in `--browser-host` mode (`BrowserHostMode`): a dumb byte pipe between the extension's stdio and the bridge socket. `PasswardsCore/BrowserBridge/`: `BrowserChannelCrypto` (one-time X25519 pairing the user approves via a 6-digit code → per-connection ephemeral session keys → AES-256-GCM, nonce = direction+counter, strict per-direction sequence for replay protection), `BrowserWire` (native-messaging framing + `BrowserRequest`/`BrowserResponse`), `BrowserBridgeServer` (actor, 0600 socket in the App Group container, state keyed by `cid`). App side: `BrowserBridgeController` serves credentials **only while unlocked**, pairings in the Keychain; which item is released is matched on the page's registrable domain (eTLD+1) via `WatchtowerAuditor.registrableDomain` → `PublicSuffixList` (bundled Mozilla PSL; `scripts/update-psl.sh` refreshes it) — never a last-two-labels guess. "Open & Fill" stages a one-shot same-domain auto-submit fill. Settings → Browser installs/repairs the per-browser native-messaging manifest (`BrowserIntegration`).
 
 ### SSH agent + CLI (implemented)
 
-**SSH agent** (`TwoPasswordCore/SSH/`): a vault-backed OpenSSH agent. `SSHKey` parses unencrypted OpenSSH private keys — Ed25519 & ECDSA P-256/384/521 (CryptoKit) and RSA (`SSHRSA` via Security/`SecKey`, with `SSHBigInt` computing the CRT exponents PKCS#1 needs; honors rsa-sha2-256/512 flags). `SSHAgentProtocol`/`SSHAgentServer` serve REQUEST_IDENTITIES + SIGN_REQUEST over a 0600 Unix socket in the App Group container (`SSHAgentServer.defaultSocketPath()` → `agent.sock`). App side: `SSHAgentController` (`SSHAgentBackend`) serves `.sshKey` items only while unlocked (locking sheds them); **every signature is gated on Touch ID** (`LocalAuthorization`, per-key approval cache) — Settings → SSH Agent. Note `.sshKey` fields use a multi-line editor and the parser is whitespace-tolerant (a single-line field would strip a pasted key's newlines).
+**SSH agent** (`PasswardsCore/SSH/`): a vault-backed OpenSSH agent. `SSHKey` parses unencrypted OpenSSH private keys — Ed25519 & ECDSA P-256/384/521 (CryptoKit) and RSA (`SSHRSA` via Security/`SecKey`, with `SSHBigInt` computing the CRT exponents PKCS#1 needs; honors rsa-sha2-256/512 flags). `SSHAgentProtocol`/`SSHAgentServer` serve REQUEST_IDENTITIES + SIGN_REQUEST over a 0600 Unix socket in the App Group container (`SSHAgentServer.defaultSocketPath()` → `agent.sock`). App side: `SSHAgentController` (`SSHAgentBackend`) serves `.sshKey` items only while unlocked (locking sheds them); **every signature is gated on Touch ID** (`LocalAuthorization`, per-key approval cache) — Settings → SSH Agent. Note `.sshKey` fields use a multi-line editor and the parser is whitespace-tolerant (a single-line field would strip a pasted key's newlines).
 
-**CLI** (`CLIMode`, dispatched from `Boot.main` alongside `--browser-host` — run the app binary directly): `ssh-agent` (print SSH_AUTH_SOCK line), `ssh-keys` (list public keys via `SSHAgentClient`), plus `item list` / `item get <item> [field]` / `read op://[vault/]item/field`. The `item`/`read` commands hit a second control socket (`TwoPasswordCore/CLI/`: `CLIControlServer`/`CLIControlClient`/`CLIControlController`, `cli.sock`), opt-in via Settings → Advanced → Command-Line Access, unlocked-only, with every secret read Touch-ID-gated. Both blocking clients share `UnixSocketClient`. Interop verified against real `ssh-add`. (Passphrase-encrypted keys unsupported — decrypt-on-import is the intended path.)
+**CLI** (`CLIMode`, dispatched from `Boot.main` alongside `--browser-host` — run the app binary directly): `ssh-agent` (print SSH_AUTH_SOCK line), `ssh-keys` (list public keys via `SSHAgentClient`), plus `item list` / `item get <item> [field]` / `read op://[vault/]item/field`. The `item`/`read` commands hit a second control socket (`PasswardsCore/CLI/`: `CLIControlServer`/`CLIControlClient`/`CLIControlController`, `cli.sock`), opt-in via Settings → Advanced → Command-Line Access, unlocked-only, with every secret read Touch-ID-gated. Both blocking clients share `UnixSocketClient`. Interop verified against real `ssh-add`. (Passphrase-encrypted keys unsupported — decrypt-on-import is the intended path.)
 
 ### Deferred features
 
-Passkeys and item sharing are deferred **by the owner's explicit decision** — don't build them unprompted. Protocol seams live in `TwoPasswordCore/ExtensionPoints.swift`; `FieldKind.unknown(String)` preserves unrecognized field kinds for forward compatibility.
+Passkeys and item sharing are deferred **by the owner's explicit decision** — don't build them unprompted. Protocol seams live in `PasswardsCore/ExtensionPoints.swift`; `FieldKind.unknown(String)` preserves unrecognized field kinds for forward compatibility.
 
 ## Testing conventions
 

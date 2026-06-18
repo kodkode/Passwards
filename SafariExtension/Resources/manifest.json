@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "2Password",
+  "name": "Passwards",
   "version": "1.0",
-  "description": "Fill and save 2Password logins in your browser.",
+  "description": "Fill and save Passwards logins in your browser.",
   "permissions": [
     "nativeMessaging",
     "storage",
@@ -14,7 +14,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "2Password"
+    "default_title": "Passwards"
   },
   "content_scripts": [
     {

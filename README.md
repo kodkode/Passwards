@@ -1,4 +1,4 @@
-# 2Password
+# Passwards
 
 A native macOS clone of 1Password 8 — Swift + SwiftUI, real cryptography, built for daily personal use.
 
@@ -25,14 +25,14 @@ A native macOS clone of 1Password 8 — Swift + SwiftUI, real cryptography, buil
 ## Building
 
 ```bash
-open 2Password.xcodeproj   # ⌘R — or:
-xcodebuild -project 2Password.xcodeproj -scheme 2Password build
+open Passwards.xcodeproj   # ⌘R — or:
+xcodebuild -project Passwards.xcodeproj -scheme Passwards build
 ```
 
 Unit tests (58 crypto/storage/TOTP/Watchtower/import tests, no signing needed):
 
 ```bash
-cd Packages/TwoPasswordCore && swift test
+cd Packages/PasswardsCore && swift test
 ```
 
 ## Activating iCloud sync (one-time)
@@ -40,7 +40,7 @@ cd Packages/TwoPasswordCore && swift test
 The sync engine ships dormant because creating the iCloud provisioning profile requires your Apple ID in Xcode:
 
 1. Xcode → Settings → Accounts → add your Apple ID (the paid team `L5774582ZK`).
-2. Replace the contents of `2Password/2Password.entitlements` with `2Password/2Password+CloudKit.entitlements` (or point `CODE_SIGN_ENTITLEMENTS` at it).
+2. Replace the contents of `Passwards/Passwards.entitlements` with `Passwards/Passwards+CloudKit.entitlements` (or point `CODE_SIGN_ENTITLEMENTS` at it).
 3. Build once from Xcode — it auto-registers the `iCloud.com.michael.twopassword` container.
 4. Before relying on sync day-to-day, deploy the schema to Production in the [CloudKit Console](https://icloud.developer.apple.com) (Development → Deploy Schema Changes).
 
@@ -49,7 +49,7 @@ The app detects the entitlement at runtime; the sync toggle and "sign in to exis
 ## Architecture
 
 ```
-Packages/TwoPasswordCore   # SPM package: everything testable without the app
+Packages/PasswardsCore   # SPM package: everything testable without the app
   Crypto/      2SKD key derivation, AES-GCM blobs, KeyStore actor, Keychain, Secure Enclave
   Models/      Item/Field/Section/Category (+ all 22 templates)
   Storage/     GRDB (SQLite) — ciphertext-only columns; repositories encrypt at the boundary
@@ -58,14 +58,14 @@ Packages/TwoPasswordCore   # SPM package: everything testable without the app
   TOTP/        RFC 6238, otpauth parser, Base32
   Watchtower/  auditor, HIBP k-anonymity client, 2fa.directory matcher
   Importers/   1PUX, CSV, exporters
-2Password/                 # app target (SwiftUI, module name TwoPassword)
+Passwards/                 # app target (SwiftUI, module name Passwards)
   App/  Theme/  Onboarding/  LockScreen/  Main/  QuickAccess/  Watchtower/
   Generator/  Settings/  Icons/
 ```
 
 Dependencies: **GRDB**, **KeyboardShortcuts**, **ZIPFoundation**. All cryptography is CryptoKit + CommonCrypto — no third-party code touches key material.
 
-Local data: `~/Library/Containers/com.michael.twopassword/Data/Library/Application Support/2Password/` (SQLite DB + encrypted attachment files).
+Local data: `~/Library/Containers/com.michael.passwards/Data/Library/Application Support/2Password/` (SQLite DB + encrypted attachment files).
 
 ## Deliberately deferred (extension points stubbed in `ExtensionPoints.swift`)
 

@@ -1,4 +1,4 @@
-// 2Password content script: fills login forms on request from the popup and
+// Passwards content script: fills login forms on request from the popup and
 // offers to save credentials when a login form is submitted.
 
 (() => {
@@ -51,7 +51,7 @@
   // ----------------------------------------------------------- open & fill
 
   // The app may have staged a one-shot fill for this domain ("Open & Fill"
-  // clicked in 2Password). Login forms often render late, so retry briefly.
+  // clicked in Passwards). Login forms often render late, so retry briefly.
   async function checkPendingFill() {
     let creds;
     try {
@@ -159,11 +159,11 @@
         cmd: "fill-credentials", url: captured.url, itemID: existing.itemID,
       });
       if (!current || current.password === captured.password) return;
-      showBanner(`Update password for “${existing.title}” in 2Password?`, "Update", async () => {
+      showBanner(`Update password for “${existing.title}” in Passwards?`, "Update", async () => {
         await chrome.runtime.sendMessage({ cmd: "save-login", ...captured });
       });
     } else {
-      showBanner("Save this login in 2Password?", "Save", async () => {
+      showBanner("Save this login in Passwards?", "Save", async () => {
         await chrome.runtime.sendMessage({ cmd: "save-login", ...captured });
       });
     }

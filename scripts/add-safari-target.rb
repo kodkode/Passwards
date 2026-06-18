@@ -1,16 +1,16 @@
 #!/usr/bin/env ruby
-# Adds the Safari Web Extension app-extension target to 2Password.xcodeproj and
+# Adds the Safari Web Extension app-extension target to Passwards.xcodeproj and
 # embeds it in the app. Idempotent: removes any prior "SafariExtension" target
 # and its embed phase first, so it can be re-run safely.
 require 'xcodeproj'
 
 ROOT = File.expand_path('..', __dir__)
-PROJECT = File.join(ROOT, '2Password.xcodeproj')
+PROJECT = File.join(ROOT, 'Passwards.xcodeproj')
 EXT_NAME = 'SafariExtension'
-EXT_BUNDLE_ID = 'com.michael.twopassword.SafariExtension'
+EXT_BUNDLE_ID = 'com.michael.passwards.SafariExtension'
 
 project = Xcodeproj::Project.open(PROJECT)
-app = project.targets.find { |t| t.name == '2Password' } or abort 'app target not found'
+app = project.targets.find { |t| t.name == 'Passwards' } or abort 'app target not found'
 
 # --- Clean slate (idempotent re-runs) ---
 project.targets.select { |t| t.name == EXT_NAME }.each(&:remove_from_project)

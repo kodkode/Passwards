@@ -1,5 +1,5 @@
 // Pairing runs in a full tab (not the popup) because the popup is killed the
-// moment 2Password takes focus to show its approval alert.
+// moment Passwards takes focus to show its approval alert.
 
 const steps = {
   start: document.getElementById("step-start"),

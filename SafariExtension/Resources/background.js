@@ -1,4 +1,4 @@
-// 2Password background service worker.
+// Passwards background service worker.
 //
 // Speaks the app's wire protocol over native messaging: one-time X25519
 // pairing (user approves a verification code in the app), then per-connection
@@ -6,7 +6,7 @@
 // AES-256-GCM. Mirrors BrowserChannelCrypto.swift — labels and byte orders
 // are the wire contract.
 
-const HOST = "com.michael.twopassword";
+const HOST = "com.michael.passwards";
 
 // chrome.* exists in Chrome/Brave and Safari alike; prefer browser.* when the
 // engine defines it. connectNative routes to the native messaging host on
@@ -135,7 +135,7 @@ async function getStoredPairing() {
 }
 
 // Pair with the app. onCode is called with the verification code so the
-// popup can display it while the user approves in 2Password.
+// popup can display it while the user approves in Passwards.
 async function pair(onCode) {
   const keyPair = await x25519Generate();
   const extPub = new Uint8Array(await crypto.subtle.exportKey("raw", keyPair.publicKey));
