@@ -41,7 +41,7 @@ Product/bundle is `2Password` / `com.michael.twopassword`, but Swift modules can
 
 Two layers with a strict boundary:
 
-- **`Packages/TwoPasswordCore`** (SPM, fully testable headless): Crypto, Models, Storage (GRDB), Sync (CKSyncEngine), Generator, TOTP, Watchtower, Importers. Deps: GRDB, ZIPFoundation. Crypto is CryptoKit + CommonCrypto only — no third-party code may touch key material.
+- **`Packages/TwoPasswordCore`** (SPM, fully testable headless): Crypto, Models, Storage (GRDB), Sync (CKSyncEngine), Generator, TOTP, Watchtower (+ `PublicSuffixList`), Importers, BrowserBridge, SSH agent, CLI control. Deps: GRDB, ZIPFoundation. Crypto is CryptoKit + CommonCrypto only — no third-party code may touch key material.
 - **`2Password/`** (app target, SwiftUI, `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`): all UI + AppKit integration (Quick Access NSPanel, hotkeys via KeyboardShortcuts, clipboard, Touch ID prompts).
 
 ### Encryption layering (the core invariant)
@@ -52,7 +52,7 @@ SecretKey (Keychain-only, never in DB/CloudKit) ─HKDF──┴─XOR→ AUK
 AUK → encMasterKey → per-vault keys → per-item keys → blobs/files
 ```
 
-Every DB column and CKRecord field that carries item/vault data is AES-256-GCM ciphertext with **AAD = record-type:ID** (`EncryptedBlob`). Plaintext columns are limited to IDs, timestamps, and sync state. `KeyStore` (actor) holds decrypted keys while unlocked; `AppState.lock()` clears it. If you add a stored field, decide explicitly which side of the boundary it's on.
+Every DB column and CKRecord field that carries item/vault data is AES-256-GCM ciphertext with **AAD = record-type:ID** (`EncryptedBlob`). Plaintext columns are limited to IDs, timestamps, and sync state. `KeyStore` (actor) holds decrypted keys while unlocked; `AppState.lock()` clears it — and also sheds the decrypted `VaultStore` caches (summaries + any in-progress edit draft) and any secret left on the clipboard. If you add a stored field, decide explicitly which side of the boundary it's on.
 
 ### Item model: overview/details split
 
@@ -65,6 +65,10 @@ Every DB column and CKRecord field that carries item/vault data is AES-256-GCM c
 ### CloudKit sync (code-complete, dormant)
 
 `SyncEngine` (CKSyncEngine, single "Main" zone, LWW conflicts with the losing payload preserved into local history, tombstone table for deletions) only activates when the binary has the iCloud entitlement — checked at runtime via `SecTaskCopyValueForEntitlement` in `SyncController` (CloudKit APIs crash uncatchably without it). Activation requires the owner's Apple ID in Xcode: swap `2Password/2Password.entitlements` for `2Password/2Password+CloudKit.entitlements` contents, build once, deploy schema to Production (steps in README). Sync runs while locked (ciphertext only); local mutations propagate via `VaultStore.refresh()` → `sync.kick()`.
+
+### Browser extension + bridge (implemented)
+
+`BrowserExtension/` is the single source of truth for the extension (Chrome/Brave/Edge load it unpacked); `scripts/sync-safari-extension.sh` copies it verbatim into `SafariExtension/Resources/` (only the manifest differs — edit `BrowserExtension/` then re-run the script, never edit the Safari copy). The same app binary is the native-messaging host in `--browser-host` mode (`BrowserHostMode`): a dumb byte pipe between the extension's stdio and the bridge socket. `TwoPasswordCore/BrowserBridge/`: `BrowserChannelCrypto` (one-time X25519 pairing the user approves via a 6-digit code → per-connection ephemeral session keys → AES-256-GCM, nonce = direction+counter, strict per-direction sequence for replay protection), `BrowserWire` (native-messaging framing + `BrowserRequest`/`BrowserResponse`), `BrowserBridgeServer` (actor, 0600 socket in the App Group container, state keyed by `cid`). App side: `BrowserBridgeController` serves credentials **only while unlocked**, pairings in the Keychain; which item is released is matched on the page's registrable domain (eTLD+1) via `WatchtowerAuditor.registrableDomain` → `PublicSuffixList` (bundled Mozilla PSL; `scripts/update-psl.sh` refreshes it) — never a last-two-labels guess. "Open & Fill" stages a one-shot same-domain auto-submit fill. Settings → Browser installs/repairs the per-browser native-messaging manifest (`BrowserIntegration`).
 
 ### SSH agent + CLI (implemented)
 
