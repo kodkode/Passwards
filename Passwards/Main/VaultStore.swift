@@ -383,6 +383,14 @@ final class VaultStore {
         await refresh()
     }
 
+    func updateVault(vaultID: String, name: String, symbolName: String, colorToken: String) async {
+        try? await vaultRepo?.updateVaultAttributes(
+            VaultAttributes(name: name, symbolName: symbolName, colorToken: colorToken),
+            vaultID: vaultID
+        )
+        await refresh()
+    }
+
     // MARK: History
 
     func versions(itemID: String) async -> [ItemRepository.DecryptedVersion] {

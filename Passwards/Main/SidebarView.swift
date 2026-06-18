@@ -24,6 +24,7 @@ struct SidebarView: View {
     @Bindable var store: VaultStore
     let appState: AppState
     @State private var newVaultShown = false
+    @State private var editingVault: Vault?
 
     var body: some View {
         List(selection: $store.sidebarSelection) {
@@ -61,6 +62,9 @@ struct SidebarView: View {
                             .foregroundStyle(Theme.color(token: vault.attributes.colorToken))
                     }
                     .tag(SidebarFilter.vault(vault.id))
+                    .contextMenu {
+                        Button("Edit Vault…") { editingVault = vault }
+                    }
                 }
             } header: {
                 HStack {
@@ -141,6 +145,9 @@ struct SidebarView: View {
         .sheet(isPresented: $newVaultShown) {
             NewVaultSheet(store: store)
         }
+        .sheet(item: $editingVault) { vault in
+            NewVaultSheet(store: store, vault: vault)
+        }
         .safeAreaInset(edge: .bottom) {
             HStack {
                 Button {
@@ -207,17 +214,27 @@ struct SidebarView: View {
 
 struct NewVaultSheet: View {
     let store: VaultStore
+    /// nil = create a new vault; non-nil = edit this existing vault.
+    var vault: Vault?
     @Environment(\.dismiss) private var dismiss
-    @State private var name = ""
-    @State private var symbolName = "lock.fill"
-    @State private var colorToken = "blue"
+    @State private var name: String
+    @State private var symbolName: String
+    @State private var colorToken: String
+
+    init(store: VaultStore, vault: Vault? = nil) {
+        self.store = store
+        self.vault = vault
+        _name = State(initialValue: vault?.attributes.name ?? "")
+        _symbolName = State(initialValue: vault?.attributes.symbolName ?? "lock.fill")
+        _colorToken = State(initialValue: vault?.attributes.colorToken ?? "blue")
+    }
 
     private let symbols = ["lock.fill", "person.fill", "briefcase.fill", "house.fill", "creditcard.fill", "airplane", "heart.fill", "star.fill", "folder.fill", "graduationcap.fill"]
     private let colors = ["blue", "teal", "green", "orange", "red", "purple", "pink", "steel"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("New Vault").font(.title3.bold())
+            Text(vault == nil ? "New Vault" : "Edit Vault").font(.title3.bold())
             TextField("Name", text: $name, prompt: Text("Vault name"))
                 .textFieldStyle(.roundedBorder)
 
@@ -260,9 +277,13 @@ struct NewVaultSheet: View {
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button("Create") {
+                Button(vault == nil ? "Create" : "Save") {
                     Task {
-                        await store.createVault(name: name, symbolName: symbolName, colorToken: colorToken)
+                        if let vault {
+                            await store.updateVault(vaultID: vault.id, name: name, symbolName: symbolName, colorToken: colorToken)
+                        } else {
+                            await store.createVault(name: name, symbolName: symbolName, colorToken: colorToken)
+                        }
                         dismiss()
                     }
                 }

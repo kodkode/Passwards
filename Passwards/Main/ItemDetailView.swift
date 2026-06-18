@@ -103,7 +103,8 @@ struct ItemDetailView: View {
                     } label: {
                         Label("Duplicate", systemImage: "plus.square.on.square")
                     }
-                    .help("Duplicate item")
+                    .keyboardShortcut("d", modifiers: .command)
+                    .help("Duplicate item (⌘D)")
                 }
             }
         }
