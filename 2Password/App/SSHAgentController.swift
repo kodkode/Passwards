@@ -1,4 +1,5 @@
 import Foundation
+import os
 import TwoPasswordCore
 
 /// Owns the vault-backed SSH agent. When enabled it listens on a Unix socket
@@ -101,16 +102,34 @@ final class SSHAgentController: SSHAgentBackend {
     }
 
     /// Decrypts every SSH Key item in the unlocked vault and maps it. Returns
-    /// empty while locked so the agent exposes nothing.
+    /// empty while locked so the agent exposes nothing. Logs why each item is
+    /// skipped to aid setup ("ssh-add -l shows nothing") diagnosis.
     private func withSSHKeys<T>(_ transform: (SSHKey, ItemSummary) -> T) async -> [T] {
-        guard appState.phase == .unlocked, let store = appState.vaultStore else { return [] }
+        guard appState.phase == .unlocked, let store = appState.vaultStore else {
+            Self.log.info("identities: vault is locked — serving no keys")
+            return []
+        }
+        let summaries = sshSummaries(in: store)
+        Self.log.info("identities: \(summaries.count, privacy: .public) SSH Key item(s) in vault")
         var result: [T] = []
-        for summary in sshSummaries(in: store) {
-            guard let item = await store.item(id: summary.id),
-                  let pem = item.details.firstField(ofKind: .sshKey)?.value, !pem.isEmpty,
-                  let key = try? SSHKey.parseOpenSSHPrivateKey(pem) else { continue }
-            result.append(transform(key, summary))
+        for summary in summaries {
+            guard let item = await store.item(id: summary.id) else {
+                Self.log.error("identities: could not read item \(summary.id, privacy: .public)")
+                continue
+            }
+            guard let pem = item.details.firstField(ofKind: .sshKey)?.value, !pem.isEmpty else {
+                Self.log.error("identities: “\(summary.overview.title, privacy: .public)” has no SSH-key field value")
+                continue
+            }
+            do {
+                let key = try SSHKey.parseOpenSSHPrivateKey(pem)
+                result.append(transform(key, summary))
+            } catch {
+                Self.log.error("identities: parse failed for “\(summary.overview.title, privacy: .public)”: \(String(describing: error), privacy: .public)")
+            }
         }
         return result
     }
+
+    private static let log = Logger(subsystem: "com.michael.twopassword", category: "ssh-agent")
 }
