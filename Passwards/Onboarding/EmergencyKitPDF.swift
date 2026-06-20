@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 /// Renders the Emergency Kit PDF: sign-in details, Secret Key, and a blank
 /// line for the account password — modeled on 1Password's kit.
 enum EmergencyKitPDF {
-    static func save(email: String, secretKey: SecretKey, presentingWindow: NSWindow?) {
+    static func save(email: String, secretKey: SecretKey, recoveryCode: String? = nil, presentingWindow: NSWindow?) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.pdf]
         panel.nameFieldStringValue = "Passwards Emergency Kit.pdf"
@@ -14,7 +14,7 @@ enum EmergencyKitPDF {
         let handler: (NSApplication.ModalResponse) -> Void = { response in
             guard response == .OK, let url = panel.url else { return }
             do {
-                try render(email: email, secretKey: secretKey).write(to: url)
+                try render(email: email, secretKey: secretKey, recoveryCode: recoveryCode).write(to: url)
             } catch {
                 NSAlert(error: error).runModal()
             }
@@ -26,7 +26,7 @@ enum EmergencyKitPDF {
         }
     }
 
-    static func render(email: String, secretKey: SecretKey) -> Data {
+    static func render(email: String, secretKey: SecretKey, recoveryCode: String? = nil) -> Data {
         let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792) // US Letter
         let data = NSMutableData()
         var mediaBox = pageRect
@@ -69,6 +69,9 @@ enum EmergencyKitPDF {
         field("Created", Date().formatted(date: .long, time: .shortened))
         field("Email address", email)
         field("Secret Key", secretKey.formatted, monospaced: true)
+        if let recoveryCode {
+            field("Recovery Code", recoveryCode, monospaced: true)
+        }
 
         draw("ACCOUNT PASSWORD", at: CGPoint(x: 48, y: y), font: .boldSystemFont(ofSize: 9), color: .gray)
         NSColor.gray.setStroke()

@@ -21,16 +21,45 @@ public struct VaultRepository: Sendable {
     }
 
     public func saveAccount(_ record: AccountCrypto.AccountKeyRecord) async throws {
-        let row = AccountRecord(
-            id: record.accountID,
-            email: record.email,
-            kdfSalt: record.kdfSalt,
-            kdfIterations: record.kdfIterations,
-            encMasterKey: record.encMasterKey,
-            createdAt: Date()
-        )
         try await database.writer.write { db in
+            // Preserve the original creation date if a row already exists.
+            let createdAt = try AccountRecord.fetchOne(db)?.createdAt ?? Date()
+            let row = AccountRecord(
+                id: record.accountID,
+                email: record.email,
+                kdfSalt: record.kdfSalt,
+                kdfIterations: record.kdfIterations,
+                encMasterKey: record.encMasterKey,
+                createdAt: createdAt,
+                recoveryEnabled: record.recoveryEnabled,
+                recoveryBlob: record.recoveryBlob,
+                encRecoveryCode: record.encRecoveryCode
+            )
             try row.save(db)
+        }
+    }
+
+    /// Turns on (or rotates) the recovery code. Updates only the recovery columns
+    /// so the rest of the account row is untouched.
+    public func setRecoveryFields(recoveryBlob: Data, encRecoveryCode: Data, accountID: String) async throws {
+        try await database.writer.write { db in
+            try db.execute(
+                sql: "UPDATE account SET recoveryEnabled = 1, recoveryBlob = ?, encRecoveryCode = ? WHERE id = ?",
+                arguments: [recoveryBlob, encRecoveryCode, accountID]
+            )
+        }
+    }
+
+    /// Turns off the recovery code. The blobs are overwritten with random,
+    /// un-openable bytes (not NULLed) so that a stale CloudKit copy — which a
+    /// freshly-built CKRecord can overwrite but not delete a field from — is
+    /// replaced by garbage and can no longer be opened with the old code.
+    public func disableRecovery(tombstone: Data, accountID: String) async throws {
+        try await database.writer.write { db in
+            try db.execute(
+                sql: "UPDATE account SET recoveryEnabled = 0, recoveryBlob = ?, encRecoveryCode = ? WHERE id = ?",
+                arguments: [tombstone, tombstone, accountID]
+            )
         }
     }
 

@@ -252,6 +252,116 @@ final class AppState {
         }.value
     }
 
+    // MARK: Recovery code
+
+    enum RecoveryError: Error {
+        case notUnlocked
+        case wrongCurrentPassword
+        case invalidCode
+        case noRecoveryConfigured
+        case noAccountFound
+    }
+
+    /// True when an opt-in recovery code is currently active for this account.
+    var hasRecoveryCode: Bool { account?.recoveryEnabled == true }
+
+    /// Generates (or rotates) the recovery code. Gated on re-entering the current
+    /// password — you can only create a recovery path while you still have access.
+    /// Escrows the master key + Secret Key sealed under the new code (synced via
+    /// iCloud), and returns the code to display once.
+    func createRecoveryCode(currentPassword: String) async throws -> RecoveryCode {
+        guard let account, let vaultRepository else { throw RecoveryError.notUnlocked }
+        guard let masterKey = await keyStore.masterKey else { throw RecoveryError.notUnlocked }
+        guard let secretKey = KeychainStore.loadSecretKey(accountID: account.id) else {
+            throw UnlockError.missingSecretKey
+        }
+        guard await verifyAccountPassword(currentPassword) else { throw RecoveryError.wrongCurrentPassword }
+        let accountID = account.id
+        let masterKeyBox = SymmetricKeyBox(key: masterKey)
+        let result = try await Task.detached(priority: .userInitiated) {
+            try AccountCrypto.enableRecovery(masterKey: masterKeyBox.key, secretKey: secretKey, accountID: accountID)
+        }.value
+        try await vaultRepository.setRecoveryFields(
+            recoveryBlob: result.recoveryBlob, encRecoveryCode: result.encRecoveryCode, accountID: accountID
+        )
+        self.account = try await vaultRepository.account()
+        sync.kick()
+        return result.code
+    }
+
+    /// Decrypts the stored recovery code for re-viewing while unlocked.
+    func revealRecoveryCode() async -> String? {
+        guard let account, account.recoveryEnabled, let enc = account.encRecoveryCode else { return nil }
+        guard let masterKey = await keyStore.masterKey else { return nil }
+        let accountID = account.id
+        let box = SymmetricKeyBox(key: masterKey)
+        return await Task.detached(priority: .userInitiated) {
+            try? AccountCrypto.revealRecoveryCode(encRecoveryCode: enc, masterKey: box.key, accountID: accountID)
+        }.value
+    }
+
+    /// Turns off recovery, destroying the escrowed material (locally and, via the
+    /// overwrite-with-random scheme, in iCloud) so the old code no longer works.
+    func disableRecovery() async throws {
+        guard let account, let vaultRepository else { throw RecoveryError.notUnlocked }
+        let tombstone = try AccountCrypto.recoveryTombstone()
+        try await vaultRepository.disableRecovery(tombstone: tombstone, accountID: account.id)
+        self.account = try await vaultRepository.account()
+        sync.kick()
+    }
+
+    /// Regains access with a recovery code when the password is forgotten, then
+    /// sets a new password. Works on this device or, on a fresh machine, by
+    /// pulling the account record from iCloud. The recovery code stays valid.
+    func recoverWithCode(_ codeString: String, newPassword: String) async throws {
+        guard let code = RecoveryCode(parsing: codeString) else { throw RecoveryError.invalidCode }
+        guard let vaultRepository else { throw RecoveryError.notUnlocked }
+
+        let record: AccountCrypto.AccountKeyRecord
+        if let local = account {
+            record = local.keyRecord
+        } else if let remote = try await SyncController.fetchRemoteAccount() {
+            record = remote
+        } else {
+            throw RecoveryError.noAccountFound
+        }
+        guard record.recoveryEnabled, let recoveryBlob = record.recoveryBlob else {
+            throw RecoveryError.noRecoveryConfigured
+        }
+        let accountID = record.accountID
+
+        let recovered: (masterKey: SymmetricKeyBox, secretKey: SecretKey)
+        do {
+            recovered = try await Task.detached(priority: .userInitiated) {
+                let r = try AccountCrypto.recover(recoveryBlob: recoveryBlob, code: code, accountID: accountID)
+                return (SymmetricKeyBox(key: r.masterKey), r.secretKey)
+            }.value
+        } catch {
+            throw RecoveryError.invalidCode
+        }
+
+        // Persist the recovered Secret Key and set the new password (re-wraps the
+        // master key under the new AUK; recovery material carries through).
+        try KeychainStore.saveSecretKey(recovered.secretKey, accountID: accountID)
+        let masterBox = recovered.masterKey
+        let secretKey = recovered.secretKey
+        let newRecord = try await Task.detached(priority: .userInitiated) {
+            try AccountCrypto.changePassword(
+                record: record, masterKey: masterBox.key, newPassword: newPassword, secretKey: secretKey
+            )
+        }.value
+
+        try await vaultRepository.saveAccount(newRecord)
+        self.account = try await vaultRepository.account()
+        await keyStore.setMasterKey(masterBox.key)
+        needsSecretKeyEntry = false
+        UserDefaults.standard.set(Date(), forKey: SettingsKeys.lastPasswordUnlock)
+        phase = .unlocked
+        autoLock.start()
+        await sync.start(database: database)
+        sync.kick()
+    }
+
     func unlockWithTouchID() async -> Bool {
         guard biometricUnlockAllowed else { return false }
         let result = await BiometricUnlock.unlock()

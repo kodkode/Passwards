@@ -13,6 +13,12 @@ public enum RecordCoder {
         record["kdfSalt"] = account.kdfSalt
         record["kdfIterations"] = account.kdfIterations
         record["encMasterKey"] = account.encMasterKey
+        // Always set the flag so on/off propagates; blobs are set whenever present
+        // (turning recovery off overwrites them with random bytes, not nil, so a
+        // fresh CKRecord can still overwrite the stale server copy).
+        record["recoveryEnabled"] = account.recoveryEnabled ? 1 : 0
+        if let recoveryBlob = account.recoveryBlob { record["recoveryBlob"] = recoveryBlob }
+        if let encRecoveryCode = account.encRecoveryCode { record["encRecoveryCode"] = encRecoveryCode }
         return record
     }
 
@@ -22,7 +28,13 @@ public enum RecordCoder {
               let kdfSalt = record["kdfSalt"] as? Data,
               let kdfIterations = record["kdfIterations"] as? Int,
               let encMasterKey = record["encMasterKey"] as? Data else { return nil }
-        return .init(accountID: accountID, email: email, kdfSalt: kdfSalt, kdfIterations: kdfIterations, encMasterKey: encMasterKey)
+        return .init(
+            accountID: accountID, email: email, kdfSalt: kdfSalt, kdfIterations: kdfIterations,
+            encMasterKey: encMasterKey,
+            recoveryEnabled: (record["recoveryEnabled"] as? Int ?? 0) == 1,
+            recoveryBlob: record["recoveryBlob"] as? Data,
+            encRecoveryCode: record["encRecoveryCode"] as? Data
+        )
     }
 
     // MARK: Vault

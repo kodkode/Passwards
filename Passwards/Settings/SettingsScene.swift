@@ -87,6 +87,7 @@ struct SecuritySettingsView: View {
     @State private var touchIDError: String?
     @State private var changePasswordShown = false
     @State private var emergencyKitShown = false
+    @State private var recoveryCodeShown = false
 
     var body: some View {
         Form {
@@ -107,6 +108,17 @@ struct SecuritySettingsView: View {
                 }
                 .disabled(appState.phase != .unlocked)
                 Text("The Emergency Kit contains your Secret Key — you'll need it to set up Passwards on a new device. Keep a copy somewhere safe.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Section("Recovery Code") {
+                Button(appState.hasRecoveryCode ? "Manage Recovery Code…" : "Set Up Recovery Code…") {
+                    recoveryCodeShown = true
+                }
+                .disabled(appState.phase != .unlocked)
+                Text(appState.hasRecoveryCode
+                     ? "A recovery code is set up. Use it to regain access if you forget your account password."
+                     : "A recovery code lets you regain access if you forget your account password. Keep it as safe as your Secret Key — with it and your iCloud data, your vault can be unlocked.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -191,6 +203,9 @@ struct SecuritySettingsView: View {
         }
         .sheet(isPresented: $emergencyKitShown) {
             EmergencyKitSheet(appState: appState)
+        }
+        .sheet(isPresented: $recoveryCodeShown) {
+            RecoveryCodeSheet(appState: appState)
         }
     }
 }
@@ -336,6 +351,223 @@ struct EmergencyKitSheet: View {
             return
         }
         revealedKey = key
+    }
+}
+
+/// Set up / view / replace / turn off the recovery code. Creating or replacing
+/// is gated on the current password (you can only create a recovery path while
+/// you still have access); viewing is gated like the Emergency Kit.
+struct RecoveryCodeSheet: View {
+    let appState: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var password = ""
+    @State private var isWorking = false
+    @State private var errorMessage: String?
+    @State private var revealedCode: String?
+    @State private var copied = false
+    @State private var confirmingDisable = false
+
+    private enum PendingVerify { case view, replace }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Recovery Code")
+                .font(.title3.bold())
+
+            if let revealedCode {
+                revealed(revealedCode)
+            } else if appState.hasRecoveryCode {
+                manage
+            } else {
+                setup
+            }
+        }
+        .padding(22)
+        .frame(width: 440)
+    }
+
+    // MARK: First-time setup
+
+    private var setup: some View {
+        Group {
+            Text("A recovery code lets you get back into Passwards if you forget your account password. Enter your current password to create one.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            Text("Keep it as safe as your Secret Key: combined with your iCloud data, it can unlock your vault.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            SecureField("Current Password", text: $password, prompt: Text("Current password"))
+                .textFieldStyle(.roundedBorder)
+                .onSubmit { startCreate() }
+
+            errorText
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button {
+                    startCreate()
+                } label: {
+                    if isWorking { ProgressView().controlSize(.small) } else { Text("Create Recovery Code") }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(password.isEmpty || isWorking)
+            }
+        }
+    }
+
+    // MARK: Manage an existing code
+
+    private var manage: some View {
+        Group {
+            Label("Recovery code is on", systemImage: "checkmark.shield.fill")
+                .foregroundStyle(.green)
+            Text("Enter your account password to view or replace your recovery code. With the code and your iCloud data, your vault can be unlocked even without your password — so keep it safe.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            SecureField("Account Password", text: $password, prompt: Text("Account password"))
+                .textFieldStyle(.roundedBorder)
+                .onSubmit { verify(.view) }
+
+            errorText
+
+            HStack {
+                Button("View") { verify(.view) }
+                    .disabled(password.isEmpty || isWorking)
+                Button("Replace…") { verify(.replace) }
+                    .disabled(password.isEmpty || isWorking)
+                if appState.biometricUnlockAllowed {
+                    Button("Use Touch ID") { Task { await touchIDView() } }
+                }
+                Spacer()
+                Button("Turn Off…", role: .destructive) { confirmingDisable = true }
+            }
+
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+            }
+        }
+        .confirmationDialog("Turn off recovery?", isPresented: $confirmingDisable) {
+            Button("Turn Off Recovery", role: .destructive) { Task { await disable() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your current recovery code will stop working everywhere. You can set up a new one anytime.")
+        }
+    }
+
+    // MARK: Revealed code
+
+    private func revealed(_ code: String) -> some View {
+        Group {
+            Text("Write this down and store it somewhere safe, separate from your Mac. Anyone with this code and access to your iCloud data can unlock your vault.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("RECOVERY CODE")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Text(code)
+                        .font(.system(.callout, design: .monospaced).weight(.semibold))
+                        .textSelection(.enabled)
+                    Spacer()
+                    Button {
+                        ClipboardManager.copy(code, concealed: true)
+                        copied = true
+                    } label: {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Copy recovery code")
+                }
+            }
+            .padding(10)
+            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+
+            HStack {
+                Button("Save to Emergency Kit…") {
+                    guard let account = appState.account,
+                          let key = KeychainStore.loadSecretKey(accountID: account.id) else { return }
+                    EmergencyKitPDF.save(email: account.email, secretKey: key, recoveryCode: code, presentingWindow: NSApp.keyWindow)
+                }
+                Spacer()
+                Button("Done") { dismiss() }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+    }
+
+    @ViewBuilder private var errorText: some View {
+        if let errorMessage {
+            Text(errorMessage)
+                .font(.callout)
+                .foregroundStyle(.red)
+        }
+    }
+
+    // MARK: Actions
+
+    private func startCreate() {
+        guard !password.isEmpty, !isWorking else { return }
+        errorMessage = nil
+        isWorking = true
+        Task { await create(); isWorking = false }
+    }
+
+    private func verify(_ action: PendingVerify) {
+        guard !password.isEmpty, !isWorking else { return }
+        errorMessage = nil
+        isWorking = true
+        Task {
+            switch action {
+            case .view:
+                if await appState.verifyAccountPassword(password) {
+                    revealedCode = await appState.revealRecoveryCode()
+                    if revealedCode == nil { errorMessage = "Couldn't read the recovery code." }
+                } else {
+                    errorMessage = "The account password is incorrect."
+                }
+            case .replace:
+                await create()
+            }
+            isWorking = false
+        }
+    }
+
+    private func create() async {
+        do {
+            let code = try await appState.createRecoveryCode(currentPassword: password)
+            revealedCode = code.formatted
+            password = ""
+        } catch AppState.RecoveryError.wrongCurrentPassword {
+            errorMessage = "The account password is incorrect."
+        } catch {
+            errorMessage = "Couldn't create a recovery code: \(error.localizedDescription)"
+        }
+    }
+
+    private func touchIDView() async {
+        if case .success = await BiometricUnlock.unlock(reason: "view your recovery code") {
+            revealedCode = await appState.revealRecoveryCode()
+            if revealedCode == nil { errorMessage = "Couldn't read the recovery code." }
+        }
+    }
+
+    private func disable() async {
+        do {
+            try await appState.disableRecovery()
+            dismiss()
+        } catch {
+            errorMessage = "Couldn't turn off recovery: \(error.localizedDescription)"
+        }
     }
 }
 

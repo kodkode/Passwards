@@ -11,6 +11,7 @@ struct LockScreenView: View {
     @State private var isUnlocking = false
     @State private var failed = false
     @State private var shake = 0
+    @State private var showRecover = false
     @FocusState private var passwordFocused: Bool
 
     var body: some View {
@@ -94,11 +95,25 @@ struct LockScreenView: View {
                         .buttonStyle(.plain)
                         .padding(.top, 6)
                     }
+
+                    if appState.hasRecoveryCode {
+                        Button("Forgot password? Use your recovery code") {
+                            showRecover = true
+                        }
+                        .buttonStyle(.plain)
+                        .font(.callout)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .underline()
+                        .padding(.top, 4)
+                    }
                 }
             }
             .padding(48)
         }
         .frame(minWidth: 760, minHeight: 560)
+        .sheet(isPresented: $showRecover) {
+            RecoverWithCodeSheet(appState: appState)
+        }
         .task {
             passwordFocused = true
             // Touch ID is offered on app launch/activation (AppState observes
@@ -124,6 +139,89 @@ struct LockScreenView: View {
                 withAnimation(.default) { shake += 1 }
             }
             isUnlocking = false
+        }
+    }
+}
+
+/// Recover access on this Mac when the password is forgotten: enter the recovery
+/// code and choose a new password. On success the app unlocks and this sheet's
+/// host (the lock screen) is replaced by the main window.
+struct RecoverWithCodeSheet: View {
+    let appState: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var code = ""
+    @State private var newPassword = ""
+    @State private var confirmPassword = ""
+    @State private var isWorking = false
+    @State private var errorMessage: String?
+
+    private var score: PasswordStrength.Score { PasswordStrength.score(newPassword) }
+    private var formValid: Bool {
+        !code.isEmpty && newPassword.count >= 10 && newPassword == confirmPassword
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Recover with Recovery Code")
+                .font(.title3.bold())
+            Text("Enter your recovery code and choose a new account password. Your Secret Key is restored automatically.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            TextField("Recovery Code", text: $code, prompt: Text("RC-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"))
+                .textFieldStyle(.roundedBorder)
+                .font(.callout.monospaced())
+            SecureField("New Password", text: $newPassword, prompt: Text("New password (10+ characters)"))
+                .textFieldStyle(.roundedBorder)
+            if !newPassword.isEmpty {
+                StrengthBar(score: score)
+            }
+            SecureField("Confirm New Password", text: $confirmPassword, prompt: Text("Confirm new password"))
+                .textFieldStyle(.roundedBorder)
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.callout)
+                    .foregroundStyle(.red)
+            }
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button {
+                    recover()
+                } label: {
+                    if isWorking { ProgressView().controlSize(.small) } else { Text("Recover") }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!formValid || isWorking)
+            }
+        }
+        .padding(22)
+        .frame(width: 440)
+    }
+
+    private func recover() {
+        errorMessage = nil
+        guard score >= .fair else {
+            errorMessage = "That password is too weak to protect a vault. Add more words or characters."
+            return
+        }
+        isWorking = true
+        Task {
+            do {
+                try await appState.recoverWithCode(code, newPassword: newPassword)
+                dismiss()
+            } catch AppState.RecoveryError.invalidCode {
+                errorMessage = "That recovery code didn't work. Check it and try again."
+            } catch AppState.RecoveryError.noRecoveryConfigured {
+                errorMessage = "This account doesn't have a recovery code set up."
+            } catch {
+                errorMessage = "Recovery failed: \(error.localizedDescription)"
+            }
+            isWorking = false
         }
     }
 }

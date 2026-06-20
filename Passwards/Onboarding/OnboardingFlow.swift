@@ -12,6 +12,7 @@ struct OnboardingFlow: View {
         case secretKey
         case touchID
         case signIn
+        case recover
     }
 
     @State private var step: Step = .welcome
@@ -33,6 +34,7 @@ struct OnboardingFlow: View {
                 case .secretKey: secretKey
                 case .touchID: touchID
                 case .signIn: signIn
+                case .recover: recover
                 }
             }
             .frame(maxWidth: 460)
@@ -71,7 +73,92 @@ struct OnboardingFlow: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.white.opacity(0.8))
                 .underline()
+                Button("Recover with a recovery code") {
+                    step = .recover
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white.opacity(0.7))
+                .underline()
             }
+        }
+    }
+
+    @State private var recoveryCodeInput = ""
+    @State private var recoverNewPassword = ""
+    @State private var recoverConfirm = ""
+    @State private var recoverError: String?
+    @State private var recoverBusy = false
+
+    private var recoverScore: PasswordStrength.Score { PasswordStrength.score(recoverNewPassword) }
+    private var recoverFormValid: Bool {
+        !recoveryCodeInput.isEmpty
+            && recoverNewPassword.count >= 10
+            && recoverNewPassword == recoverConfirm
+    }
+
+    private var recover: some View {
+        card {
+            Text("Recover your account")
+                .font(.title2.bold())
+            Text("Enter your recovery code to download your vault from iCloud and set a new account password. Your Secret Key is restored automatically.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            TextField("Recovery Code", text: $recoveryCodeInput, prompt: Text("RC-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"))
+                .textFieldStyle(.roundedBorder)
+                .font(.callout.monospaced())
+            SecureField("New Password", text: $recoverNewPassword, prompt: Text("New password (10+ characters)"))
+                .textFieldStyle(.roundedBorder)
+            if !recoverNewPassword.isEmpty {
+                StrengthBar(score: recoverScore)
+            }
+            SecureField("Confirm New Password", text: $recoverConfirm, prompt: Text("Confirm new password"))
+                .textFieldStyle(.roundedBorder)
+
+            if let recoverError {
+                Text(recoverError)
+                    .font(.callout)
+                    .foregroundStyle(.red)
+            }
+
+            HStack {
+                Button("Back") { step = .welcome }
+                Spacer()
+                Button {
+                    performRecover()
+                } label: {
+                    if recoverBusy {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("Recover")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!recoverFormValid || recoverBusy)
+            }
+        }
+    }
+
+    private func performRecover() {
+        recoverError = nil
+        guard recoverScore >= .fair else {
+            recoverError = "That password is too weak to protect a vault. Add more words or characters."
+            return
+        }
+        recoverBusy = true
+        Task {
+            do {
+                try await appState.recoverWithCode(recoveryCodeInput, newPassword: recoverNewPassword)
+            } catch AppState.RecoveryError.invalidCode {
+                recoverError = "That recovery code didn't work. Check it and try again."
+            } catch AppState.RecoveryError.noAccountFound {
+                recoverError = "No account found in this iCloud account."
+            } catch AppState.RecoveryError.noRecoveryConfigured {
+                recoverError = "This account doesn't have a recovery code set up."
+            } catch {
+                recoverError = "Recovery failed: \(error.localizedDescription)"
+            }
+            recoverBusy = false
         }
     }
 

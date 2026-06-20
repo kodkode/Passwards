@@ -106,6 +106,15 @@ public struct AppDatabase: Sendable {
                 t.column("replacedAt", .datetime).notNull()
             }
         }
+        migrator.registerMigration("v4-recovery-code") { db in
+            // Opt-in recovery code (forgotten-password recovery). All nullable /
+            // defaulted so existing rows and older synced records stay valid.
+            try db.alter(table: "account") { t in
+                t.add(column: "recoveryEnabled", .boolean).notNull().defaults(to: false)
+                t.add(column: "recoveryBlob", .blob)      // master key + Secret Key sealed under the code
+                t.add(column: "encRecoveryCode", .blob)   // the code sealed under the master key
+            }
+        }
         return migrator
     }
 
@@ -158,7 +167,10 @@ public struct AppDatabase: Sendable {
                 id: incoming.accountID, email: incoming.email,
                 kdfSalt: incoming.kdfSalt, kdfIterations: incoming.kdfIterations,
                 encMasterKey: incoming.encMasterKey,
-                createdAt: local?.createdAt ?? Date())
+                createdAt: local?.createdAt ?? Date(),
+                recoveryEnabled: incoming.recoveryEnabled,
+                recoveryBlob: incoming.recoveryBlob,
+                encRecoveryCode: incoming.encRecoveryCode)
             try row.save(db)
             return true
         }
@@ -184,9 +196,18 @@ public struct AccountRecord: Codable, Sendable, FetchableRecord, PersistableReco
     public var kdfIterations: Int
     public var encMasterKey: Data
     public var createdAt: Date
+    /// Opt-in recovery code (forgotten-password recovery). Optional/defaulted so
+    /// rows written before the v4 migration and older synced records decode.
+    public var recoveryEnabled: Bool = false
+    public var recoveryBlob: Data?
+    public var encRecoveryCode: Data?
 
     public var keyRecord: AccountCrypto.AccountKeyRecord {
-        .init(accountID: id, email: email, kdfSalt: kdfSalt, kdfIterations: kdfIterations, encMasterKey: encMasterKey)
+        .init(
+            accountID: id, email: email, kdfSalt: kdfSalt, kdfIterations: kdfIterations,
+            encMasterKey: encMasterKey, recoveryEnabled: recoveryEnabled,
+            recoveryBlob: recoveryBlob, encRecoveryCode: encRecoveryCode
+        )
     }
 }
 
