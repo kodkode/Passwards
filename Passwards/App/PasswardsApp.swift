@@ -80,7 +80,15 @@ struct PasswardsApp: App {
                     }
                 }
             }
+            CommandGroup(replacing: .help) {
+                HelpMenuItems()
+            }
         }
+
+        Window("Passwards Help", id: "help") {
+            HelpView()
+        }
+        .windowResizability(.contentSize)
 
         Settings {
             SettingsScene(appState: appState)
@@ -104,6 +112,19 @@ struct PasswardsApp: App {
                 NSApp.terminate(nil)
             }
         }
+    }
+}
+
+/// The "Help" menu: opens the in-app guide window. (Replaces the default empty
+/// macOS Help menu.)
+private struct HelpMenuItems: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("Passwards Help") {
+            openWindow(id: "help")
+        }
+        .keyboardShortcut("?", modifiers: .command)
     }
 }
 
