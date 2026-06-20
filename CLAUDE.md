@@ -97,3 +97,7 @@ Passkeys and item sharing are deferred **by the owner's explicit decision** — 
 ## Testing conventions
 
 Swift Testing (`@Test`/`#expect`), not XCTest. Crypto/TOTP changes must keep the published test vectors green (PBKDF2/HKDF/RFC 6238 in `CryptoTests`/`TOTPTests`). `TestEnvironment.make()` (StorageTests) builds an unlocked in-memory DB + vault for repository-level tests — reuse it. Importer tests run against inline fixtures; HIBP is tested with recorded responses, never live calls.
+
+## Dev references
+
+- **`docs/agent-teams.md`** — master reference for orchestrating **agent teams** (one lead + peer teammates that share a task list and message via `SendMessage`): when to use teams vs subagents vs the `Workflow` tool, spawning/steering, the real tools/settings/limits, and Passwards-specific fit (parallel security review, cross-layer core/app features, disjoint-file ownership across the strict layer boundary). Agent teams are **enabled for this repo** via `.claude/settings.local.json` (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`); restart Claude Code for it to take effect.
