@@ -760,9 +760,22 @@ struct BrowserSettingsView: View {
 
 struct AdvancedSettingsView: View {
     let appState: AppState
+    @State private var restoreChoice: Backup.Chosen?
 
     var body: some View {
         Form {
+            Section("Encrypted Backup") {
+                Button("Save Encrypted Backup…") {
+                    Backup.saveBackup(appState: appState)
+                }
+                .disabled(appState.phase != .unlocked)
+                Button("Restore from Backup…") {
+                    if let chosen = Backup.chooseBackupFile() { restoreChoice = chosen }
+                }
+                Text("A backup is a single encrypted file with your whole vault — your safety net if you don't use iCloud. Restoring replaces everything on this Mac and needs your password + Secret Key, or a recovery code.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Section("iCloud Sync") {
                 if SyncController.hasCloudKitEntitlement {
                     Toggle("Sync with iCloud", isOn: Binding(
@@ -805,6 +818,9 @@ struct AdvancedSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.vertical, 8)
+        .sheet(item: $restoreChoice) { chosen in
+            RestoreBackupSheet(appState: appState, fileData: chosen.data, header: chosen.file)
+        }
     }
 
     private var syncStatusText: String {

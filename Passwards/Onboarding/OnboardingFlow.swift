@@ -41,6 +41,9 @@ struct OnboardingFlow: View {
             .padding(40)
         }
         .frame(minWidth: 760, minHeight: 560)
+        .sheet(item: $restoreChoice) { chosen in
+            RestoreBackupSheet(appState: appState, fileData: chosen.data, header: chosen.file)
+        }
     }
 
     private var welcome: some View {
@@ -80,8 +83,16 @@ struct OnboardingFlow: View {
                 .foregroundStyle(.white.opacity(0.7))
                 .underline()
             }
+            Button("Restore from a backup file") {
+                if let chosen = Backup.chooseBackupFile() { restoreChoice = chosen }
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white.opacity(0.7))
+            .underline()
         }
     }
+
+    @State private var restoreChoice: Backup.Chosen?
 
     @State private var recoveryCodeInput = ""
     @State private var recoverNewPassword = ""

@@ -1147,7 +1147,7 @@ Your Recovery Code is **reusable** and stays valid even after you change your Ac
 
 Either way you'll set a new Account Password during recovery, and your Recovery Code keeps working for next time.
 
-> **Not using iCloud?** Your recovery backup is still saved on this Mac, so the **same-Mac** recovery above works completely offline — forgetting your password doesn't lock you out as long as you have your Recovery Code. But with no iCloud copy there's nothing to restore from if this Mac is lost or damaged, and recovering onto a *new* Mac needs iCloud. If you rely on a single Mac without iCloud, your safest backstop is still keeping your Account Password and Secret Key somewhere safe.
+> **Not using iCloud?** Your recovery backup is still saved on this Mac, so the **same-Mac** recovery above works completely offline — forgetting your password doesn't lock you out as long as you have your Recovery Code. But with no iCloud copy there's nothing to restore from if this Mac is lost or damaged. For protection against device loss without iCloud, create an **Encrypted Backup** (File → Save Encrypted Backup…) and keep it somewhere safe — you can restore it on a new Mac. See *Importing & Exporting*.
 
 ## Viewing, replacing, or turning it off
 
@@ -1308,6 +1308,7 @@ Open the **File** menu in the menu bar. You'll find two import commands and two 
 - **Import from CSV…**
 - **Export Logins as CSV…**
 - **Export All Items as JSON…**
+- **Save Encrypted Backup…** — a full, encrypted copy of your vault (see [Encrypted Backup](#encrypted-backup-recommended) below). Restoring lives in **Settings → Advanced** (and in onboarding on a fresh Mac).
 
 These appear only when your vault is unlocked. If you don't see them, unlock Passwards first.
 
@@ -1375,6 +1376,29 @@ The save dialog reminds you of this, and so does the completion message. To stay
 
 When in doubt, keep your data in the app, where it stays encrypted, and only create an export when you truly need one.
 
+## Encrypted Backup (recommended)
+
+Unlike the plaintext CSV and JSON exports above, an **encrypted backup** is a single `.pwbackup` file containing your **entire vault** — every item, all your vaults, item history, and file attachments — kept fully encrypted. It's the safe way to keep an off-device copy, and it's especially valuable if you don't use iCloud sync.
+
+### Save a backup
+
+Choose **File → Save Encrypted Backup…** (or **Settings → Advanced → Save Encrypted Backup…**) while unlocked, and pick where to save the `.pwbackup` file. There's no password prompt to *create* one — the file is already sealed under your account keys.
+
+> The backup is locked with the same protection as your live vault. To open it later you'll need your **account password + Secret Key**, or a **recovery code**. It's encrypted, but it's still a complete copy of your vault — keep it somewhere safe.
+
+### Restore a backup
+
+You can restore in two places:
+
+- **On a new or replacement Mac:** during onboarding, choose **Restore from a backup file** — no iCloud required.
+- **On your current Mac:** open **Settings → Advanced → Restore from Backup…**.
+
+Either way you'll choose the `.pwbackup` file and unlock it with your **account password + Secret Key**, or a **recovery code** (restoring with a recovery code also has you set a new password, since the backup's old one may be forgotten).
+
+> **Restoring replaces everything.** A restore wipes this Mac's current vault and puts the backup's contents in their place, so the app ends up exactly as it was when the backup was made. If iCloud sync is on, the restored state syncs out to your other devices too. Touch ID is reset by a restore — re-enable it in **Settings → Security** afterward.
+
+Because a backup is a complete encrypted snapshot, it's both your protection against losing a device and a way to roll back to an earlier state.
+
 
 # FAQ & Glossary
 
@@ -1402,7 +1426,7 @@ Your data is safe as long as your Account Password and Secret Key stay private. 
 2. Your encrypted vault downloads from iCloud.
 3. Enter your **Account Password** and the **Secret Key** from your **Emergency Kit**.
 
-> This relies on iCloud sync — it's what keeps an off-device (encrypted) copy of your vault. If you use Passwards on a single Mac **without** iCloud, a vault that exists only on a lost or damaged Mac can't be recovered. Turn on iCloud sync if you want protection against losing the device.
+> This relies on iCloud sync — it's what keeps an off-device (encrypted) copy of your vault. If you use Passwards on a single Mac **without** iCloud, protect yourself against losing the device by creating an **Encrypted Backup** (File → Save Encrypted Backup…) and storing it somewhere safe; you can restore it on a new Mac during onboarding. Otherwise a vault that exists only on a lost or damaged Mac can't be recovered.
 
 > Touch ID does not transfer between Macs. Each new Mac re-enrolls Touch ID via the **Unlock with Touch ID** toggle in **Settings → Security**, while unlocked.
 

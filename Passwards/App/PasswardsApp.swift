@@ -78,6 +78,10 @@ struct PasswardsApp: App {
                     Button("Export All Items as JSON…") {
                         ImportExport.exportJSON(appState: appState, store: store)
                     }
+                    Divider()
+                    Button("Save Encrypted Backup…") {
+                        Backup.saveBackup(appState: appState)
+                    }
                 }
             }
             CommandGroup(replacing: .help) {

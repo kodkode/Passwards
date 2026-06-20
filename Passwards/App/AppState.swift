@@ -362,6 +362,103 @@ final class AppState {
         sync.kick()
     }
 
+    // MARK: Encrypted backup
+
+    enum BackupRestoreError: Error {
+        case notUnlocked
+        case wrongCredentials
+    }
+
+    /// Produces an encrypted `.pwbackup` of the whole vault, sealed under the
+    /// current master key. Requires being unlocked.
+    func makeBackupData() async throws -> Data {
+        guard let database, let attachmentStore else { throw BackupRestoreError.notUnlocked }
+        guard let masterKey = await keyStore.masterKey else { throw BackupRestoreError.notUnlocked }
+        let store = BackupStore(database: database, attachmentsDirectory: attachmentStore.directory)
+        let collected = try await store.collect()
+        let box = SymmetricKeyBox(key: masterKey)
+        return try await Task.detached(priority: .userInitiated) {
+            try BackupArchive.encode(
+                account: collected.account, contents: collected.contents,
+                masterKey: box.key, createdAt: Date()
+            )
+        }.value
+    }
+
+    /// Restores a backup using the account password + Secret Key. Replaces the
+    /// local vault entirely. Works on a fresh Mac (onboarding) or the current one.
+    func restoreBackup(fileData: Data, password: String, typedSecretKey: String) async throws {
+        guard let secretKey = SecretKey(parsing: typedSecretKey) else { throw BackupRestoreError.wrongCredentials }
+        let file = try BackupArchive.decode(fileData) // throws on corrupt/unsupported
+        let header = file.account.keyRecord
+        let masterBox: SymmetricKeyBox
+        do {
+            masterBox = try await Task.detached(priority: .userInitiated) {
+                SymmetricKeyBox(key: try AccountCrypto.unlock(record: header, password: password, secretKey: secretKey))
+            }.value
+        } catch {
+            throw BackupRestoreError.wrongCredentials
+        }
+        let contents = try BackupArchive.openContents(file, masterKey: masterBox.key)
+        try await applyRestore(accountToStore: file.account, contents: contents, masterKey: masterBox.key, secretKey: secretKey)
+    }
+
+    /// Restores a backup using a recovery code, then sets a new password (the
+    /// backup's old password is unknown). Replaces the local vault entirely.
+    func restoreBackup(fileData: Data, recoveryCode: String, newPassword: String) async throws {
+        guard let code = RecoveryCode(parsing: recoveryCode) else { throw BackupRestoreError.wrongCredentials }
+        let file = try BackupArchive.decode(fileData)
+        let header = file.account.keyRecord
+        guard header.recoveryEnabled, let recoveryBlob = header.recoveryBlob else {
+            throw BackupRestoreError.wrongCredentials
+        }
+        let recovered: (master: SymmetricKeyBox, secret: SecretKey)
+        do {
+            recovered = try await Task.detached(priority: .userInitiated) {
+                let r = try AccountCrypto.recover(recoveryBlob: recoveryBlob, code: code, accountID: header.accountID)
+                return (SymmetricKeyBox(key: r.masterKey), r.secretKey)
+            }.value
+        } catch {
+            throw BackupRestoreError.wrongCredentials
+        }
+        let contents = try BackupArchive.openContents(file, masterKey: recovered.master.key)
+        // Re-wrap the master key under the new password so normal unlock works after.
+        let newKeyRecord = try await Task.detached(priority: .userInitiated) {
+            try AccountCrypto.changePassword(
+                record: header, masterKey: recovered.master.key,
+                newPassword: newPassword, secretKey: recovered.secret
+            )
+        }.value
+        var accountToStore = file.account
+        accountToStore.kdfSalt = newKeyRecord.kdfSalt
+        accountToStore.encMasterKey = newKeyRecord.encMasterKey
+        accountToStore.recoveryEnabled = newKeyRecord.recoveryEnabled
+        accountToStore.recoveryBlob = newKeyRecord.recoveryBlob
+        accountToStore.encRecoveryCode = newKeyRecord.encRecoveryCode
+        try await applyRestore(accountToStore: accountToStore, contents: contents, masterKey: recovered.master.key, secretKey: recovered.secret)
+    }
+
+    private func applyRestore(accountToStore: AccountRecord, contents: BackupContents, masterKey: SymmetricKey, secretKey: SecretKey) async throws {
+        guard let database, let attachmentStore, let vaultRepository else { throw BackupRestoreError.notUnlocked }
+        let store = BackupStore(database: database, attachmentsDirectory: attachmentStore.directory)
+        try await store.restore(account: accountToStore, contents: contents)
+        try KeychainStore.saveSecretKey(secretKey, accountID: accountToStore.id)
+        // Touch ID's per-device Secure-Enclave wrap may no longer match the
+        // restored master key, so reset it; the user can re-enroll while unlocked.
+        BiometricUnlock.disable()
+        await keyStore.lock()
+        await keyStore.setMasterKey(masterKey)
+        account = try await vaultRepository.account()
+        needsSecretKeyEntry = false
+        vaultStore?.clearSecrets()
+        await vaultStore?.refresh()
+        UserDefaults.standard.set(Date(), forKey: SettingsKeys.lastPasswordUnlock)
+        phase = .unlocked
+        autoLock.start()
+        await sync.start(database: database)
+        sync.kick()
+    }
+
     func unlockWithTouchID() async -> Bool {
         guard biometricUnlockAllowed else { return false }
         let result = await BiometricUnlock.unlock()

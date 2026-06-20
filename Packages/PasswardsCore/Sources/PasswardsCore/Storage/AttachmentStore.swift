@@ -19,7 +19,7 @@ public struct AttachmentStore: Sendable {
 
     let database: AppDatabase
     let keyStore: KeyStore
-    let directory: URL
+    public let directory: URL
 
     public init(database: AppDatabase, keyStore: KeyStore, directory: URL? = nil) throws {
         self.database = database
