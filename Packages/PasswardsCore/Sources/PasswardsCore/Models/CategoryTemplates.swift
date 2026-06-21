@@ -292,6 +292,9 @@ public enum CategoryTemplates {
                 ItemField(label: "wireless network password", kind: .concealed),
                 ItemField(label: "attached storage password", kind: .concealed),
             ])]
+        case .unknown:
+            // A category this build doesn't recognize — no template to seed.
+            return []
         }
     }
 }

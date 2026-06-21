@@ -22,10 +22,36 @@ enum Backup {
             let panel = NSSavePanel()
             panel.allowedContentTypes = [fileType]
             panel.nameFieldStringValue = defaultFileName()
-            panel.message = "This backup is encrypted. To restore it you'll need your account password + Secret Key, or a recovery code."
+
+            // Only offer the recovery-code toggle when a code is actually active —
+            // otherwise there's nothing to strip. A recovery code can open ANY
+            // backup made while it was enabled, even after the code is rotated or
+            // turned off (rotation can't reach already-exported files), so let the
+            // user make a password-only backup that a future rotation covers.
+            let recoveryActive = appState.hasRecoveryCode
+            let toggle = NSButton(checkboxWithTitle: "Allow restoring this backup with a recovery code", target: nil, action: nil)
+            toggle.state = .on
+            toggle.toolTip = "If checked, anyone with this file and your recovery code can open it — even after you rotate or turn off recovery. Uncheck for a password-only backup."
+            if recoveryActive {
+                let label = NSTextField(wrappingLabelWithString: "Rotating or disabling a recovery code does not invalidate backups already exported while it was active.")
+                label.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+                label.textColor = .secondaryLabelColor
+                let stack = NSStackView(views: [toggle, label])
+                stack.orientation = .vertical
+                stack.alignment = .leading
+                stack.edgeInsets = NSEdgeInsets(top: 10, left: 16, bottom: 10, right: 16)
+                stack.translatesAutoresizingMaskIntoConstraints = false
+                label.widthAnchor.constraint(equalToConstant: 360).isActive = true
+                panel.accessoryView = stack
+            }
+            panel.message = recoveryActive
+                ? "This backup is encrypted. To restore it you'll need your account password + Secret Key (and, unless you uncheck the option below, a recovery code can also open it)."
+                : "This backup is encrypted. To restore it you'll need your account password + Secret Key."
+
             guard panel.runModal() == .OK, let url = panel.url else { return }
+            let includeRecovery = recoveryActive && toggle.state == .on
             do {
-                let data = try await appState.makeBackupData()
+                let data = try await appState.makeBackupData(includeRecovery: includeRecovery)
                 try data.write(to: url, options: .atomic)
                 notify("Backup saved", "Saved to \(url.lastPathComponent). It's encrypted — keep it somewhere safe.")
             } catch {

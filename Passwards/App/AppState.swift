@@ -302,12 +302,17 @@ final class AppState {
 
     /// Turns off recovery, destroying the escrowed material (locally and, via the
     /// overwrite-with-random scheme, in iCloud) so the old code no longer works.
+    /// The local blob is overwritten immediately, so the code is dead on-device at
+    /// once. When sync is running we then AWAIT the push so the un-openable account
+    /// record reaches iCloud before returning; if sync is off/offline the stale
+    /// cloud copy is overwritten on the next sync instead (the account record is
+    /// always re-enqueued).
     func disableRecovery() async throws {
         guard let account, let vaultRepository else { throw RecoveryError.notUnlocked }
         let tombstone = try AccountCrypto.recoveryTombstone()
         try await vaultRepository.disableRecovery(tombstone: tombstone, accountID: account.id)
         self.account = try await vaultRepository.account()
-        sync.kick()
+        await sync.pushChangesAndWait()
     }
 
     /// Regains access with a recovery code when the password is forgotten, then
@@ -371,7 +376,11 @@ final class AppState {
 
     /// Produces an encrypted `.pwbackup` of the whole vault, sealed under the
     /// current master key. Requires being unlocked.
-    func makeBackupData() async throws -> Data {
+    /// `includeRecovery: false` produces a password-only backup (the recovery
+    /// escrow is stripped from the header), so the exported file can't be opened
+    /// with a recovery code — the way to make a backup that disabling/rotating a
+    /// code actually covers.
+    func makeBackupData(includeRecovery: Bool = true) async throws -> Data {
         guard let database, let attachmentStore else { throw BackupRestoreError.notUnlocked }
         guard let masterKey = await keyStore.masterKey else { throw BackupRestoreError.notUnlocked }
         let store = BackupStore(database: database, attachmentsDirectory: attachmentStore.directory)
@@ -380,7 +389,7 @@ final class AppState {
         return try await Task.detached(priority: .userInitiated) {
             try BackupArchive.encode(
                 account: collected.account, contents: collected.contents,
-                masterKey: box.key, createdAt: Date()
+                masterKey: box.key, createdAt: Date(), includeRecovery: includeRecovery
             )
         }.value
     }
@@ -440,6 +449,15 @@ final class AppState {
 
     private func applyRestore(accountToStore: AccountRecord, contents: BackupContents, masterKey: SymmetricKey, secretKey: SecretKey) async throws {
         guard let database, let attachmentStore, let vaultRepository else { throw BackupRestoreError.notUnlocked }
+        // Tear down any running sync engine first, and AWAIT it so the old engine
+        // is fully released before we wipe its state token. `restore` clears the
+        // persisted CKSyncEngine token, but a live engine keeps its token in memory
+        // and `start()` is a no-op while it's running — so without this stop the
+        // trailing `start()` wouldn't re-bootstrap and the device would resume from
+        // the pre-restore token. Awaiting guarantees no lingering engine can
+        // re-persist the stale token across the destructive restore; the trailing
+        // `start()` then recreates the engine for a full fetch+reconcile.
+        await sync.stop()
         let store = BackupStore(database: database, attachmentsDirectory: attachmentStore.directory)
         try await store.restore(account: accountToStore, contents: contents)
         try KeychainStore.saveSecretKey(secretKey, accountID: accountToStore.id)

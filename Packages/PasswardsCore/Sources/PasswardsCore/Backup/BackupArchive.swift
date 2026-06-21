@@ -59,16 +59,31 @@ public enum BackupArchive {
     }
 
     /// Seals the contents under the master key and encodes the whole backup file.
+    ///
+    /// With `includeRecovery: false` the recovery escrow is stripped from the
+    /// header (a "password-only" backup): the exported file can then only be
+    /// opened with the account password + Secret Key, never a recovery code.
+    /// This is the way to make a backup that a code rotation actually "covers" —
+    /// a recovery code opens any backup made while it was active, even after the
+    /// user disables/rotates it, because rotation can't reach already-exported
+    /// files.
     public static func encode(
         account: AccountRecord,
         contents: BackupContents,
         masterKey: SymmetricKey,
-        createdAt: Date
+        createdAt: Date,
+        includeRecovery: Bool = true
     ) throws -> Data {
+        var header = account
+        if !includeRecovery {
+            header.recoveryEnabled = false
+            header.recoveryBlob = nil
+            header.encRecoveryCode = nil
+        }
         let sealed = try EncryptedBlob.seal(
-            encoder().encode(contents), key: masterKey, aad: "backup:\(account.id)"
+            encoder().encode(contents), key: masterKey, aad: "backup:\(header.id)"
         )
-        let file = BackupFile(version: formatVersion, createdAt: createdAt, account: account, sealedContents: sealed)
+        let file = BackupFile(version: formatVersion, createdAt: createdAt, account: header, sealedContents: sealed)
         return try encoder().encode(file)
     }
 

@@ -38,7 +38,7 @@ final class SyncController {
         get { UserDefaults.standard.object(forKey: "cloudSyncEnabled") as? Bool ?? true }
         set {
             UserDefaults.standard.set(newValue, forKey: "cloudSyncEnabled")
-            Task { newValue ? await start(database: lastDatabase) : stop() }
+            Task { if newValue { await start(database: lastDatabase) } else { await stop() } }
         }
     }
 
@@ -75,10 +75,17 @@ final class SyncController {
         await engine?.manualSync()
     }
 
-    func stop() {
-        Task { await engine?.stop() }
+    func stop() async {
+        // Capture the engine BEFORE niling: `engine = nil` runs synchronously on
+        // the MainActor, so a detached `Task { await engine?.stop() }` would read
+        // a nil `self.engine` and never actually tear the engine down — leaving
+        // the old CKSyncEngine alive (it retains us as its delegate) to keep
+        // handling push events and re-persisting its state token. Awaiting the
+        // captured engine's stop() releases it and breaks that retain cycle.
+        let old = engine
         engine = nil
         status = .disabled
+        await old?.stop()
     }
 
     /// Call after local mutations so pending rows get queued and pushed.
@@ -88,6 +95,19 @@ final class SyncController {
             await engine.enqueuePendingChanges()
             await engine.manualSync()
         }
+    }
+
+    /// Like `kick()` but awaits the push, so a caller can sequence on it — e.g.
+    /// disabling recovery awaits this so the overwritten (un-openable) account
+    /// record reaches iCloud before reporting done. A no-op when no engine is
+    /// running: if sync was previously on (so a recovery blob already reached
+    /// iCloud) and was then turned OFF, the stale cloud copy isn't overwritten
+    /// here — it's replaced on the next sync, because the account record is
+    /// always re-enqueued (see `SyncEngine.enqueuePendingChanges`).
+    func pushChangesAndWait() async {
+        guard let engine else { return }
+        await engine.enqueuePendingChanges()
+        await engine.manualSync()
     }
 
     /// Fetch the remote account for the new-device sign-in flow.
