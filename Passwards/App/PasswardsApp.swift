@@ -69,7 +69,7 @@ struct PasswardsApp: App {
             // and unlocking doesn't retroactively add it. Always-present content
             // keeps the File menu rendered, with the items greyed out until unlock.
             CommandGroup(replacing: .importExport) {
-                Button("Import from 1Password (.1pux)…") {
+                Button("Import…") {
                     if let store = appState.vaultStore { ImportExport.importOnePux(appState: appState, store: store) }
                 }
                 .disabled(appState.phase != .unlocked)
