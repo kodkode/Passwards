@@ -63,26 +63,34 @@ struct PasswardsApp: App {
                     quickAccess?.toggle()
                 }
             }
+            // The items must always be present (disabled when locked), not gated
+            // behind an `if` — a CommandGroup that starts empty at launch never
+            // makes SwiftUI create the File menu for this single-`Window` scene,
+            // and unlocking doesn't retroactively add it. Always-present content
+            // keeps the File menu rendered, with the items greyed out until unlock.
             CommandGroup(replacing: .importExport) {
-                if appState.phase == .unlocked, let store = appState.vaultStore {
-                    Button("Import from 1Password (.1pux)…") {
-                        ImportExport.importOnePux(appState: appState, store: store)
-                    }
-                    Button("Import from CSV…") {
-                        ImportExport.importCSV(appState: appState, store: store)
-                    }
-                    Divider()
-                    Button("Export Logins as CSV…") {
-                        ImportExport.exportCSV(appState: appState, store: store)
-                    }
-                    Button("Export All Items as JSON…") {
-                        ImportExport.exportJSON(appState: appState, store: store)
-                    }
-                    Divider()
-                    Button("Save Encrypted Backup…") {
-                        Backup.saveBackup(appState: appState)
-                    }
+                Button("Import from 1Password (.1pux)…") {
+                    if let store = appState.vaultStore { ImportExport.importOnePux(appState: appState, store: store) }
                 }
+                .disabled(appState.phase != .unlocked)
+                Button("Import from CSV…") {
+                    if let store = appState.vaultStore { ImportExport.importCSV(appState: appState, store: store) }
+                }
+                .disabled(appState.phase != .unlocked)
+                Divider()
+                Button("Export Logins as CSV…") {
+                    if let store = appState.vaultStore { ImportExport.exportCSV(appState: appState, store: store) }
+                }
+                .disabled(appState.phase != .unlocked)
+                Button("Export All Items as JSON…") {
+                    if let store = appState.vaultStore { ImportExport.exportJSON(appState: appState, store: store) }
+                }
+                .disabled(appState.phase != .unlocked)
+                Divider()
+                Button("Save Encrypted Backup…") {
+                    Backup.saveBackup(appState: appState)
+                }
+                .disabled(appState.phase != .unlocked)
             }
             CommandGroup(replacing: .help) {
                 HelpMenuItems()

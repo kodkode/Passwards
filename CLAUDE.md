@@ -44,7 +44,7 @@ Product/bundle is `Passwards` / `com.michael.passwards`; the app module is **`Pa
 Two layers with a strict boundary:
 
 - **`Packages/PasswardsCore`** (SPM, fully testable headless): Crypto, Models, Storage (GRDB), Sync (CKSyncEngine), Generator, TOTP, Watchtower (+ `PublicSuffixList`), Importers, BrowserBridge, SSH agent, CLI control. Deps: GRDB, ZIPFoundation. Crypto is CryptoKit + CommonCrypto only — no third-party code may touch key material.
-- **`Passwards/`** (app target, SwiftUI, `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`): all UI + AppKit integration (Quick Access NSPanel, hotkeys via KeyboardShortcuts, clipboard, Touch ID prompts).
+- **`Passwards/`** (app target, SwiftUI, `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`): all UI + AppKit integration (Quick Access NSPanel, hotkeys via KeyboardShortcuts, clipboard, Touch ID prompts). **Menu gotcha:** the app is a single `Window` scene (not `WindowGroup`); a `CommandGroup` targeting the **File** menu (Import/Export, Save Backup) must keep its items **always present** (`.disabled` when locked), never wrapped in an `if` — a group that's empty at launch makes SwiftUI skip creating the File menu entirely (it silently won't appear).
 
 ### Encryption layering (the core invariant)
 
