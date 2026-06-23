@@ -13,6 +13,7 @@ struct DatabaseErrorView: View {
 
     @State private var isRetrying = false
     @State private var restoreChoice: Backup.Chosen?
+    @State private var showEraseConfirm = false
 
     var body: some View {
         ZStack {
@@ -67,6 +68,16 @@ struct DatabaseErrorView: View {
                     .disabled(isRetrying)
                 }
                 .padding(.top, 4)
+
+                // Last resort, deliberately de-emphasized and gated behind a
+                // typed confirmation. Only for a genuinely unrecoverable vault
+                // with no backup — everything below is permanently destroyed.
+                Button("Erase & Start Over…", role: .destructive) {
+                    showEraseConfirm = true
+                }
+                .buttonStyle(.link)
+                .foregroundStyle(.red)
+                .padding(.top, 10)
             }
             .frame(maxWidth: 440)
             .padding(40)
@@ -75,5 +86,69 @@ struct DatabaseErrorView: View {
         .sheet(item: $restoreChoice) { chosen in
             RestoreBackupSheet(appState: appState, fileData: chosen.data, header: chosen.file)
         }
+        .sheet(isPresented: $showEraseConfirm) {
+            EraseConfirmSheet(appState: appState)
+        }
+    }
+}
+
+/// Type-to-confirm gate for the irreversible "erase and start over" path. Kept
+/// in its own sheet so it can't be triggered by a stray click, and steers the
+/// user back to Restore if they have a backup.
+private struct EraseConfirmSheet: View {
+    let appState: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var confirmText = ""
+    @State private var isErasing = false
+
+    private var canErase: Bool { confirmText.trimmingCharacters(in: .whitespaces) == "ERASE" }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label("Erase everything and start over", systemImage: "trash.fill")
+                .font(.title3.bold())
+                .foregroundStyle(.red)
+
+            Text("This permanently deletes every item, attachment, and account detail stored on this Mac. **It cannot be undone.**")
+                .fixedSize(horizontal: false, vertical: true)
+            Text("If you have a backup or your account is in iCloud, cancel and choose **Restore from Backup** instead — that recovers your data.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Type ERASE to confirm")
+                .font(.callout.weight(.medium))
+            TextField("", text: $confirmText, prompt: Text("ERASE"))
+                .textFieldStyle(.roundedBorder)
+                .font(.body.monospaced())
+                .disableAutocorrection(true)
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button(role: .destructive) {
+                    isErasing = true
+                    Task {
+                        await appState.eraseVaultAndRestartOnboarding()
+                        // The phase flips to .onboarding, swapping out RootView and
+                        // this sheet; dismiss defensively in case it lingers.
+                        dismiss()
+                    }
+                } label: {
+                    if isErasing {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("Erase Everything")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+                .disabled(!canErase || isErasing)
+            }
+        }
+        .padding(22)
+        .frame(width: 460)
     }
 }

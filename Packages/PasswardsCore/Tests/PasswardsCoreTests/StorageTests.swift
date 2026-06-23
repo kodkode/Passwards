@@ -128,6 +128,10 @@ struct StorageTests {
                            encDetails: Data([1]), contentVersion: 1, createdAt: Date(), updatedAt: Date(),
                            trashedAt: nil, syncState: "pending", ckSystemFields: nil).insert(db)
         }
+        // The orphan-items state the app routes to `.databaseError` (not onboarding).
+        #expect(try await vaults.hasAccount() == false)
+        #expect(try await vaults.hasItems() == true)
+
         let acct = try AccountCrypto.createAccount(email: "a@b.com", password: "pw", iterations: 1000)
         await #expect(throws: VaultRepositoryError.self) {
             try await vaults.createInitialAccount(acct.record)

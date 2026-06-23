@@ -11,12 +11,19 @@ public struct AppDatabase: Sendable {
         try migrator.migrate(writer)
     }
 
-    /// Opens (creating if needed) the on-disk database in Application Support.
-    public static func open() throws -> AppDatabase {
+    /// The on-disk vault directory (…/Application Support/2Password). Holds the
+    /// SQLite database, its WAL/SHM sidecars, and the `Attachments/` ciphertext.
+    /// (Kept at the legacy name across the rename so existing data stays reachable.)
+    public static func vaultDirectory() throws -> URL {
         let appSupport = try FileManager.default.url(
             for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
         )
-        let dir = appSupport.appendingPathComponent("2Password", isDirectory: true)
+        return appSupport.appendingPathComponent("2Password", isDirectory: true)
+    }
+
+    /// Opens (creating if needed) the on-disk database in Application Support.
+    public static func open() throws -> AppDatabase {
+        let dir = try vaultDirectory()
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         var config = Configuration()
         config.prepareDatabase { db in
@@ -24,6 +31,18 @@ public struct AppDatabase: Sendable {
         }
         let pool = try DatabasePool(path: dir.appendingPathComponent("2password.sqlite").path, configuration: config)
         return try AppDatabase(writer: pool)
+    }
+
+    /// Permanently deletes the ENTIRE on-disk vault — database, WAL/SHM sidecars,
+    /// and all attachment ciphertext. Used only by the explicit, gated "erase and
+    /// start over" recovery path on the database-error screen. Irreversible.
+    /// Callers MUST release any open `AppDatabase` first so the file handles are
+    /// closed before the directory is removed.
+    public static func destroyOnDiskVault() throws {
+        let dir = try vaultDirectory()
+        if FileManager.default.fileExists(atPath: dir.path) {
+            try FileManager.default.removeItem(at: dir)
+        }
     }
 
     /// In-memory database for tests.

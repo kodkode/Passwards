@@ -123,6 +123,13 @@ final class AppState {
                 phase = .locked
                 // Sync moves only ciphertext, so it can run while locked.
                 await sync.start(database: db)
+            } else if try await vaultRepository?.hasItems() == true {
+                // Account row missing but items remain — a partially-corrupted
+                // vault. Route to the error screen (restore / erase), NEVER to
+                // onboarding: a fresh account would mint a new master key and
+                // orphan the surviving items (encrypted under the lost key).
+                bootstrapError = "Your vault’s items are still here, but its account record is missing. Restore from a backup to recover them, or erase and start over if you have no backup."
+                phase = .databaseError
             } else {
                 bootstrapError = nil
                 phase = .onboarding
@@ -131,6 +138,27 @@ final class AppState {
             bootstrapError = error.localizedDescription
             phase = .databaseError
         }
+    }
+
+    /// Permanently erases the on-disk vault and returns to onboarding. Invoked
+    /// ONLY from the gated "erase and start over" control on the database-error
+    /// screen, after the user types an explicit confirmation. Irreversible.
+    func eraseVaultAndRestartOnboarding() async {
+        phase = .loading
+        await sync.stop()
+        // Drop every reference to the open database so its file handles close
+        // before the files underneath them are deleted.
+        database = nil
+        vaultRepository = nil
+        itemRepository = nil
+        attachmentStore = nil
+        account = nil
+        bootstrapError = nil
+        needsSecretKeyEntry = false
+        await keyStore.lock()
+        try? AppDatabase.destroyOnDiskVault()
+        // Re-open a fresh, empty database → onboarding.
+        await openVaultAndRoute()
     }
 
     /// Re-attempts opening the vault after a `.databaseError` (e.g. the user freed

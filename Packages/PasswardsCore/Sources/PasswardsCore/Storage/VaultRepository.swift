@@ -36,6 +36,16 @@ public struct VaultRepository: Sendable {
         }
     }
 
+    /// Whether any item row exists. Used to detect a partially-corrupted vault
+    /// whose account row is missing but whose items remain (encrypted under the
+    /// lost master key) — that state must route to the database-error screen, not
+    /// onboarding, so a fresh account can't orphan the surviving items.
+    public func hasItems() async throws -> Bool {
+        try await database.writer.read { db in
+            try ItemRecord.fetchCount(db) > 0
+        }
+    }
+
     /// Creates the very first account row during onboarding. Atomically refuses if
     /// the database already holds an account or any item — so a bootstrap that hit a
     /// recoverable error (corruption, a locked file, a failed migration, an
