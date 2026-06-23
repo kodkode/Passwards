@@ -30,9 +30,6 @@ let package = Package(
             dependencies: [
                 "PasswardsCore",
                 .product(name: "ZIPFoundation", package: "ZIPFoundation"),
-            ],
-            resources: [
-                .copy("Fixtures")
             ]
         ),
     ]

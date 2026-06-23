@@ -2,6 +2,13 @@ import Foundation
 import CryptoKit
 import GRDB
 
+public enum VaultRepositoryError: Error {
+    /// `createInitialAccount` refused because the database is not pristine. Onboarding
+    /// must never overwrite an existing vault — doing so would insert a second account
+    /// row with a fresh master key and orphan every already-encrypted item.
+    case databaseNotEmpty
+}
+
 /// Account + vault persistence with encryption at the boundary.
 public struct VaultRepository: Sendable {
     let database: AppDatabase
@@ -17,6 +24,41 @@ public struct VaultRepository: Sendable {
     public func account() async throws -> AccountRecord? {
         try await database.writer.read { db in
             try AccountRecord.fetchOne(db)
+        }
+    }
+
+    /// Whether any account row exists. Uses a COUNT, so it returns true even for a
+    /// row that is present-but-undecodable (the case `account()` would throw on) —
+    /// which is exactly the bootstrap-failure state onboarding must not clobber.
+    public func hasAccount() async throws -> Bool {
+        try await database.writer.read { db in
+            try AccountRecord.fetchCount(db) > 0
+        }
+    }
+
+    /// Creates the very first account row during onboarding. Atomically refuses if
+    /// the database already holds an account or any item — so a bootstrap that hit a
+    /// recoverable error (corruption, a locked file, a failed migration, an
+    /// undecodable row) and fell back to onboarding can never insert a second account
+    /// and orphan the existing vault's master key. This is the storage-layer backstop
+    /// for the app-side guard in `AppState.createAccount`.
+    public func createInitialAccount(_ record: AccountCrypto.AccountKeyRecord) async throws {
+        try await database.writer.write { db in
+            guard try AccountRecord.fetchCount(db) == 0, try ItemRecord.fetchCount(db) == 0 else {
+                throw VaultRepositoryError.databaseNotEmpty
+            }
+            let row = AccountRecord(
+                id: record.accountID,
+                email: record.email,
+                kdfSalt: record.kdfSalt,
+                kdfIterations: record.kdfIterations,
+                encMasterKey: record.encMasterKey,
+                createdAt: Date(),
+                recoveryEnabled: record.recoveryEnabled,
+                recoveryBlob: record.recoveryBlob,
+                encRecoveryCode: record.encRecoveryCode
+            )
+            try row.insert(db)
         }
     }
 

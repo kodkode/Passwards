@@ -5,6 +5,7 @@ import PasswardsCore
 enum AppPhase: Equatable {
     case loading
     case onboarding
+    case databaseError
     case locked
     case unlocked
 }
@@ -30,6 +31,10 @@ final class AppState {
     /// and the lock screen must ask for it.
     private(set) var needsSecretKeyEntry = false
 
+    /// Human-readable detail shown on the `.databaseError` screen when opening the
+    /// on-disk vault failed. Cleared on a successful (re)open.
+    private(set) var bootstrapError: String?
+
     /// Guards the Touch ID auto-prompt against re-entrancy.
     private var biometricPromptInFlight = false
 
@@ -51,26 +56,7 @@ final class AppState {
     }
 
     func bootstrap() async {
-        do {
-            let db = try AppDatabase.open()
-            database = db
-            vaultRepository = VaultRepository(database: db, keyStore: keyStore)
-            itemRepository = ItemRepository(database: db, keyStore: keyStore)
-            attachmentStore = try? AttachmentStore(database: db, keyStore: keyStore)
-            try? await itemRepository?.purgeTrash()
-            if let existing = try await vaultRepository?.account() {
-                account = existing
-                needsSecretKeyEntry = KeychainStore.loadSecretKey(accountID: existing.id) == nil
-                phase = .locked
-                // Sync moves only ciphertext, so it can run while locked.
-                await sync.start(database: db)
-            } else {
-                phase = .onboarding
-            }
-        } catch {
-            assertionFailure("database bootstrap failed: \(error)")
-            phase = .onboarding
-        }
+        await openVaultAndRoute()
         autoLock.onShouldLock = { [weak self] in self?.lock() }
         // The bridge serves only lock-state info until unlocked.
         let bridge = BrowserBridgeController(appState: self)
@@ -115,6 +101,47 @@ final class AppState {
         }
     }
 
+    /// Opens the on-disk vault and routes to the right phase. A *recoverable* error
+    /// (corruption, a locked file, a failed migration, or a present-but-undecodable
+    /// account row) routes to `.databaseError` — NEVER to `.onboarding`. Onboarding's
+    /// "create account" path would insert a second account row with a fresh master
+    /// key and orphan every already-encrypted item, so a transient open failure must
+    /// not be allowed to reach it. `.onboarding` is reached only when the database
+    /// opened cleanly and genuinely holds no account.
+    func openVaultAndRoute() async {
+        do {
+            let db = try AppDatabase.open()
+            database = db
+            vaultRepository = VaultRepository(database: db, keyStore: keyStore)
+            itemRepository = ItemRepository(database: db, keyStore: keyStore)
+            attachmentStore = try? AttachmentStore(database: db, keyStore: keyStore)
+            try? await itemRepository?.purgeTrash()
+            if let existing = try await vaultRepository?.account() {
+                account = existing
+                needsSecretKeyEntry = KeychainStore.loadSecretKey(accountID: existing.id) == nil
+                bootstrapError = nil
+                phase = .locked
+                // Sync moves only ciphertext, so it can run while locked.
+                await sync.start(database: db)
+            } else {
+                bootstrapError = nil
+                phase = .onboarding
+            }
+        } catch {
+            bootstrapError = error.localizedDescription
+            phase = .databaseError
+        }
+    }
+
+    /// Re-attempts opening the vault after a `.databaseError` (e.g. the user freed
+    /// disk space or quit a second instance holding the file). Safe to call repeatedly:
+    /// the one-time controller/observer setup in `bootstrap()` is not re-run.
+    func retryOpeningVault() async {
+        phase = .loading
+        await openVaultAndRoute()
+        if phase == .locked, NSApp.isActive { promptBiometricIfAppropriate() }
+    }
+
     // MARK: Onboarding
 
     struct OnboardingResult {
@@ -125,12 +152,19 @@ final class AppState {
     /// Creates the account, default vault, and stores the Secret Key in the
     /// Keychain. Runs key derivation off the main thread.
     func createAccount(email: String, password: String) async throws -> OnboardingResult {
+        guard let vaultRepository else { throw CryptoError.decryptionFailed }
+        // Never overwrite an existing vault. Onboarding should only be reachable on a
+        // pristine database, but guard here too: if any account row exists, refuse
+        // rather than orphan its master key with a second account. The Secret Key is
+        // not generated/written until after this check passes.
+        guard try await !vaultRepository.hasAccount() else {
+            throw VaultRepositoryError.databaseNotEmpty
+        }
         let new = try await Task.detached(priority: .userInitiated) {
             try AccountCrypto.createAccount(email: email, password: password)
         }.value
         try KeychainStore.saveSecretKey(new.secretKey, accountID: new.record.accountID)
-        guard let vaultRepository else { throw CryptoError.decryptionFailed }
-        try await vaultRepository.saveAccount(new.record)
+        try await vaultRepository.createInitialAccount(new.record)
         await keyStore.setMasterKey(new.masterKey)
         try await vaultRepository.createVault(attributes: VaultAttributes(name: "Personal", symbolName: "person.fill", colorToken: "blue"))
         account = try await vaultRepository.account()

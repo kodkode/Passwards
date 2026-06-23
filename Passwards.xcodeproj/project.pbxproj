@@ -49,34 +49,24 @@
 
 /* Begin PBXFileReference section */
 		0BB4B057C85DF0A7A34A1272 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
-		1AF8AC0BDBE2902682E6BF2D /* popup.js */ = {isa = PBXFileReference; includeInIndex = 1; path = popup.js; sourceTree = "<group>"; };
+		1AF8AC0BDBE2902682E6BF2D /* popup.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = popup.js; sourceTree = "<group>"; };
 		27F94A17EBF12379095D5B56 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
 		2DD610223516AB5E35ED409D /* AppGroupRelay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppGroupRelay.swift; sourceTree = "<group>"; };
 		2F2EE795FF81D15868668853 /* SafariExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = SafariExtension.entitlements; sourceTree = "<group>"; };
 		2P0000000000000000000031 /* Passwards.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Passwards.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		30A7958388FB23B0560D9275 /* pairing.js */ = {isa = PBXFileReference; includeInIndex = 1; path = pairing.js; sourceTree = "<group>"; };
+		30A7958388FB23B0560D9275 /* pairing.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = pairing.js; sourceTree = "<group>"; };
 		56E6AEF91A7642D16D9C8468 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		5C2AAD0AC34A2B7790BABB1A /* manifest.json */ = {isa = PBXFileReference; includeInIndex = 1; path = manifest.json; sourceTree = "<group>"; };
+		5C2AAD0AC34A2B7790BABB1A /* manifest.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
 		888219B247F1FF724C58FB8A /* icon128.png */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = image.png; path = icon128.png; sourceTree = "<group>"; };
-		91E0D3AFB732AFBB5E978A6B /* popup.html */ = {isa = PBXFileReference; includeInIndex = 1; path = popup.html; sourceTree = "<group>"; };
-		B59E7DC146DD322AF69015A7 /* background.js */ = {isa = PBXFileReference; includeInIndex = 1; path = background.js; sourceTree = "<group>"; };
-		C3F91B6A4D3F09C3D565450B /* content.js */ = {isa = PBXFileReference; includeInIndex = 1; path = content.js; sourceTree = "<group>"; };
+		91E0D3AFB732AFBB5E978A6B /* popup.html */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.html; path = popup.html; sourceTree = "<group>"; };
+		B59E7DC146DD322AF69015A7 /* background.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = background.js; sourceTree = "<group>"; };
+		C3F91B6A4D3F09C3D565450B /* content.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = content.js; sourceTree = "<group>"; };
 		C953A583FDE3A32EC5CB1235 /* SafariExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SafariExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		E302C64EFFC69A9252332901 /* pairing.html */ = {isa = PBXFileReference; includeInIndex = 1; path = pairing.html; sourceTree = "<group>"; };
+		E302C64EFFC69A9252332901 /* pairing.html */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.html; path = pairing.html; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		2P0000000000000000000011 /* Passwards */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = Passwards;
-			sourceTree = "<group>";
-		};
+		2P0000000000000000000011 /* Passwards */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Passwards; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,7 +118,6 @@
 				2DD610223516AB5E35ED409D /* AppGroupRelay.swift */,
 				A381014291F78377486DD07E /* Resources */,
 			);
-			name = SafariExtension;
 			path = SafariExtension;
 			sourceTree = "<group>";
 		};
@@ -144,7 +133,6 @@
 				91E0D3AFB732AFBB5E978A6B /* popup.html */,
 				1AF8AC0BDBE2902682E6BF2D /* popup.js */,
 			);
-			name = Resources;
 			path = Resources;
 			sourceTree = "<group>";
 		};
@@ -236,7 +224,7 @@
 			mainGroup = 2P0000000000000000000001;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				2P0000000000000000000081 /* XCLocalSwiftPackageReference "PasswardsCore" */,
+				2P0000000000000000000081 /* XCLocalSwiftPackageReference "Packages/PasswardsCore" */,
 				2P0000000000000000000082 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 			);
 			productRefGroup = 2P0000000000000000000012 /* Products */;
@@ -508,7 +496,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		2P0000000000000000000081 /* XCLocalSwiftPackageReference "PasswardsCore" */ = {
+		2P0000000000000000000081 /* XCLocalSwiftPackageReference "Packages/PasswardsCore" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PasswardsCore;
 		};

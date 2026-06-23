@@ -155,6 +155,8 @@ struct RootView: View {
             .frame(minWidth: 760, minHeight: 560)
         case .onboarding:
             OnboardingFlow(appState: appState)
+        case .databaseError:
+            DatabaseErrorView(appState: appState)
         case .locked:
             LockScreenView(appState: appState)
         case .unlocked:

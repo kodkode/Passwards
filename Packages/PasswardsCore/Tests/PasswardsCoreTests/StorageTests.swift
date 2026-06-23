@@ -91,6 +91,50 @@ struct StorageTests {
         #expect(reloaded.map(\.attributes.name) == ["Renamed"])
     }
 
+    /// Onboarding must never overwrite an existing vault. If bootstrap hit a
+    /// recoverable error (e.g. an undecodable account row) and fell back to
+    /// onboarding, a second `createInitialAccount` would orphan the master key —
+    /// so it must be refused, leaving the original account intact.
+    @Test func createInitialAccountRefusesExistingAccount() async throws {
+        let database = try AppDatabase.inMemory()
+        let vaults = VaultRepository(database: database, keyStore: KeyStore())
+
+        #expect(try await vaults.hasAccount() == false)
+
+        let first = try AccountCrypto.createAccount(email: "a@b.com", password: "pw", iterations: 1000)
+        try await vaults.createInitialAccount(first.record)
+        #expect(try await vaults.hasAccount() == true)
+
+        let second = try AccountCrypto.createAccount(email: "evil@b.com", password: "pw2", iterations: 1000)
+        await #expect(throws: VaultRepositoryError.self) {
+            try await vaults.createInitialAccount(second.record)
+        }
+        // The original account survives untouched — no second row, key not orphaned.
+        let surviving = try #require(try await vaults.account())
+        #expect(surviving.id == first.record.accountID)
+        #expect(surviving.encMasterKey == first.record.encMasterKey)
+        #expect(try await database.writer.read { try AccountRecord.fetchCount($0) } == 1)
+    }
+
+    /// Even with no account row, leftover item rows (a partially-corrupted DB)
+    /// must block a fresh account — those items are encrypted under the lost key.
+    @Test func createInitialAccountRefusesOrphanItems() async throws {
+        let database = try AppDatabase.inMemory()
+        let vaults = VaultRepository(database: database, keyStore: KeyStore())
+        try await database.writer.write { db in
+            try VaultRecord(id: "v1", encVaultKey: Data([1]), encAttributes: Data([1]),
+                            createdAt: Date(), syncState: "pending").insert(db)
+            try ItemRecord(id: "i1", vaultId: "v1", encItemKey: Data([1]), encOverview: Data([1]),
+                           encDetails: Data([1]), contentVersion: 1, createdAt: Date(), updatedAt: Date(),
+                           trashedAt: nil, syncState: "pending", ckSystemFields: nil).insert(db)
+        }
+        let acct = try AccountCrypto.createAccount(email: "a@b.com", password: "pw", iterations: 1000)
+        await #expect(throws: VaultRepositoryError.self) {
+            try await vaults.createInitialAccount(acct.record)
+        }
+        #expect(try await vaults.hasAccount() == false)
+    }
+
     @Test func itemCRUDRoundTrip() async throws {
         let env = try await TestEnvironment.make()
         let item = sampleLogin(vaultID: env.vault.id)
