@@ -8,6 +8,7 @@ struct MainWindow: View {
     @State private var newItemCategoryPickerShown = false
     @State private var generatorShown = false
     @State private var emptyTrashConfirm = false
+    @Environment(\.openWindow) private var openWindow
 
     init(appState: AppState) {
         self.appState = appState
@@ -41,15 +42,6 @@ struct MainWindow: View {
         }
         .focusedSceneValue(\.vaultStore, store)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    newItemCategoryPickerShown = true
-                } label: {
-                    Label("New Item", systemImage: "plus")
-                }
-                .keyboardShortcut("n", modifiers: .command)
-                .help("New Item (⌘N)")
-            }
             ToolbarItem {
                 Button {
                     generatorShown = true
@@ -71,6 +63,35 @@ struct MainWindow: View {
                     .help("Empty Recently Deleted")
                 }
             }
+            // Wide search field, like 1P8's (system `.searchable` would pin a
+            // small field to the trailing edge and crowd out the right cluster).
+            ToolbarItem(placement: .principal) {
+                ToolbarSearchField(text: $store.searchText)
+            }
+            // Right cluster, matching 1P8: a Help link, then the prominent blue
+            // "+ New Item" button.
+            ToolbarItem(placement: .primaryAction) {
+                Button("Help") { openWindow(id: "help") }
+                    .help("Passwards Help")
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    newItemCategoryPickerShown = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus")
+                        Text("New Item")
+                    }
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 5)
+                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: 7))
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut("n", modifiers: .command)
+                .help("New Item (⌘N)")
+            }
         }
         .sheet(isPresented: $newItemCategoryPickerShown) {
             NewItemCategoryPicker(store: store)
@@ -82,6 +103,44 @@ struct MainWindow: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This permanently deletes every item in Recently Deleted. This can’t be undone.")
+        }
+    }
+}
+
+/// A wide rounded search field for the toolbar, matching 1P8's prominent search
+/// (the system `.searchable` field is small and pinned to the trailing edge).
+struct ToolbarSearchField: View {
+    @Binding var text: String
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+            TextField("", text: $text, prompt: Text("Search items"))
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .focused($focused)
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .frame(width: 360)
+        .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 7))
+        .overlay {
+            RoundedRectangle(cornerRadius: 7)
+                .strokeBorder(focused ? Theme.accent.opacity(0.8) : Color.primary.opacity(0.12),
+                              lineWidth: focused ? 1.5 : 1)
         }
     }
 }

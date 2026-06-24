@@ -32,7 +32,6 @@ struct ItemListView: View {
             }
         }
         .background(Theme.listBackground)
-        .searchable(text: $store.searchText, placement: .toolbar, prompt: "Search items")
         .navigationTitle(store.listTitle)
     }
 

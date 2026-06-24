@@ -15,17 +15,24 @@ struct ItemDetailContainer: View {
         } else if store.sidebarSelection == .watchtower {
             WatchtowerDashboardView(store: store)
         } else {
-            VStack(spacing: 12) {
-                AppIconImage(size: 72)
-                    .opacity(0.35)
-                    .grayscale(0.6)
-                Text("Select an item")
-                    .font(.title3)
-                    .foregroundStyle(.tertiary)
-            }
+            // Empty detail pane: the security-themed illustration.
+            LogoEmptyIllustration()
+        }
+    }
+}
+
+/// The empty-pane illustration: a hand-authored, security-themed artwork
+/// (central shield + key ringed by locks, biometrics, cards, 2FA…), shown small
+/// and centered on the standard pane background.
+struct LogoEmptyIllustration: View {
+    var body: some View {
+        Image("EmptyVaultIllustration")
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 200, height: 200)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Theme.detailBackground)
-        }
+            .accessibilityHidden(true)
     }
 }
 

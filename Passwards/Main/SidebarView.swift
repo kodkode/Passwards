@@ -202,19 +202,38 @@ struct SidebarView: View {
         }.count
     }
 
+    /// 1P8 shows the account by name; we have only the email, so use its
+    /// local-part (e.g. "michael.tubul@gmail.com" → "michael.tubul").
+    private var accountDisplayName: String {
+        let email = appState.account?.email ?? ""
+        return email.split(separator: "@").first.map(String.init) ?? email
+    }
+
     private var accountHeader: some View {
-        HStack(spacing: 10) {
-            DefaultAvatarView(size: 34)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Personal")
-                    .font(.system(size: 15, weight: .semibold))
-                Text(appState.account?.email ?? "")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+        // Compact single line (avatar · name · chevron), as a menu — like 1P8's
+        // account switcher.
+        Menu {
+            if let email = appState.account?.email {
+                Text(email)
             }
-            Spacer()
+            Divider()
+            Button("Lock", systemImage: "lock.fill") { appState.lock() }
+        } label: {
+            HStack(spacing: 9) {
+                DefaultAvatarView(size: 30)
+                Text(accountDisplayName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
         }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
     }
 }
 

@@ -102,6 +102,7 @@ Add a new row each time you run the tests, so we can compare over time.
 | 2026-06-23 | ~12:00 IDT | `xcodebuild … build` | ✅ BUILD SUCCEEDED | App compiles with the new database-error screen. |
 | 2026-06-23 | 12:39 IDT | `swift test` + `xcodebuild` | ✅ 131/131 passed · BUILD SUCCEEDED | Round 2: gated Erase & Start Over + orphan-items routing. Committed + pushed. |
 | 2026-06-24 | 10:50 IDT | `xcodebuild … build` | ✅ BUILD SUCCEEDED | 1P8 fidelity polish: lock-screen redesign + roomier sidebar rows/fonts. UI-only; verified by screenshot. |
+| 2026-06-24 | 13:30 IDT | `xcodebuild … build` | ✅ BUILD SUCCEEDED | All Items fidelity: toolbar (wide search + Help + blue New Item), compact account header, empty-pane illustration asset. UI-only; verified by screenshot. |
 
 <!--
 To add a row, copy the line below and fill it in:
