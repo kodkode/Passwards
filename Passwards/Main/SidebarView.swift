@@ -33,8 +33,10 @@ struct SidebarView: View {
 
             Label("All Items", systemImage: "square.grid.2x2")
                 .tag(SidebarFilter.allItems)
+                .sidebarRow()
             Label("Favorites", systemImage: "star")
                 .tag(SidebarFilter.favorites)
+                .sidebarRow()
             Label {
                 HStack {
                     Text("Watchtower")
@@ -52,6 +54,7 @@ struct SidebarView: View {
                 Image(systemName: "shield.lefthalf.filled")
             }
             .tag(SidebarFilter.watchtower)
+            .sidebarRow()
 
             Section {
                 ForEach(store.vaults) { vault in
@@ -62,6 +65,7 @@ struct SidebarView: View {
                             .foregroundStyle(Theme.color(token: vault.attributes.colorToken))
                     }
                     .tag(SidebarFilter.vault(vault.id))
+                    .sidebarRow()
                     .contextMenu {
                         Button("Edit Vault…") { editingVault = vault }
                     }
@@ -95,9 +99,10 @@ struct SidebarView: View {
                                     .font(.caption)
                             }
                         } icon: {
-                            CategoryIconView(category: category, size: 16)
+                            CategoryIconView(category: category, size: 18)
                         }
                         .tag(SidebarFilter.category(category))
+                        .sidebarRow()
                     }
                 }
             } header: {
@@ -110,6 +115,7 @@ struct SidebarView: View {
                     ForEach(store.allTags, id: \.self) { tag in
                         Label(tag, systemImage: "tag")
                             .tag(SidebarFilter.tag(tag))
+                            .sidebarRow()
                     }
                 } header: {
                     Text("TAGS")
@@ -120,6 +126,7 @@ struct SidebarView: View {
             Section {
                 Label("Archive", systemImage: "archivebox")
                     .tag(SidebarFilter.archive)
+                    .sidebarRow()
                 Label {
                     HStack {
                         Text("Recently Deleted")
@@ -134,14 +141,13 @@ struct SidebarView: View {
                     Image(systemName: "trash")
                 }
                 .tag(SidebarFilter.trash)
+                .sidebarRow()
             }
         }
         .listStyle(.sidebar)
         // Transparent so the window-level frosted material (see MainWindow)
         // shows through FLUSH to the window frame — not as an inset card.
         .scrollContentBackground(.hidden)
-        .font(.system(size: 14.5))
-        .environment(\.defaultMinListRowHeight, 40)
         .sheet(isPresented: $newVaultShown) {
             NewVaultSheet(store: store)
         }
@@ -198,17 +204,29 @@ struct SidebarView: View {
 
     private var accountHeader: some View {
         HStack(spacing: 10) {
-            DefaultAvatarView(size: 30)
+            DefaultAvatarView(size: 34)
             VStack(alignment: .leading, spacing: 1) {
                 Text("Personal")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                 Text(appState.account?.email ?? "")
-                    .font(.caption)
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
             Spacer()
         }
+    }
+}
+
+private extension View {
+    /// 1Password 8's roomy sidebar rows: larger label text and generous vertical
+    /// padding. The `.sidebar` list style ignores `.font`/`defaultMinListRowHeight`
+    /// on the List, so we set the font on each label and drive row height with
+    /// explicit row insets (the reliable lever for that list style).
+    func sidebarRow() -> some View {
+        self
+            .font(.system(size: 15.5))
+            .listRowInsets(EdgeInsets(top: 8, leading: 6, bottom: 8, trailing: 4))
     }
 }
 

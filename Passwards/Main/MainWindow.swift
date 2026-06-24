@@ -24,7 +24,7 @@ struct MainWindow: View {
                 SidebarMaterial().ignoresSafeArea()
                 SidebarView(store: store, appState: appState)
             }
-            .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 300)
+            .navigationSplitViewColumnWidth(min: 210, ideal: 245, max: 320)
         } content: {
             ItemListView(store: store)
                 .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 400)
