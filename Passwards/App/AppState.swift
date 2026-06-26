@@ -37,6 +37,12 @@ final class AppState {
 
     /// Guards the Touch ID auto-prompt against re-entrancy.
     private var biometricPromptInFlight = false
+    /// The system Touch ID dialog re-activates the app when it's dismissed
+    /// (Cancel / Use Password…), which would re-fire `didBecomeActive` and
+    /// re-prompt in an endless loop — trapping the user before they can reach
+    /// the password field. So auto-prompt at most ONCE per locked session;
+    /// a fresh lock re-arms it, and the manual Touch ID button is unaffected.
+    private var biometricAutoPrompted = false
 
     let autoLock = AutoLockMonitor()
     let sync = SyncController()
@@ -93,8 +99,10 @@ final class AppState {
     /// Auto-prompts Touch ID when the app activates while locked. Guarded so the
     /// system prompt can't re-enter and so a manual lock (no activation) is silent.
     func promptBiometricIfAppropriate() {
-        guard phase == .locked, biometricUnlockAllowed, !biometricPromptInFlight else { return }
+        guard phase == .locked, biometricUnlockAllowed,
+              !biometricPromptInFlight, !biometricAutoPrompted else { return }
         biometricPromptInFlight = true
+        biometricAutoPrompted = true
         Task {
             _ = await unlockWithTouchID()
             biometricPromptInFlight = false
@@ -120,6 +128,7 @@ final class AppState {
                 account = existing
                 needsSecretKeyEntry = KeychainStore.loadSecretKey(accountID: existing.id) == nil
                 bootstrapError = nil
+                biometricAutoPrompted = false
                 phase = .locked
                 // Sync moves only ciphertext, so it can run while locked.
                 await sync.start(database: db)
@@ -541,6 +550,11 @@ final class AppState {
 
     func unlockWithTouchID() async -> Bool {
         guard biometricUnlockAllowed else { return false }
+        // Showing the system dialog (whether from the manual Touch ID button or
+        // the auto-prompt) re-activates the app when it's dismissed, which fires
+        // `didBecomeActive`. Mark the session as prompted up front so that
+        // dismissal can't trigger a second auto-prompt (the "Cancel twice" bug).
+        biometricAutoPrompted = true
         let result = await BiometricUnlock.unlock()
         switch result {
         case .success(let masterKey):
@@ -575,6 +589,7 @@ final class AppState {
         // password/Secret Key still sitting in the clipboard.
         vaultStore?.clearSecrets()
         ClipboardManager.clearOnLock()
+        biometricAutoPrompted = false
         phase = .locked
     }
 }
