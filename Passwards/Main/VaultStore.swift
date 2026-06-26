@@ -117,13 +117,13 @@ final class VaultStore {
         vaults.first(where: { $0.id == id })?.attributes.name ?? "Vault"
     }
 
-    /// Items shown for the current sidebar selection + search + filter + sort.
-    var visibleSummaries: [ItemSummary] {
-        var result = summaries
-
+    /// The active sidebar selection mapped to the shared, navigation-free
+    /// `VaultFilter`. The Watchtower case is resolved to its flagged item IDs here
+    /// (that's the only macOS-specific part) so `VaultQuery` stays Watchtower-free.
+    private var currentFilter: VaultFilter {
         switch sidebarSelection {
-        case .allItems:
-            result = result.filter { $0.trashedAt == nil && !$0.overview.isArchived }
+        case .allItems: return .allItems
+        case .favorites: return .favorites
         case .watchtower:
             let flagged: Set<String>
             if let focus = watchtower.focus {
@@ -133,71 +133,34 @@ final class VaultStore {
                     $0.formUnion(watchtower.report.items(for: $1))
                 }
             }
-            result = result.filter { $0.trashedAt == nil && !$0.overview.isArchived && flagged.contains($0.id) }
-        case .favorites:
-            result = result.filter { $0.trashedAt == nil && !$0.overview.isArchived && $0.overview.isFavorite }
-        case .category(let category):
-            result = result.filter { $0.trashedAt == nil && !$0.overview.isArchived && $0.overview.category == category }
-        case .tag(let tag):
-            result = result.filter {
-                $0.trashedAt == nil && !$0.overview.isArchived &&
-                $0.overview.tags.contains(where: { $0 == tag || $0.hasPrefix(tag + "/") })
-            }
-        case .vault(let vaultID):
-            result = result.filter { $0.trashedAt == nil && !$0.overview.isArchived && $0.vaultID == vaultID }
-        case .archive:
-            result = result.filter { $0.trashedAt == nil && $0.overview.isArchived }
-        case .trash:
-            result = result.filter { $0.trashedAt != nil }
+            return .flagged(flagged)
+        case .category(let c): return .category(c)
+        case .tag(let t): return .tag(t)
+        case .vault(let id): return .vault(id)
+        case .archive: return .archive
+        case .trash: return .trash
         }
+    }
 
-        if let categoryFilter {
-            result = result.filter { $0.overview.category == categoryFilter }
-        }
-
-        if !searchText.isEmpty {
-            let query = searchText.lowercased()
-            result = result.filter {
-                $0.overview.title.lowercased().contains(query)
-                || $0.overview.subtitle.lowercased().contains(query)
-                || $0.overview.urls.contains(where: { $0.lowercased().contains(query) })
-                || $0.overview.tags.contains(where: { $0.lowercased().contains(query) })
-            }
-        }
-
+    private var currentSortKey: VaultSortKey {
         switch sortKey {
-        case .title:
-            result.sort {
-                let l = $0.overview.title.localizedCaseInsensitiveCompare($1.overview.title)
-                return sortAscending ? l == .orderedAscending : l == .orderedDescending
-            }
-        case .dateEdited:
-            result.sort { sortAscending ? $0.updatedAt > $1.updatedAt : $0.updatedAt < $1.updatedAt }
-        case .dateCreated:
-            result.sort { sortAscending ? $0.createdAt > $1.createdAt : $0.createdAt < $1.createdAt }
+        case .title: return .title
+        case .dateEdited: return .dateEdited
+        case .dateCreated: return .dateCreated
         }
-        return result
+    }
+
+    /// Items shown for the current sidebar selection + search + filter + sort.
+    var visibleSummaries: [ItemSummary] {
+        VaultQuery.filteredSorted(
+            summaries, filter: currentFilter, search: searchText,
+            categoryFilter: categoryFilter, sortKey: currentSortKey, ascending: sortAscending
+        )
     }
 
     /// List sections: grouped by month for date sorts (like 1P8), flat for title sort.
     var groupedSummaries: [(header: String?, items: [ItemSummary])] {
-        let visible = visibleSummaries
-        guard sortKey != .title else {
-            return visible.isEmpty ? [] : [(nil, visible)]
-        }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
-        var groups: [(header: String?, items: [ItemSummary])] = []
-        for summary in visible {
-            let date = sortKey == .dateEdited ? summary.updatedAt : summary.createdAt
-            let header = formatter.string(from: date).uppercased()
-            if let last = groups.indices.last, groups[last].header == header {
-                groups[last].items.append(summary)
-            } else {
-                groups.append((header, [summary]))
-            }
-        }
-        return groups
+        VaultQuery.grouped(visibleSummaries, sortKey: currentSortKey)
     }
 
     var listTitle: String {
@@ -216,28 +179,10 @@ final class VaultStore {
     // MARK: Item CRUD
 
     /// Computes the derived overview bits (subtitle, strength, OTP flag) that
-    /// keep list and Watchtower fast without decrypting details.
+    /// keep list and Watchtower fast without decrypting details. Delegates to the
+    /// shared, unit-tested `VaultQuery` so macOS and iOS derive identical overviews.
     static func reconcileOverview(_ item: inout VaultItem) {
-        if let username = item.details.firstField(withPurpose: .username)?.value, !username.isEmpty {
-            item.overview.subtitle = username
-        } else if item.overview.category == .creditCard,
-                  let number = item.details.firstField(withPurpose: .password)?.value, number.count >= 4 {
-            item.overview.subtitle = "•••• " + number.suffix(4)
-        } else {
-            item.overview.subtitle = ""
-        }
-        item.overview.urls = item.details.sections
-            .flatMap(\.fields)
-            .filter { $0.kind == .url && !$0.value.isEmpty }
-            .map(\.value)
-        item.overview.hasOTP = item.details.sections
-            .flatMap(\.fields)
-            .contains { $0.kind == .otp && !$0.value.isEmpty }
-        if let password = item.details.firstField(withPurpose: .password)?.value, !password.isEmpty {
-            item.overview.strengthBucket = PasswordStrength.score(password).rawValue
-        } else {
-            item.overview.strengthBucket = nil
-        }
+        VaultQuery.reconcileOverview(&item)
     }
 
     func newItem(category: PasswardsCore.Category, vaultID: String? = nil) -> VaultItem {
