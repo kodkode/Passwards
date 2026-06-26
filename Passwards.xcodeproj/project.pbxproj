@@ -21,6 +21,7 @@
 		3E8839DA5178B83BE8BE032F /* IOSOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF38FB2E095C7CC71132B189 /* IOSOnboardingView.swift */; };
 		4847B5BD1BBD5AD7DC9387C4 /* IOSRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BA6DC597B8A9DEB11D28645 /* IOSRootView.swift */; };
 		48D19478BCC651384B7EF853 /* AppGroupRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD610223516AB5E35ED409D /* AppGroupRelay.swift */; };
+		48EC6CA7E68199A40EF99B51 /* Geist.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3949ED823D69455FDA35611D /* Geist.ttf */; };
 		4B666944E2161FFEEA60BEDA /* PasswardsOrchestration in Frameworks */ = {isa = PBXBuildFile; productRef = D4E9F712E5142CD76EF17F26 /* PasswardsOrchestration */; };
 		563B9BDDFB73C3B0A905C44A /* IOSItemDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF180FB7C0703067A4F84BE /* IOSItemDetailView.swift */; };
 		5B480B735E188FA45027C00E /* PasswardsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 8228F4E48AABA1B58AA13D4B /* PasswardsCore */; };
@@ -34,6 +35,8 @@
 		B46FCD8DA8B24C1886FE7D81 /* IOSTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C79607A4574338F5FDF92F0 /* IOSTheme.swift */; };
 		B6A6AB8C2A1BFA2D33983B88 /* IOSVaultModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DAA67B61D351115135A0A17 /* IOSVaultModel.swift */; };
 		BBA149A4DFB1D37D7821A8C2 /* SafariExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C953A583FDE3A32EC5CB1235 /* SafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CB6E05347EBECBB14E437CC7 /* HankenGrotesk.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F089065AD009E5066E3DC9F3 /* HankenGrotesk.ttf */; };
+		DD452614ED0193E509628294 /* GeistMono.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B5A3002D1D70726EDC48D2DD /* GeistMono.ttf */; };
 		E189B8F447FDBF4CCF31F3A9 /* PasswardsiOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB5E46E93FC0AC93A70F4A92 /* PasswardsiOSApp.swift */; };
 		E255C80D0CF5310A969EF3D2 /* IOSItemEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A79B60B7FAE297A89B9B635 /* IOSItemEditorView.swift */; };
 		E5F056DC0E6B8ED953DB9D57 /* pairing.js in Resources */ = {isa = PBXBuildFile; fileRef = 30A7958388FB23B0560D9275 /* pairing.js */; };
@@ -78,6 +81,7 @@
 		2P0000000000000000000031 /* Passwards.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Passwards.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		30A7958388FB23B0560D9275 /* pairing.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = pairing.js; sourceTree = "<group>"; };
 		31653233A8008CE3BA777E11 /* IOSFaviconLoader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSFaviconLoader.swift; path = Icons/IOSFaviconLoader.swift; sourceTree = "<group>"; };
+		3949ED823D69455FDA35611D /* Geist.ttf */ = {isa = PBXFileReference; includeInIndex = 1; name = Geist.ttf; path = Fonts/Geist.ttf; sourceTree = "<group>"; };
 		3A79B60B7FAE297A89B9B635 /* IOSItemEditorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSItemEditorView.swift; path = Items/IOSItemEditorView.swift; sourceTree = "<group>"; };
 		3C5D73139EE2B8C6709C6155 /* IOSGeneratorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSGeneratorView.swift; path = Generator/IOSGeneratorView.swift; sourceTree = "<group>"; };
 		3C79607A4574338F5FDF92F0 /* IOSTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IOSTheme.swift; sourceTree = "<group>"; };
@@ -94,6 +98,7 @@
 		A30F16CB52755DCAA05073D7 /* IOSItemListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSItemListView.swift; path = Items/IOSItemListView.swift; sourceTree = "<group>"; };
 		ABD8B729D23E4924360D53C9 /* PasswardsiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PasswardsiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B59E7DC146DD322AF69015A7 /* background.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = background.js; sourceTree = "<group>"; };
+		B5A3002D1D70726EDC48D2DD /* GeistMono.ttf */ = {isa = PBXFileReference; includeInIndex = 1; name = GeistMono.ttf; path = Fonts/GeistMono.ttf; sourceTree = "<group>"; };
 		BD6148B14A9049605479D693 /* IOSPlatformServices.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSPlatformServices.swift; path = Platform/IOSPlatformServices.swift; sourceTree = "<group>"; };
 		BF38FB2E095C7CC71132B189 /* IOSOnboardingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSOnboardingView.swift; path = Onboarding/IOSOnboardingView.swift; sourceTree = "<group>"; };
 		C3F91B6A4D3F09C3D565450B /* content.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = content.js; sourceTree = "<group>"; };
@@ -101,6 +106,7 @@
 		DB5E46E93FC0AC93A70F4A92 /* PasswardsiOSApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PasswardsiOSApp.swift; sourceTree = "<group>"; };
 		E302C64EFFC69A9252332901 /* pairing.html */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.html; path = pairing.html; sourceTree = "<group>"; };
 		E76C93216B40C92EE0852798 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		F089065AD009E5066E3DC9F3 /* HankenGrotesk.ttf */ = {isa = PBXFileReference; includeInIndex = 1; name = HankenGrotesk.ttf; path = Fonts/HankenGrotesk.ttf; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -169,6 +175,9 @@
 				1E74FFD24B6A68BE05EA488D /* Info.plist */,
 				837FCA6C537E6C8F078A60DD /* Assets.xcassets */,
 				31653233A8008CE3BA777E11 /* IOSFaviconLoader.swift */,
+				F089065AD009E5066E3DC9F3 /* HankenGrotesk.ttf */,
+				3949ED823D69455FDA35611D /* Geist.ttf */,
+				B5A3002D1D70726EDC48D2DD /* GeistMono.ttf */,
 			);
 			name = PasswardsiOS;
 			path = PasswardsiOS;
@@ -368,6 +377,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				1676945E466ECDF0F28CA709 /* Assets.xcassets in Resources */,
+				CB6E05347EBECBB14E437CC7 /* HankenGrotesk.ttf in Resources */,
+				48EC6CA7E68199A40EF99B51 /* Geist.ttf in Resources */,
+				DD452614ED0193E509628294 /* GeistMono.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

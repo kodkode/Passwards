@@ -56,6 +56,8 @@ struct PasswardsiOSApp: App {
     @State private var model = IOSAppModel()
     @Environment(\.scenePhase) private var scenePhase
 
+    init() { Theme.configureAppearance() }
+
     var body: some Scene {
         WindowGroup {
             Group {

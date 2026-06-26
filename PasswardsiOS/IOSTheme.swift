@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import PasswardsCore
 
 /// "Vault Sentinel" — the iOS design system from the owner's Stitch
@@ -72,6 +73,44 @@ enum Theme {
         case .good: Color(.sRGB, red: 0.45, green: 0.75, blue: 0.25)
         case .excellent: Color(.sRGB, red: 0.20, green: 0.70, blue: 0.32)
         }
+    }
+
+    // MARK: Fonts (Vault Sentinel)
+    // Hanken Grotesk → headlines/body · Geist → uppercase labels · Geist Mono →
+    // passwords, TOTP codes, Secret Key. `relativeTo` keeps Dynamic Type scaling.
+
+    static func display(_ size: CGFloat, _ weight: Font.Weight = .bold) -> Font {
+        .custom("Hanken Grotesk", size: size, relativeTo: .largeTitle).weight(weight)
+    }
+    static func title(_ size: CGFloat, _ weight: Font.Weight = .semibold) -> Font {
+        .custom("Hanken Grotesk", size: size, relativeTo: .title2).weight(weight)
+    }
+    static func text(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
+        .custom("Hanken Grotesk", size: size, relativeTo: .body).weight(weight)
+    }
+    static func caps(_ size: CGFloat = 12, _ weight: Font.Weight = .semibold) -> Font {
+        .custom("Geist", size: size, relativeTo: .caption).weight(weight)
+    }
+    static func mono(_ size: CGFloat, _ weight: Font.Weight = .medium) -> Font {
+        .custom("Geist Mono", size: size, relativeTo: .body).weight(weight)
+    }
+
+    /// Dark, blended navigation bar with Hanken Grotesk titles. Call once at launch.
+    static func configureAppearance() {
+        let bar = UINavigationBarAppearance()
+        bar.configureWithOpaqueBackground()
+        bar.backgroundColor = UIColor(background)
+        bar.shadowColor = .clear
+        func hanken(_ size: CGFloat, _ w: UIFont.Weight) -> UIFont {
+            let base = UIFont(name: "Hanken Grotesk", size: size) ?? .systemFont(ofSize: size, weight: w)
+            let d = base.fontDescriptor.addingAttributes([.traits: [UIFontDescriptor.TraitKey.weight: w]])
+            return UIFont(descriptor: d, size: size)
+        }
+        bar.largeTitleTextAttributes = [.font: hanken(32, .bold), .foregroundColor: UIColor.white]
+        bar.titleTextAttributes = [.font: hanken(17, .semibold), .foregroundColor: UIColor.white]
+        UINavigationBar.appearance().standardAppearance = bar
+        UINavigationBar.appearance().scrollEdgeAppearance = bar
+        UINavigationBar.appearance().compactAppearance = bar
     }
 }
 

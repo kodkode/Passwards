@@ -9,5 +9,11 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>UIAppFonts</key>
+	<array>
+		<string>HankenGrotesk.ttf</string>
+		<string>Geist.ttf</string>
+		<string>GeistMono.ttf</string>
+	</array>
 </dict>
 </plist>
