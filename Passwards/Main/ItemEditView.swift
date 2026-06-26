@@ -1,5 +1,6 @@
 import SwiftUI
 import PasswardsCore
+import UniformTypeIdentifiers
 
 /// In-place editor for new and existing items: title, vault, every field
 /// editable, add/remove fields and sections, tags, notes.
@@ -15,6 +16,12 @@ struct ItemEditView: View {
     @State private var tagsText = ""
     @State private var isSaving = false
     @State private var iconPickerShown = false
+    /// The field currently being dragged for reordering (nil when not dragging).
+    @State private var draggingFieldID: UUID?
+    /// The section currently being dragged for reordering (nil when not dragging).
+    /// Field and section drags are mutually exclusive — each delegate validates
+    /// only its own kind, so the two never interfere.
+    @State private var draggingSectionID: UUID?
 
     init(store: VaultStore, draft: VaultItem) {
         self.store = store
@@ -63,8 +70,8 @@ struct ItemEditView: View {
                     }
                 }
 
-                ForEach(draft.details.sections.indices, id: \.self) { sectionIndex in
-                    sectionEditor(draft: draft, sectionIndex: sectionIndex)
+                ForEach(draft.details.sections) { $section in
+                    sectionEditor(draft: draft, sectionID: section.id)
                 }
 
                 Button {
@@ -118,57 +125,108 @@ struct ItemEditView: View {
         }
     }
 
-    private func sectionEditor(draft: Binding<VaultItem>, sectionIndex: Int) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                TextField(
-                    "Section",
-                    text: draft.details.sections[sectionIndex].title,
-                    prompt: Text(sectionIndex == 0 ? "" : "Section title")
-                )
-                .textFieldStyle(.plain)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                Spacer()
-                if sectionIndex > 0 {
-                    Button {
-                        draft.wrappedValue.details.sections.remove(at: sectionIndex)
-                    } label: {
-                        Image(systemName: "trash")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                    .help("Remove section")
+    private func sectionEditor(draft: Binding<VaultItem>, sectionID: UUID) -> some View {
+        // Resolve by identity each render so reordering can't desync the index.
+        let sectionIndex = draftItem.details.sections.firstIndex { $0.id == sectionID } ?? 0
+        let sectionCount = draftItem.details.sections.count
+        let sectionFields = draftItem.details.sections[sectionIndex].fields
+        // Custom sections (index > 0) drag, but only when there's more than one
+        // to reorder among. `enabled` must match `visible` or the grip would be
+        // an invisible-yet-draggable hit target.
+        let sectionDraggable = sectionIndex > 0 && sectionCount > 2
+        return VStack(alignment: .leading, spacing: 0) {
+            // The grip sits flush at x=0 (like field grips); the title/trash
+            // carry the 14pt inset, so both gutters line up in one column.
+            HStack(spacing: 2) {
+                gutterGrip(
+                    visible: sectionDraggable,
+                    enabled: sectionDraggable,
+                    help: "Drag to reorder section"
+                ) {
+                    draggingSectionID = sectionID
+                    draggingFieldID = nil
+                    return reorderProvider(sectionID, type: .passwardsSectionReorder)
                 }
+                HStack(spacing: 0) {
+                    TextField(
+                        "Section",
+                        text: draft.details.sections[sectionIndex].title,
+                        prompt: Text(sectionIndex == 0 ? "" : "Section title")
+                    )
+                    .textFieldStyle(.plain)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    Spacer()
+                    if sectionIndex > 0 {
+                        Button {
+                            draft.wrappedValue.details.sections.removeAll { $0.id == sectionID }
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .help("Remove section")
+                    }
+                }
+                .padding(.horizontal, 14)
             }
-            .padding(.horizontal, 14)
             .padding(.top, 12)
             .padding(.bottom, 4)
+            .contentShape(Rectangle())
+            .onDrop(
+                of: [.passwardsSectionReorder],
+                delegate: SectionReorderDropDelegate(
+                    targetID: sectionID,
+                    sections: draft.details.sections,
+                    dragging: $draggingSectionID
+                )
+            )
 
-            let fields = draft.wrappedValue.details.sections[sectionIndex].fields
-            ForEach(fields.indices, id: \.self) { fieldIndex in
-                if fieldIndex > 0 { Divider().padding(.leading, 14) }
-                if fields[fieldIndex].kind == .file {
-                    AttachmentEditRow(
-                        field: draft.details.sections[sectionIndex].fields[fieldIndex],
-                        store: store,
-                        onDelete: {
-                            draft.wrappedValue.details.sections[sectionIndex].fields.remove(at: fieldIndex)
-                        }
-                    )
-                } else {
-                    FieldEditRow(
-                        field: draft.details.sections[sectionIndex].fields[fieldIndex],
-                        generatorShown: Binding(
-                            get: { generatorField == fields[fieldIndex].id },
-                            set: { generatorField = $0 ? fields[fieldIndex].id : nil }
-                        ),
-                        onDelete: {
-                            draft.wrappedValue.details.sections[sectionIndex].fields.remove(at: fieldIndex)
-                        }
-                    )
+            // Iterate by stable field identity (not position) so a drag reorder
+            // animates the rows rather than re-binding by index mid-move.
+            ForEach(draft.details.sections[sectionIndex].fields) { $field in
+                let fieldID = field.id
+                // Custom fields drag; username/password (purpose fields) are
+                // pinned, matching 1P8. A grip shows only when there's somewhere
+                // to drag — another field here, or another section to move into.
+                let draggable = field.purpose == nil && (sectionFields.count > 1 || sectionCount > 1)
+                if sectionFields.first?.id != fieldID { Divider().padding(.leading, 32) }
+                HStack(spacing: 2) {
+                    gutterGrip(visible: draggable, enabled: draggable, help: "Drag to reorder") {
+                        draggingFieldID = fieldID
+                        draggingSectionID = nil
+                        return reorderProvider(fieldID, type: .passwardsFieldReorder)
+                    }
+                    if field.kind == .file {
+                        AttachmentEditRow(
+                            field: $field,
+                            store: store,
+                            onDelete: {
+                                draft.wrappedValue.details.sections[sectionIndex].fields.removeAll { $0.id == fieldID }
+                            }
+                        )
+                    } else {
+                        FieldEditRow(
+                            field: $field,
+                            generatorShown: Binding(
+                                get: { generatorField == fieldID },
+                                set: { generatorField = $0 ? fieldID : nil }
+                            ),
+                            onDelete: {
+                                draft.wrappedValue.details.sections[sectionIndex].fields.removeAll { $0.id == fieldID }
+                            }
+                        )
+                    }
                 }
+                .onDrop(
+                    of: [.passwardsFieldReorder],
+                    delegate: FieldReorderDropDelegate(
+                        targetID: fieldID,
+                        sections: draft.details.sections,
+                        dragging: $draggingFieldID
+                    )
+                )
             }
 
             Menu {
@@ -186,11 +244,49 @@ struct ItemEditView: View {
             .menuStyle(.borderlessButton)
             .fixedSize()
             .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            // Only an EMPTY section exposes a drop zone here (it has no field rows
+            // to target). A non-empty section is served entirely by its row drop
+            // targets — registering an adjacent append zone there would let a
+            // cross-section drag ping-pong between the two.
+            .modifier(ConditionalFieldDrop(
+                active: sectionFields.isEmpty,
+                delegate: SectionAppendDropDelegate(
+                    sectionID: sectionID,
+                    sections: draft.details.sections,
+                    dragging: $draggingFieldID
+                )
+            ))
         }
         .background(Theme.fieldCard, in: RoundedRectangle(cornerRadius: 8))
         .overlay {
             RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(Theme.fieldCardBorder, lineWidth: 1)
+        }
+    }
+
+    /// A drag handle that sits in a fixed 16pt leading gutter so rows align
+    /// whether or not the handle is shown. `visible` controls the glyph;
+    /// `enabled` controls whether it can start a drag.
+    @ViewBuilder
+    private func gutterGrip(
+        visible: Bool,
+        enabled: Bool,
+        help: String,
+        provider: @escaping () -> NSItemProvider
+    ) -> some View {
+        if enabled {
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.tertiary)
+                .frame(width: 16)
+                .opacity(visible ? 1 : 0)
+                .contentShape(Rectangle())
+                .help(help)
+                .onDrag(provider)
+        } else {
+            Color.clear.frame(width: 16, height: 1)
         }
     }
 
@@ -242,6 +338,166 @@ struct ItemEditView: View {
     private func close() {
         store.editorDraft = nil
         store.editorPrevious = nil
+    }
+}
+
+/// Private drag types for editor reordering. Using app-owned types (rather than
+/// `.text`) means foreign drags — text dragged out of a TextField, content from
+/// another app — cannot match these drop targets, so they can never trigger a
+/// reorder. This also makes a stale `dragging` id (left by a cancelled drag)
+/// inert: only an actual grip drag, which resets the id first, can reach a
+/// delegate.
+private extension UTType {
+    static let passwardsFieldReorder = UTType(exportedAs: "com.michael.passwards.field-reorder")
+    static let passwardsSectionReorder = UTType(exportedAs: "com.michael.passwards.section-reorder")
+}
+
+/// An in-process-only drag payload tagged with one of the private reorder types.
+private func reorderProvider(_ id: UUID, type: UTType) -> NSItemProvider {
+    let provider = NSItemProvider()
+    provider.registerDataRepresentation(forTypeIdentifier: type.identifier, visibility: .ownProcess) { completion in
+        completion(Data(id.uuidString.utf8), nil)
+        return nil
+    }
+    return provider
+}
+
+/// Applies the field-append drop target only when `active` (an empty section).
+/// A non-empty section is served entirely by its row drop targets.
+private struct ConditionalFieldDrop: ViewModifier {
+    let active: Bool
+    let delegate: SectionAppendDropDelegate
+
+    func body(content: Content) -> some View {
+        if active {
+            content.onDrop(of: [.passwardsFieldReorder], delegate: delegate)
+        } else {
+            content
+        }
+    }
+}
+
+/// Locates a field by id within a sections array. Shared by the field drop
+/// delegates so within- and cross-section moves use one lookup.
+private func locateField(_ id: UUID, in sections: [ItemSection]) -> (section: Int, field: Int)? {
+    for (s, section) in sections.enumerated() {
+        if let f = section.fields.firstIndex(where: { $0.id == id }) { return (s, f) }
+    }
+    return nil
+}
+
+/// Count of leading pinned (purpose) fields — username/password that 1P8 keeps
+/// fixed at the top. A custom field can't initiate a drag from above them
+/// (they have no grip) and must not be dropped above them either, so reorder
+/// destinations are floored to this index.
+private func pinnedPrefix(_ fields: [ItemField]) -> Int {
+    var n = 0
+    for f in fields {
+        if f.purpose != nil { n += 1 } else { break }
+    }
+    return n
+}
+
+/// Live field reorder across all sections: as the dragged field's pointer
+/// enters another row, the list reflows under the cursor (1P8 grip behavior).
+/// Within a section it swaps; across sections it moves the field over.
+///
+/// Strict-end placement note: dropping onto a row in a *different* non-empty
+/// section inserts *before* that row, so a single cross-section drag can't land
+/// a field at the very end of a foreign section (drop on the last row, then
+/// nudge down within the section). This is deliberate — the alternative (an
+/// always-on append zone) makes a cross-section drag ping-pong at the boundary.
+private struct FieldReorderDropDelegate: DropDelegate {
+    let targetID: UUID
+    @Binding var sections: [ItemSection]
+    @Binding var dragging: UUID?
+
+    // Only engage while a field drag is active, so a section drag passes through.
+    func validateDrop(info: DropInfo) -> Bool { dragging != nil }
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        dragging == nil ? nil : DropProposal(operation: .move)
+    }
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging, dragging != targetID,
+              let from = locateField(dragging, in: sections),
+              let to = locateField(targetID, in: sections) else { return }
+        let floor = pinnedPrefix(sections[to.section].fields)
+        withAnimation(.easeInOut(duration: 0.18)) {
+            if from.section == to.section {
+                let dest = max(to.field > from.field ? to.field + 1 : to.field, floor)
+                sections[from.section].fields.move(
+                    fromOffsets: IndexSet(integer: from.field),
+                    toOffset: dest
+                )
+            } else {
+                let element = sections[from.section].fields.remove(at: from.field)
+                let insertAt = min(max(to.field, floor), sections[to.section].fields.count)
+                sections[to.section].fields.insert(element, at: insertAt)
+            }
+        }
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        dragging = nil
+        return true
+    }
+}
+
+/// Drop target on a section's "Add Field" area: moves the dragged field to the
+/// end of that section. The only way to reach a section that has no fields yet.
+private struct SectionAppendDropDelegate: DropDelegate {
+    let sectionID: UUID
+    @Binding var sections: [ItemSection]
+    @Binding var dragging: UUID?
+
+    func validateDrop(info: DropInfo) -> Bool { dragging != nil }
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        dragging == nil ? nil : DropProposal(operation: .move)
+    }
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging,
+              let to = sections.firstIndex(where: { $0.id == sectionID }),
+              let from = locateField(dragging, in: sections) else { return }
+        // Already the last field in this section — nothing to do (avoids churn).
+        if from.section == to, from.field == sections[to].fields.count - 1 { return }
+        withAnimation(.easeInOut(duration: 0.18)) {
+            let element = sections[from.section].fields.remove(at: from.field)
+            sections[to].fields.append(element)
+        }
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        dragging = nil
+        return true
+    }
+}
+
+/// Live reorder of custom sections (the first/main section stays pinned).
+private struct SectionReorderDropDelegate: DropDelegate {
+    let targetID: UUID
+    @Binding var sections: [ItemSection]
+    @Binding var dragging: UUID?
+
+    func validateDrop(info: DropInfo) -> Bool { dragging != nil }
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        dragging == nil ? nil : DropProposal(operation: .move)
+    }
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging, dragging != targetID,
+              let from = sections.firstIndex(where: { $0.id == dragging }),
+              let to = sections.firstIndex(where: { $0.id == targetID }),
+              from >= 1, to >= 1 else { return }
+        withAnimation(.easeInOut(duration: 0.18)) {
+            sections.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+        }
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        dragging = nil
+        return true
     }
 }
 
