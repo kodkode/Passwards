@@ -43,8 +43,15 @@ public actor BrowserBridgeServer {
         }
         // Unentitled contexts (unit tests, command-line tooling): the group
         // container is unavailable, so fall back to the home directory.
+        #if os(macOS)
         return FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".2password-bridge.sock").path
+        #else
+        // The browser bridge is a macOS-only feature; on iOS the group container
+        // always resolves, so this fallback is unreachable. Kept compilable only
+        // because iOS links PasswardsCore.
+        return NSTemporaryDirectory() + ".2password-bridge.sock"
+        #endif
     }
 
     /// Per-`cid` decrypted session, owned here (not in the transient socket).

@@ -2,6 +2,7 @@ import SwiftUI
 import ServiceManagement
 import KeyboardShortcuts
 import PasswardsCore
+import PasswardsOrchestration
 
 struct SettingsScene: View {
     let appState: AppState

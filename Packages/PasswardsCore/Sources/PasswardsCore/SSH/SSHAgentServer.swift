@@ -36,8 +36,16 @@ public actor SSHAgentServer {
             forSecurityApplicationGroupIdentifier: BrowserBridgeServer.appGroupIdentifier) {
             return container.appendingPathComponent("agent.sock").path
         }
+        #if os(macOS)
         return FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".2password-agent.sock").path
+        #else
+        // The SSH agent is a macOS-only feature; on iOS the group container
+        // always resolves, so this fallback is unreachable. Kept compilable only
+        // because iOS links PasswardsCore. (`homeDirectoryForCurrentUser` is
+        // unavailable on iOS.)
+        return NSTemporaryDirectory() + ".2password-agent.sock"
+        #endif
     }
 
     public func start() throws {

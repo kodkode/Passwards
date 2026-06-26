@@ -1,14 +1,21 @@
-import SwiftUI
+import Foundation
+import Observation
 import PasswardsCore
 import Security
 
 /// App-side wrapper around the core SyncEngine: entitlement detection,
 /// status for the sidebar, and change kicks after local mutations.
+///
+/// Lives in PasswardsOrchestration so both the macOS and iOS apps share one
+/// sync wrapper. Explicitly `@MainActor` because this package target has no
+/// default actor isolation (the app targets set `SWIFT_DEFAULT_ACTOR_ISOLATION
+/// = MainActor`, which doesn't apply here).
+@MainActor
 @Observable
-final class SyncController {
-    static let containerIdentifier = "iCloud.com.michael.twopassword"
+public final class SyncController {
+    public static let containerIdentifier = "iCloud.com.michael.twopassword"
 
-    enum DisplayStatus: Equatable {
+    public enum DisplayStatus: Equatable {
         case disabled        // no entitlement or user turned sync off
         case idle
         case syncing
@@ -16,14 +23,16 @@ final class SyncController {
         case accountUnavailable
     }
 
-    private(set) var status: DisplayStatus = .disabled
+    public private(set) var status: DisplayStatus = .disabled
     private var engine: SyncEngine?
-    var onRemoteChanges: (() -> Void)?
+    public var onRemoteChanges: (() -> Void)?
+
+    public init() {}
 
     /// True when the running binary actually has the iCloud entitlement —
     /// CloudKit APIs crash (uncatchably) without it, so never touch them unless
     /// this returns true.
-    static var hasCloudKitEntitlement: Bool {
+    public static var hasCloudKitEntitlement: Bool {
         guard let task = SecTaskCreateFromSelf(nil) else { return false }
         guard let value = SecTaskCopyValueForEntitlement(task, "com.apple.developer.icloud-services" as CFString, nil) else {
             return false
@@ -34,7 +43,7 @@ final class SyncController {
         return false
     }
 
-    var syncEnabled: Bool {
+    public var syncEnabled: Bool {
         get { UserDefaults.standard.object(forKey: "cloudSyncEnabled") as? Bool ?? true }
         set {
             UserDefaults.standard.set(newValue, forKey: "cloudSyncEnabled")
@@ -44,7 +53,7 @@ final class SyncController {
 
     private var lastDatabase: AppDatabase?
 
-    func start(database: AppDatabase?) async {
+    public func start(database: AppDatabase?) async {
         guard let database else { return }
         lastDatabase = database
         guard Self.hasCloudKitEntitlement, syncEnabled else {
@@ -75,7 +84,7 @@ final class SyncController {
         await engine?.manualSync()
     }
 
-    func stop() async {
+    public func stop() async {
         // Capture the engine BEFORE niling: `engine = nil` runs synchronously on
         // the MainActor, so a detached `Task { await engine?.stop() }` would read
         // a nil `self.engine` and never actually tear the engine down — leaving
@@ -89,7 +98,7 @@ final class SyncController {
     }
 
     /// Call after local mutations so pending rows get queued and pushed.
-    func kick() {
+    public func kick() {
         guard let engine else { return }
         Task {
             await engine.enqueuePendingChanges()
@@ -104,14 +113,14 @@ final class SyncController {
     /// iCloud) and was then turned OFF, the stale cloud copy isn't overwritten
     /// here — it's replaced on the next sync, because the account record is
     /// always re-enqueued (see `SyncEngine.enqueuePendingChanges`).
-    func pushChangesAndWait() async {
+    public func pushChangesAndWait() async {
         guard let engine else { return }
         await engine.enqueuePendingChanges()
         await engine.manualSync()
     }
 
     /// Fetch the remote account for the new-device sign-in flow.
-    static func fetchRemoteAccount() async throws -> AccountCrypto.AccountKeyRecord? {
+    public static func fetchRemoteAccount() async throws -> AccountCrypto.AccountKeyRecord? {
         guard hasCloudKitEntitlement else { return nil }
         return try await SyncEngine.fetchRemoteAccount(containerIdentifier: containerIdentifier)
     }

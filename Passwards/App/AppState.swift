@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import PasswardsCore
+import PasswardsOrchestration
 
 enum AppPhase: Equatable {
     case loading

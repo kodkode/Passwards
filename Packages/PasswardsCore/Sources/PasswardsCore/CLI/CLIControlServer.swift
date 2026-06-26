@@ -26,8 +26,15 @@ public actor CLIControlServer {
             forSecurityApplicationGroupIdentifier: BrowserBridgeServer.appGroupIdentifier) {
             return container.appendingPathComponent("cli.sock").path
         }
+        #if os(macOS)
         return FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".2password-cli.sock").path
+        #else
+        // CLI control is a macOS-only feature; on iOS the group container always
+        // resolves, so this fallback is unreachable. Kept compilable only because
+        // iOS links PasswardsCore.
+        return NSTemporaryDirectory() + ".2password-cli.sock"
+        #endif
     }
 
     public func start() throws {

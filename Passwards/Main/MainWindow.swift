@@ -1,5 +1,6 @@
 import SwiftUI
 import PasswardsCore
+import PasswardsOrchestration
 
 /// The three-pane main window: sidebar · item list · detail.
 struct MainWindow: View {

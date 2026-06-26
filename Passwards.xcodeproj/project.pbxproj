@@ -13,6 +13,7 @@
 		2688DAC61E68831C51AA5463 /* popup.js in Resources */ = {isa = PBXBuildFile; fileRef = 1AF8AC0BDBE2902682E6BF2D /* popup.js */; };
 		2P00000000000000000000A1 /* PasswardsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 2P0000000000000000000091 /* PasswardsCore */; };
 		2P00000000000000000000A2 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 2P0000000000000000000092 /* KeyboardShortcuts */; };
+		2P00000000000000000000A3 /* PasswardsOrchestration in Frameworks */ = {isa = PBXBuildFile; productRef = 2P0000000000000000000093 /* PasswardsOrchestration */; };
 		3153234A0D049CBD744372AE /* icon128.png in Resources */ = {isa = PBXBuildFile; fileRef = 888219B247F1FF724C58FB8A /* icon128.png */; };
 		48D19478BCC651384B7EF853 /* AppGroupRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD610223516AB5E35ED409D /* AppGroupRelay.swift */; };
 		6DE1B35EA6C8DC4BEC92BFDE /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0BB4B057C85DF0A7A34A1272 /* Cocoa.framework */; };
@@ -76,6 +77,7 @@
 			files = (
 				2P00000000000000000000A1 /* PasswardsCore in Frameworks */,
 				2P00000000000000000000A2 /* KeyboardShortcuts in Frameworks */,
+				2P00000000000000000000A3 /* PasswardsOrchestration in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -176,6 +178,7 @@
 			packageProductDependencies = (
 				2P0000000000000000000091 /* PasswardsCore */,
 				2P0000000000000000000092 /* KeyboardShortcuts */,
+				2P0000000000000000000093 /* PasswardsOrchestration */,
 			);
 			productName = Passwards;
 			productReference = 2P0000000000000000000031 /* Passwards.app */;
@@ -522,6 +525,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 2P0000000000000000000082 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
 			productName = KeyboardShortcuts;
+		};
+		2P0000000000000000000093 /* PasswardsOrchestration */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PasswardsOrchestration;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

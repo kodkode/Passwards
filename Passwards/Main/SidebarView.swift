@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import PasswardsCore
+import PasswardsOrchestration
 
 /// The native frosted sidebar material (behind-window vibrancy). SwiftUI's bare
 /// `.listStyle(.sidebar)` doesn't reliably render it on every macOS build, so we

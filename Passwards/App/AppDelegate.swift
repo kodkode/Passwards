@@ -1,4 +1,5 @@
 import AppKit
+import PasswardsOrchestration
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Capture-blocking can be bypassed in DEBUG builds only, so the developer

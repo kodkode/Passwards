@@ -3,6 +3,13 @@ import GRDB
 
 /// SQLite database. Every sensitive column holds AES-GCM ciphertext; plaintext
 /// is limited to IDs, timestamps, and sync bookkeeping.
+public enum StorageError: Error {
+    /// The App Group container couldn't be resolved — the entitlement is missing
+    /// or the identifier is wrong. Surfaced so bootstrap routes to the error
+    /// screen instead of silently falling back to an unshared sandbox location.
+    case appGroupContainerUnavailable(String)
+}
+
 public struct AppDatabase: Sendable {
     public let writer: any DatabaseWriter
 
@@ -11,19 +18,36 @@ public struct AppDatabase: Sendable {
         try migrator.migrate(writer)
     }
 
-    /// The on-disk vault directory (…/Application Support/2Password). Holds the
-    /// SQLite database, its WAL/SHM sidecars, and the `Attachments/` ciphertext.
-    /// (Kept at the legacy name across the rename so existing data stays reachable.)
-    public static func vaultDirectory() throws -> URL {
-        let appSupport = try FileManager.default.url(
-            for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
-        )
-        return appSupport.appendingPathComponent("2Password", isDirectory: true)
+    /// The on-disk vault directory (…/2Password). Holds the SQLite database, its
+    /// WAL/SHM sidecars, and the `Attachments/` ciphertext. (Kept at the legacy
+    /// name across the rename so existing data stays reachable.)
+    ///
+    /// `appGroupIdentifier` nil → the per-app `Application Support` directory
+    /// (macOS uses this; behavior is byte-identical to before). Non-nil → the
+    /// shared App Group container, so an extension (the iOS AutoFill provider)
+    /// can reach the same vault. The iOS app passes the group id from launch.
+    public static func vaultDirectory(appGroupIdentifier: String? = nil) throws -> URL {
+        let base: URL
+        if let appGroupIdentifier {
+            guard let container = FileManager.default.containerURL(
+                forSecurityApplicationGroupIdentifier: appGroupIdentifier
+            ) else {
+                throw StorageError.appGroupContainerUnavailable(appGroupIdentifier)
+            }
+            base = container
+        } else {
+            base = try FileManager.default.url(
+                for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+            )
+        }
+        return base.appendingPathComponent("2Password", isDirectory: true)
     }
 
-    /// Opens (creating if needed) the on-disk database in Application Support.
-    public static func open() throws -> AppDatabase {
-        let dir = try vaultDirectory()
+    /// Opens (creating if needed) the on-disk database. See `vaultDirectory` for
+    /// where it lives; `appGroupIdentifier` nil keeps the macOS Application Support
+    /// location, non-nil uses the shared App Group container (iOS).
+    public static func open(appGroupIdentifier: String? = nil) throws -> AppDatabase {
+        let dir = try vaultDirectory(appGroupIdentifier: appGroupIdentifier)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         var config = Configuration()
         config.prepareDatabase { db in
@@ -38,8 +62,8 @@ public struct AppDatabase: Sendable {
     /// start over" recovery path on the database-error screen. Irreversible.
     /// Callers MUST release any open `AppDatabase` first so the file handles are
     /// closed before the directory is removed.
-    public static func destroyOnDiskVault() throws {
-        let dir = try vaultDirectory()
+    public static func destroyOnDiskVault(appGroupIdentifier: String? = nil) throws {
+        let dir = try vaultDirectory(appGroupIdentifier: appGroupIdentifier)
         if FileManager.default.fileExists(atPath: dir.path) {
             try FileManager.default.removeItem(at: dir)
         }
