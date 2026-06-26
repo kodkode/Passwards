@@ -1,35 +1,19 @@
 import SwiftUI
 import PasswardsOrchestration
 
-/// The unlocked shell: a bottom tab bar (1P8-iOS), with Items, Generator, and
-/// Settings. For this vertical slice the Items/Generator screens are placeholders
-/// (the full list/detail/editor + generator land next); Settings can lock the app
-/// so the unlock ↔ lock cycle is exercisable end to end.
+/// The unlocked shell: a bottom tab bar (1P8-iOS) — Items, Generator, Settings.
 struct IOSHomeView: View {
-    let core: AccountController
+    let vault: IOSVaultModel
+    private var core: AccountController { vault.core }
 
     var body: some View {
         TabView {
             Tab("Items", systemImage: "square.grid.2x2") {
-                NavigationStack {
-                    ContentUnavailableView {
-                        Label("No Items Yet", systemImage: "key.fill")
-                    } description: {
-                        Text("Item list, detail, and editing are coming next.")
-                    }
-                    .navigationTitle("Items")
-                }
+                IOSItemListView(vault: vault)
             }
 
             Tab("Generator", systemImage: "dial.medium") {
-                NavigationStack {
-                    ContentUnavailableView {
-                        Label("Password Generator", systemImage: "dial.medium")
-                    } description: {
-                        Text("Coming next.")
-                    }
-                    .navigationTitle("Generator")
-                }
+                NavigationStack { IOSGeneratorView() }
             }
 
             Tab("Settings", systemImage: "gearshape") {
@@ -40,6 +24,7 @@ struct IOSHomeView: View {
             }
         }
         .tint(Theme.accent)
+        .task { await vault.load() }
     }
 }
 

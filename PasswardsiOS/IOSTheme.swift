@@ -93,6 +93,68 @@ struct AppMark: View {
     }
 }
 
+/// 1P8-style colored rounded-square tile: brand-color fill, a soft top→bottom
+/// gradient + edge highlight, and a white SF Symbol glyph.
+struct IconTile: View {
+    let colorToken: String
+    let symbol: String
+    var size: CGFloat = 40
+
+    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: size * 0.235, style: .continuous) }
+
+    var body: some View {
+        shape
+            .fill(Theme.color(token: colorToken))
+            .overlay {
+                shape.fill(
+                    LinearGradient(stops: [
+                        .init(color: .white.opacity(0.30), location: 0),
+                        .init(color: .white.opacity(0.05), location: 0.55),
+                        .init(color: .black.opacity(0.12), location: 1),
+                    ], startPoint: .top, endPoint: .bottom)
+                )
+            }
+            .overlay {
+                shape.strokeBorder(
+                    LinearGradient(colors: [.white.opacity(0.45), .white.opacity(0.06)],
+                                   startPoint: .top, endPoint: .bottom),
+                    lineWidth: max(size / 32, 0.75)
+                )
+            }
+            .frame(width: size, height: size)
+            .overlay {
+                Image(systemName: symbol)
+                    .font(.system(size: size * 0.46, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.2), radius: size / 40, y: size / 60)
+            }
+            .shadow(color: .black.opacity(0.2), radius: size / 28, y: size / 32)
+    }
+}
+
+/// The category's tile (color + glyph).
+struct CategoryIcon: View {
+    let category: PasswardsCore.Category
+    var size: CGFloat = 40
+    var body: some View {
+        IconTile(colorToken: category.colorToken, symbol: category.symbolName, size: size)
+    }
+}
+
+/// The item's leading icon: a user-chosen custom symbol/color when set, else the
+/// category tile. (Favicons are deferred for iOS v1.)
+struct ItemIcon: View {
+    let overview: ItemOverview
+    var size: CGFloat = 40
+    var body: some View {
+        if let symbol = overview.iconSymbol, !symbol.isEmpty {
+            IconTile(colorToken: overview.iconColor ?? overview.category.colorToken, symbol: symbol, size: size)
+        } else {
+            CategoryIcon(category: overview.category, size: size)
+        }
+    }
+}
+
 /// Five-segment password strength bar with label, as in the 1P8 generator.
 struct StrengthBar: View {
     let score: PasswordStrength.Score

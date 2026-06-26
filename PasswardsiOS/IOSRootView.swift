@@ -3,7 +3,8 @@ import PasswardsOrchestration
 
 /// Root view: switches on the shared `AccountController` phase, like macOS `RootView`.
 struct IOSRootView: View {
-    let core: AccountController
+    let model: IOSAppModel
+    private var core: AccountController { model.core }
 
     var body: some View {
         switch core.phase {
@@ -19,7 +20,7 @@ struct IOSRootView: View {
         case .locked:
             IOSLockView(core: core)
         case .unlocked:
-            IOSHomeView(core: core)
+            IOSHomeView(vault: model.vault)
         }
     }
 }

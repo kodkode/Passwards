@@ -8,16 +8,24 @@ import PasswardsOrchestration
 @MainActor
 final class IOSAppModel {
     let core: AccountController
+    let vault: IOSVaultModel
     private let autoLock = IOSAutoLockService()
     private var backgroundedAt: Date?
 
     init() {
-        core = AccountController(
+        let core = AccountController(
             sync: SyncController(),
             autoLock: autoLock,
             pasteboard: IOSPasteboardService(),
             appGroupIdentifier: IOSAppGroup.identifier
         )
+        self.core = core
+        let vault = IOSVaultModel(core: core)
+        self.vault = vault
+        // The decrypted summary cache lives in the vault model, so the controller
+        // sheds/refreshes it on lock/restore.
+        core.onVaultShouldClearSecrets = { [weak vault] in vault?.clearSecrets() }
+        core.onVaultShouldRefresh = { [weak vault] in await vault?.refresh() }
     }
 
     func boot() async {
@@ -51,7 +59,7 @@ struct PasswardsiOSApp: App {
     var body: some Scene {
         WindowGroup {
             #if DEBUG
-            if let preview = Self.screenshotPreview(core: model.core) {
+            if let preview = Self.screenshotPreview(model: model) {
                 preview   // renders one screen directly (no bootstrap) for capture
             } else {
                 liveRoot
@@ -63,7 +71,7 @@ struct PasswardsiOSApp: App {
     }
 
     private var liveRoot: some View {
-        IOSRootView(core: model.core)
+        IOSRootView(model: model)
             .task { await model.boot() }
             .onChange(of: scenePhase) { _, phase in
                 model.scenePhaseChanged(phase)
@@ -74,14 +82,24 @@ struct PasswardsiOSApp: App {
     /// Renders a single screen for screenshot/design review when launched with
     /// `-uiPreview <name>`. Bypasses bootstrap so screens render with a fresh,
     /// empty controller. Debug-only.
-    static func screenshotPreview(core: AccountController) -> AnyView? {
+    static func screenshotPreview(model: IOSAppModel) -> AnyView? {
         let args = ProcessInfo.processInfo.arguments
         guard let i = args.firstIndex(of: "-uiPreview"), i + 1 < args.count else { return nil }
+        let core = model.core
+        let vault = model.vault
+        let seeded = { vault.seedPreview(); return vault }
         switch args[i + 1] {
         case "welcome": return AnyView(IOSOnboardingView(core: core, initialStep: .welcome))
         case "credentials": return AnyView(IOSOnboardingView(core: core, initialStep: .credentials))
         case "lock": return AnyView(IOSLockView(core: core))
-        case "home": return AnyView(IOSHomeView(core: core))
+        case "home": return AnyView(IOSHomeView(vault: seeded()))
+        case "list": return AnyView(IOSItemListView(vault: seeded()))
+        case "detail": return AnyView(NavigationStack { IOSItemDetailView(vault: seeded(), itemID: "1") })
+        case "editor": return AnyView(NavigationStack {
+            IOSItemEditorView(vault: seeded(), original: vault.seededDetailItem, isNew: false, showsCancel: true, onClose: {})
+        })
+        case "picker": return AnyView(IOSCategoryPickerView(vault: seeded()))
+        case "generator": return AnyView(NavigationStack { IOSGeneratorView() })
         default: return nil
         }
     }
