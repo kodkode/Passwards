@@ -1,5 +1,6 @@
 import Foundation
 import CloudKit
+import CryptoKit
 import GRDB
 import os
 
@@ -96,7 +97,9 @@ public actor SyncEngine {
                 )
             }
             var changes: [CKSyncEngine.PendingRecordZoneChange] = []
-            if hasAccount {
+            // Only push the account when it actually changed (vs every sync), so a
+            // signed-in device whose account matches the server doesn't churn.
+            if hasAccount, await accountNeedsPush() {
                 changes.append(.saveRecord(recordID("account")))
             }
             changes += vaultIDs.map { .saveRecord(recordID("vault-\($0)")) }
@@ -113,6 +116,53 @@ public actor SyncEngine {
 
     func recordID(_ name: String) -> CKRecord.ID {
         CKRecord.ID(recordName: name, zoneID: zoneID)
+    }
+
+    // MARK: Account record sync-state (etag + content hash)
+    //
+    // The account row has no `syncState`/`ckSystemFields` column, so its CloudKit
+    // system fields (etag) and last-pushed content hash live in `syncMeta` (no
+    // migration). The hash lets us push the account ONLY when it actually changes
+    // — a freshly-signed-in device's account already matches the server, so it
+    // never re-pushes (which previously failed forever with "record already
+    // exists"). The etag lets a genuine change UPDATE instead of INSERT.
+
+    private static let accountSystemFieldsKey = "accountSystemFields"
+    private static let accountPushedHashKey = "accountPushedHash"
+
+    private func currentAccountHash() async -> Data? {
+        guard let account = try? await database.writer.read({ try AccountRecord.fetchOne($0) }) else { return nil }
+        var hasher = SHA256()
+        hasher.update(data: Data(account.id.utf8))
+        hasher.update(data: Data(account.email.utf8))
+        hasher.update(data: account.kdfSalt)
+        hasher.update(data: Data(String(account.kdfIterations).utf8))
+        hasher.update(data: account.encMasterKey)
+        hasher.update(data: Data([account.recoveryEnabled ? 1 : 0]))
+        if let blob = account.recoveryBlob { hasher.update(data: blob) }
+        if let code = account.encRecoveryCode { hasher.update(data: code) }
+        return Data(hasher.finalize())
+    }
+
+    private func accountNeedsPush() async -> Bool {
+        guard let current = await currentAccountHash() else { return false }
+        let pushed = (try? await database.syncMetaValue(key: Self.accountPushedHashKey)) ?? nil
+        return current != pushed
+    }
+
+    private func accountBaseRecord() async -> CKRecord? {
+        guard let data = (try? await database.syncMetaValue(key: Self.accountSystemFieldsKey)) ?? nil else { return nil }
+        return RecordCoder.unarchiveSystemFields(data)
+    }
+
+    /// Marks the local account as matching CloudKit: stores the record's system
+    /// fields (etag, for the next UPDATE) and the content hash (so we don't push
+    /// again until the account actually changes).
+    private func noteAccountSynced(systemFields record: CKRecord) async {
+        try? await database.setSyncMetaValue(RecordCoder.archiveSystemFields(record), key: Self.accountSystemFieldsKey)
+        if let hash = await currentAccountHash() {
+            try? await database.setSyncMetaValue(hash, key: Self.accountPushedHashKey)
+        }
     }
 
     // MARK: New-device bootstrap
@@ -176,6 +226,9 @@ extension SyncEngine: CKSyncEngineDelegate {
         case .sentRecordZoneChanges(let sent):
             Self.log.info("sent: \(sent.savedRecords.count) saved, \(sent.failedRecordSaves.count) failed, \(sent.deletedRecordIDs.count) deleted")
             for save in sent.savedRecords {
+                if save.recordID.recordName == "account" {
+                    await noteAccountSynced(systemFields: save)
+                }
                 await markSynced(recordName: save.recordID.recordName)
             }
             for deletion in sent.deletedRecordIDs {
@@ -231,7 +284,7 @@ extension SyncEngine: CKSyncEngineDelegate {
         do {
             if recordName == "account" {
                 guard let account = try await database.writer.read({ try AccountRecord.fetchOne($0) }) else { return nil }
-                return RecordCoder.record(for: account, recordID: recordID(recordName))
+                return RecordCoder.record(for: account, recordID: recordID(recordName), baseRecord: await accountBaseRecord())
             }
             if let id = recordName.dropPrefixOrNil("vault-") {
                 guard let vault = try await database.writer.read({ try VaultRecord.fetchOne($0, key: id) }) else { return nil }
@@ -284,6 +337,9 @@ extension SyncEngine: CKSyncEngineDelegate {
                 // master key. The prior key material is backed up first so an
                 // unauthenticated/rolled-back record can't lock the user out.
                 try await database.adoptRemoteAccount(incoming)
+                // Remember the server's etag + that we now match it, so we don't
+                // try to re-insert this account record.
+                await noteAccountSynced(systemFields: record)
 
             case "Vault":
                 guard let vault = RecordCoder.vaultRecord(from: record) else { return }

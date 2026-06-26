@@ -6,8 +6,10 @@ import CloudKit
 public enum RecordCoder {
     // MARK: Account
 
-    static func record(for account: AccountRecord, recordID: CKRecord.ID) -> CKRecord {
-        let record = CKRecord(recordType: "Account", recordID: recordID)
+    static func record(for account: AccountRecord, recordID: CKRecord.ID, baseRecord: CKRecord? = nil) -> CKRecord {
+        // Reuse the archived server record (its etag) when we have one, so the save
+        // UPDATEs the existing account record instead of trying to INSERT a new one.
+        let record = baseRecord ?? CKRecord(recordType: "Account", recordID: recordID)
         record["accountID"] = account.id
         record["email"] = account.email
         record["kdfSalt"] = account.kdfSalt
