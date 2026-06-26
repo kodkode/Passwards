@@ -58,15 +58,19 @@ struct PasswardsiOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            #if DEBUG
-            if let preview = Self.screenshotPreview(model: model) {
-                preview   // renders one screen directly (no bootstrap) for capture
-            } else {
+            Group {
+                #if DEBUG
+                if let preview = Self.screenshotPreview(model: model) {
+                    preview   // renders one screen directly (no bootstrap) for capture
+                } else {
+                    liveRoot
+                }
+                #else
                 liveRoot
+                #endif
             }
-            #else
-            liveRoot
-            #endif
+            .preferredColorScheme(.dark)   // Vault Sentinel is dark-first
+            .tint(Theme.accent)
         }
     }
 

@@ -1,23 +1,40 @@
 import SwiftUI
 import PasswardsCore
 
-/// 1Password 8 visual language on iOS: brand azure, hero gradient, dark lock
-/// surfaces, category/strength colors. Mirrors the macOS `Theme` identity (the
-/// sRGB literals are cross-platform); appearance-adaptive colors use `UIColor`.
+/// "Vault Sentinel" — the iOS design system from the owner's Stitch
+/// "SecurePass Mobile Vault": deep-navy / near-black dark surfaces, Security Green
+/// as the primary accent (active tab, FAB, strength, positive states), and an
+/// iOS blue for links / secondary actions. Dark-first.
 enum Theme {
-    static let accent = Color(.sRGB, red: 0x05 / 255, green: 0x72 / 255, blue: 0xEC / 255)
-    static let accentDeep = Color(.sRGB, red: 0x03 / 255, green: 0x64 / 255, blue: 0xD3 / 255)
+    static func hex(_ v: UInt) -> Color {
+        Color(.sRGB, red: Double((v >> 16) & 0xFF) / 255,
+              green: Double((v >> 8) & 0xFF) / 255, blue: Double(v & 0xFF) / 255)
+    }
 
-    /// Lock screen / onboarding backdrop.
+    // Brand accents
+    static let accent = hex(0x10B981)       // Security Green
+    static let accentDeep = hex(0x059669)
+    static let link = hex(0x60A5FA)         // iOS blue — links / secondary actions
+
+    // Dark surfaces
+    static let background = hex(0x101216)   // app base (near-black)
+    static let navy = hex(0x0A192F)         // deep navy (hero / lock)
+    static let surface = hex(0x1C1D22)      // cards
+    static let surfaceHigh = hex(0x26272D)  // raised / chips / fields
+    static let surfaceLow = hex(0x16171B)
+    static let cardBorder = Color.white.opacity(0.06)
+    static let label = hex(0xC5C6CD)        // primary gray text
+    static let labelDim = hex(0x83858E)     // dim / uppercase labels
+    static let danger = hex(0xFF6B6B)
+
+    /// Hero / lock backdrop: deep navy fading to near-black.
     static let heroGradient = LinearGradient(
-        colors: [accentDeep, Color(.sRGB, red: 0x02 / 255, green: 0x2C / 255, blue: 0x66 / 255)],
-        startPoint: .top, endPoint: .bottom
+        colors: [hex(0x0A192F), hex(0x070D17)], startPoint: .top, endPoint: .bottom
     )
 
-    // Dark lock-screen surfaces (≈ 1P8 dark).
-    static let lockBackdrop = Color(.sRGB, red: 0x22 / 255, green: 0x23 / 255, blue: 0x27 / 255)
-    static let lockField = Color(.sRGB, red: 0x2B / 255, green: 0x2C / 255, blue: 0x32 / 255)
-    static let lockFocus = Color(.sRGB, red: 0.45, green: 0.50, blue: 0.92)
+    static let lockBackdrop = background
+    static let lockField = surfaceHigh
+    static let lockFocus = accent
 
     static func color(token: String) -> Color {
         switch token {

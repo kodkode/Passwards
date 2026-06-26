@@ -2,19 +2,31 @@ import SwiftUI
 import PasswardsCore
 import PasswardsOrchestration
 
-/// The Items tab: a searchable, month-sectioned list (1P8 default sort), with
-/// swipe-to-favorite / swipe-to-trash, a sort menu, and a "+" that creates a new
-/// item via the category picker. Taps push the item detail.
+/// The Vault tab (Stitch "Vault Home"): dark surface, category filter chips, dark
+/// item cards (icon · title · subtitle · chevron), swipe favorite/trash, a green
+/// FAB to add, and a sort menu. Taps push the item detail.
 struct IOSItemListView: View {
     @Bindable var vault: IOSVaultModel
     @State private var showCategoryPicker = false
+
+    private struct Chip: Identifiable {
+        let id: String
+        let title: String
+        let filter: VaultFilter
+    }
+    private let chips: [Chip] = [
+        .init(id: "all", title: "All", filter: .allItems),
+        .init(id: "login", title: "Logins", filter: .category(.login)),
+        .init(id: "card", title: "Cards", filter: .category(.creditCard)),
+        .init(id: "note", title: "Notes", filter: .category(.secureNote)),
+        .init(id: "fav", title: "Favorites", filter: .favorites),
+    ]
 
     private struct ListGroup: Identifiable {
         let id: String
         let header: String?
         let items: [ItemSummary]
     }
-
     private var groups: [ListGroup] {
         vault.grouped.enumerated().map { idx, g in
             ListGroup(id: g.header ?? "g\(idx)", header: g.header, items: g.items)
@@ -23,17 +35,20 @@ struct IOSItemListView: View {
 
     var body: some View {
         NavigationStack {
-            list
-            .overlay {
-                if vault.visibleSummaries.isEmpty { emptyState }
+            ZStack(alignment: .bottomTrailing) {
+                VStack(spacing: 0) {
+                    chipsRow
+                    list.overlay {
+                        if vault.visibleSummaries.isEmpty { emptyState }
+                    }
+                }
+                fab
             }
-            .navigationTitle("Items")
+            .background(Theme.background)
+            .navigationTitle("Vault")
             .searchable(text: $vault.searchText, prompt: "Search")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { sortMenu }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showCategoryPicker = true } label: { Image(systemName: "plus") }
-                }
+                ToolbarItem(placement: .topBarTrailing) { sortMenu }
             }
             .navigationDestination(for: String.self) { id in
                 IOSItemDetailView(vault: vault, itemID: id)
@@ -42,43 +57,85 @@ struct IOSItemListView: View {
                 IOSCategoryPickerView(vault: vault)
             }
         }
-        .tint(Theme.accent)
+    }
+
+    private var chipsRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(chips) { chip in
+                    let selected = vault.filter == chip.filter
+                    Button {
+                        withAnimation(.easeOut(duration: 0.15)) { vault.filter = chip.filter }
+                    } label: {
+                        Text(chip.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(selected ? Theme.navy : Theme.label)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(selected ? Theme.accent : Theme.surfaceHigh, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+        }
+        .background(Theme.background)
     }
 
     private var list: some View {
         List {
             ForEach(groups) { group in
-                if let header = group.header {
-                    Section(header) { rows(group.items) }
-                } else {
-                    Section { rows(group.items) }
+                Section {
+                    ForEach(group.items) { summary in rowLink(summary) }
+                } header: {
+                    if let header = group.header {
+                        Text(header).foregroundStyle(Theme.labelDim)
+                    }
                 }
             }
         }
         .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Theme.background)
         .refreshable { await vault.refresh() }
     }
 
-    private func rows(_ items: [ItemSummary]) -> some View {
-        ForEach(items) { summary in
-            NavigationLink(value: summary.id) {
-                ItemRow(summary: summary)
-            }
-            .swipeActions(edge: .trailing) {
-                Button(role: .destructive) {
-                    Task { await vault.moveToTrash(summary) }
-                } label: { Label("Trash", systemImage: "trash") }
-            }
-            .swipeActions(edge: .leading) {
-                Button {
-                    Task { await vault.toggleFavorite(summary) }
-                } label: {
-                    Label(summary.overview.isFavorite ? "Unfavorite" : "Favorite",
-                          systemImage: summary.overview.isFavorite ? "star.slash" : "star")
-                }
-                .tint(.yellow)
-            }
+    private func rowLink(_ summary: ItemSummary) -> some View {
+        NavigationLink(value: summary.id) {
+            ItemRow(summary: summary)
         }
+        .listRowBackground(Theme.surface)
+        .listRowSeparatorTint(Theme.cardBorder)
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                Task { await vault.moveToTrash(summary) }
+            } label: { Label("Trash", systemImage: "trash") }
+        }
+        .swipeActions(edge: .leading) {
+            Button {
+                Task { await vault.toggleFavorite(summary) }
+            } label: {
+                Label(summary.overview.isFavorite ? "Unfavorite" : "Favorite",
+                      systemImage: summary.overview.isFavorite ? "star.slash" : "star")
+            }
+            .tint(Theme.accent)
+        }
+    }
+
+    private var fab: some View {
+        Button {
+            showCategoryPicker = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(Theme.navy)
+                .frame(width: 56, height: 56)
+                .background(Theme.accent, in: Circle())
+                .shadow(color: Theme.accent.opacity(0.4), radius: 12, y: 4)
+        }
+        .buttonStyle(.plain)
+        .padding(20)
     }
 
     private var sortMenu: some View {
@@ -92,6 +149,7 @@ struct IOSItemListView: View {
         } label: {
             Image(systemName: "arrow.up.arrow.down")
         }
+        .tint(Theme.accent)
     }
 
     private var emptyState: some View {
@@ -103,7 +161,7 @@ struct IOSItemListView: View {
     }
 }
 
-/// A single list row: category/custom icon, title, subtitle, favorite star.
+/// A single list row: category/custom/favicon icon, title, subtitle, favorite star.
 struct ItemRow: View {
     let summary: ItemSummary
 
@@ -113,19 +171,20 @@ struct ItemRow: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(summary.overview.title.isEmpty ? "Untitled" : summary.overview.title)
                     .font(.body)
+                    .foregroundStyle(.white)
                     .lineLimit(1)
                 if !summary.overview.subtitle.isEmpty {
                     Text(summary.overview.subtitle)
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.labelDim)
                         .lineLimit(1)
                 }
             }
             Spacer()
             if summary.overview.isFavorite {
-                Image(systemName: "star.fill").font(.caption).foregroundStyle(.yellow)
+                Image(systemName: "star.fill").font(.caption).foregroundStyle(Theme.accent)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 3)
     }
 }
