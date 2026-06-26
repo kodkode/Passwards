@@ -69,6 +69,7 @@
 		1AF180FB7C0703067A4F84BE /* IOSItemDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSItemDetailView.swift; path = Items/IOSItemDetailView.swift; sourceTree = "<group>"; };
 		1AF8AC0BDBE2902682E6BF2D /* popup.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = popup.js; sourceTree = "<group>"; };
 		1D7B0AE86146C42ED4E384AA /* IOSHomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSHomeView.swift; path = Home/IOSHomeView.swift; sourceTree = "<group>"; };
+		1E74FFD24B6A68BE05EA488D /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		27F94A17EBF12379095D5B56 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
 		2DD610223516AB5E35ED409D /* AppGroupRelay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppGroupRelay.swift; sourceTree = "<group>"; };
 		2F2EE795FF81D15868668853 /* SafariExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = SafariExtension.entitlements; sourceTree = "<group>"; };
@@ -161,6 +162,7 @@
 				3A79B60B7FAE297A89B9B635 /* IOSItemEditorView.swift */,
 				A30F16CB52755DCAA05073D7 /* IOSItemListView.swift */,
 				4DAA67B61D351115135A0A17 /* IOSVaultModel.swift */,
+				1E74FFD24B6A68BE05EA488D /* Info.plist */,
 			);
 			name = PasswardsiOS;
 			path = PasswardsiOS;
@@ -440,6 +442,7 @@
 				DEVELOPMENT_TEAM = L5774582ZK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PasswardsiOS/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Passwards;
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Unlock your Passwards vault with Face ID.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -472,6 +475,7 @@
 				DEVELOPMENT_TEAM = L5774582ZK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PasswardsiOS/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Passwards;
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Unlock your Passwards vault with Face ID.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

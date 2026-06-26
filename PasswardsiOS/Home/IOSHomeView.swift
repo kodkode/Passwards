@@ -1,4 +1,5 @@
 import SwiftUI
+import PasswardsCore
 import PasswardsOrchestration
 
 /// The unlocked shell: a bottom tab bar (1P8-iOS) — Items, Generator, Settings.
@@ -39,6 +40,8 @@ struct IOSHomeView: View {
 
 private struct IOSSettingsView: View {
     let core: AccountController
+    @State private var faceIDOn = BiometricUnlock.isEnrolled
+    @State private var faceIDError: String?
 
     var body: some View {
         List {
@@ -52,11 +55,26 @@ private struct IOSSettingsView: View {
                 }
             }
 
-            Section("Security") {
+            Section {
+                if BiometricUnlock.isAvailable {
+                    Toggle(isOn: $faceIDOn) {
+                        Label("Unlock with Face ID", systemImage: "faceid")
+                    }
+                    .tint(Theme.accent)
+                    .onChange(of: faceIDOn) { _, on in setFaceID(on) }
+                }
                 Button {
                     core.lock()
                 } label: {
                     Label("Lock Now", systemImage: "lock.fill")
+                }
+            } header: {
+                Text("Security")
+            } footer: {
+                if let faceIDError {
+                    Text(faceIDError).foregroundStyle(.orange)
+                } else if BiometricUnlock.isAvailable {
+                    Text("Re-enable Face ID on each new device. Your account password is still required from time to time.")
                 }
             }
 
@@ -64,6 +82,27 @@ private struct IOSSettingsView: View {
                 Text("Watchtower, attachments, recovery, and backup settings are coming in a later step.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func setFaceID(_ on: Bool) {
+        faceIDError = nil
+        Task {
+            if on {
+                guard let masterKey = await core.keyStore.masterKey else {
+                    faceIDOn = false
+                    faceIDError = "Unlock first, then enable Face ID."
+                    return
+                }
+                do {
+                    try BiometricUnlock.enroll(masterKey: masterKey)
+                } catch {
+                    faceIDOn = false
+                    faceIDError = "Couldn't enable Face ID: \(error.localizedDescription)"
+                }
+            } else {
+                BiometricUnlock.disable()
             }
         }
     }
