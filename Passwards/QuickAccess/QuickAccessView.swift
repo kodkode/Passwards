@@ -1,4 +1,5 @@
 import SwiftUI
+import PasswardsOrchestration
 import PasswardsCore
 
 /// The Spotlight-style Quick Access content: search row + result rows with

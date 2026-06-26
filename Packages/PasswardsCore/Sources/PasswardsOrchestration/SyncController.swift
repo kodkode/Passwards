@@ -33,6 +33,7 @@ public final class SyncController {
     /// CloudKit APIs crash (uncatchably) without it, so never touch them unless
     /// this returns true.
     public static var hasCloudKitEntitlement: Bool {
+        #if os(macOS)
         guard let task = SecTaskCreateFromSelf(nil) else { return false }
         guard let value = SecTaskCopyValueForEntitlement(task, "com.apple.developer.icloud-services" as CFString, nil) else {
             return false
@@ -41,6 +42,13 @@ public final class SyncController {
             return services.contains("CloudKit")
         }
         return false
+        #else
+        // iOS builds always carry their declared entitlements, and CloudKit APIs
+        // don't fault without one the way they do on macOS — so no runtime probe
+        // is needed (and SecTaskCreateFromSelf is macOS-only). An unavailable
+        // iCloud account is reported by CKSyncEngine as `.accountUnavailable`.
+        return true
+        #endif
     }
 
     public var syncEnabled: Bool {

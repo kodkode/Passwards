@@ -1,4 +1,5 @@
 import AppKit
+import PasswardsOrchestration
 
 /// Copies values to the pasteboard, marking secrets as concealed (so clipboard
 /// managers skip them) and auto-clearing after a timeout if nothing else was

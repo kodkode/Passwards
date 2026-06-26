@@ -1,4 +1,5 @@
 import Foundation
+import PasswardsOrchestration
 import PasswardsCore
 
 /// Serves the `passwards` CLI's control channel: lists items and reads one

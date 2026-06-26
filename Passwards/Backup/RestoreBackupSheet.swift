@@ -1,4 +1,5 @@
 import SwiftUI
+import PasswardsOrchestration
 import PasswardsCore
 
 /// Credentials + confirmation for restoring an encrypted backup. Reused by both

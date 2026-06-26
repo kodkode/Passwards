@@ -3,10 +3,10 @@ import Testing
 
 /// Smoke test that the new target builds and links. Real behavioral tests for
 /// `filteredSorted` / `reconcileOverview` land once the extraction is done.
-@Suite struct PlatformServicesSmokeTests {
+@Suite @MainActor struct PlatformServicesSmokeTests {
     @Test func moduleLinks() {
         // A trivial in-memory conformance proves the protocol seams compile.
-        final class NoopPasteboard: PasteboardService, @unchecked Sendable {
+        final class NoopPasteboard: PasteboardService {
             func copy(_ value: String, concealed: Bool) {}
             func clearSecret() {}
         }

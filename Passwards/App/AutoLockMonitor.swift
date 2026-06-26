@@ -1,9 +1,12 @@
 import AppKit
 import CoreGraphics
+import PasswardsOrchestration
 
 /// Watches for idle time, sleep, and screensaver, and asks the app to lock.
 /// Idle detection uses CGEventSource (no Accessibility permission required).
-final class AutoLockMonitor {
+/// Conforms to `AutoLockService` (it already had onShouldLock/start/stop) so the
+/// shared `AccountController` can drive it without knowing it's macOS-specific.
+final class AutoLockMonitor: AutoLockService {
     var onShouldLock: (() -> Void)?
 
     private var timer: Timer?
