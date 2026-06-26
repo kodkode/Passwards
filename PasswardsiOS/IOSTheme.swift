@@ -67,29 +67,35 @@ extension Color {
     }
 }
 
-/// The branded app mark used on the lock screen and onboarding. (Stands in for
-/// the app icon until an iOS app-icon asset is added.)
+/// The branded app mark (lock screen / onboarding): the real app-icon art when
+/// the `AppMark` asset is present, else a generated azure lock tile.
 struct AppMark: View {
     var size: CGFloat
 
     var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
-            .fill(
-                LinearGradient(colors: [Theme.accent, Theme.accentDeep],
-                               startPoint: .top, endPoint: .bottom)
-            )
-            .overlay {
+        Group {
+            if let mark = UIImage(named: "AppMark") {
+                Image(uiImage: mark)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size, height: size)
+                    .clipShape(RoundedRectangle(cornerRadius: size * 0.22, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
+                            .strokeBorder(.white.opacity(0.12), lineWidth: max(size / 60, 0.5))
+                    }
+            } else {
                 RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
-                    .strokeBorder(.white.opacity(0.18), lineWidth: max(size / 40, 1))
+                    .fill(LinearGradient(colors: [Theme.accent, Theme.accentDeep], startPoint: .top, endPoint: .bottom))
+                    .overlay {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.system(size: size * 0.5, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+                    .frame(width: size, height: size)
             }
-            .overlay {
-                Image(systemName: "lock.shield.fill")
-                    .font(.system(size: size * 0.5, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.25), radius: size / 30, y: size / 50)
-            }
-            .frame(width: size, height: size)
-            .shadow(color: .black.opacity(0.35), radius: size / 8, y: size / 14)
+        }
+        .shadow(color: .black.opacity(0.35), radius: size / 8, y: size / 14)
     }
 }
 
@@ -141,14 +147,16 @@ struct CategoryIcon: View {
     }
 }
 
-/// The item's leading icon: a user-chosen custom symbol/color when set, else the
-/// category tile. (Favicons are deferred for iOS v1.)
+/// The item's leading icon. Precedence (matches macOS): a user-chosen custom
+/// symbol → the site favicon (when a URL exists) → the category tile.
 struct ItemIcon: View {
     let overview: ItemOverview
     var size: CGFloat = 40
     var body: some View {
         if let symbol = overview.iconSymbol, !symbol.isEmpty {
             IconTile(colorToken: overview.iconColor ?? overview.category.colorToken, symbol: symbol, size: size)
+        } else if let url = overview.urls.first, !url.isEmpty {
+            FaviconView(urlString: url, fallback: overview.category, size: size)
         } else {
             CategoryIcon(category: overview.category, size: size)
         }

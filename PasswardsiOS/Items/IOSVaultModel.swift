@@ -37,7 +37,9 @@ final class IOSVaultModel {
         summaries = samples.map { s in
             ItemSummary(
                 id: s.id, vaultID: "v",
-                overview: ItemOverview(title: s.title, subtitle: s.sub, isFavorite: s.fav, category: s.cat),
+                overview: ItemOverview(title: s.title, subtitle: s.sub,
+                                       urls: s.id == "1" ? ["https://github.com"] : [],
+                                       isFavorite: s.fav, category: s.cat),
                 createdAt: base, updatedAt: base.addingTimeInterval(-s.day * 86_400), trashedAt: nil
             )
         }

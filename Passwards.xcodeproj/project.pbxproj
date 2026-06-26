@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0B5350812E50D514FCD984E1 /* IOSGeneratorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5D73139EE2B8C6709C6155 /* IOSGeneratorView.swift */; };
+		1676945E466ECDF0F28CA709 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 837FCA6C537E6C8F078A60DD /* Assets.xcassets */; };
 		17572E3DA866B938C35BB469 /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = 91E0D3AFB732AFBB5E978A6B /* popup.html */; };
 		1B9F25933EAA80C0E5BEE04D /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = C3F91B6A4D3F09C3D565450B /* content.js */; };
 		1E26D07D5C90B2BC5173CDA4 /* pairing.html in Resources */ = {isa = PBXBuildFile; fileRef = E302C64EFFC69A9252332901 /* pairing.html */; };
@@ -26,6 +27,7 @@
 		6DE1B35EA6C8DC4BEC92BFDE /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0BB4B057C85DF0A7A34A1272 /* Cocoa.framework */; };
 		881583FE32C657233834CA3D /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27F94A17EBF12379095D5B56 /* SafariWebExtensionHandler.swift */; };
 		93F327D6A5F25130C7D40577 /* IOSLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B98AE8AF534682E48878211 /* IOSLockView.swift */; };
+		95A5BA21AD01ACE82BACA9DC /* IOSFaviconLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31653233A8008CE3BA777E11 /* IOSFaviconLoader.swift */; };
 		9BBB6947548C8979559D05F6 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 5C2AAD0AC34A2B7790BABB1A /* manifest.json */; };
 		9C20EC312336BFA4CA3435E6 /* IOSItemListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30F16CB52755DCAA05073D7 /* IOSItemListView.swift */; };
 		B19C127825CBCFDF2B62ED48 /* IOSHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D7B0AE86146C42ED4E384AA /* IOSHomeView.swift */; };
@@ -75,6 +77,7 @@
 		2F2EE795FF81D15868668853 /* SafariExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = SafariExtension.entitlements; sourceTree = "<group>"; };
 		2P0000000000000000000031 /* Passwards.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Passwards.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		30A7958388FB23B0560D9275 /* pairing.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = pairing.js; sourceTree = "<group>"; };
+		31653233A8008CE3BA777E11 /* IOSFaviconLoader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSFaviconLoader.swift; path = Icons/IOSFaviconLoader.swift; sourceTree = "<group>"; };
 		3A79B60B7FAE297A89B9B635 /* IOSItemEditorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSItemEditorView.swift; path = Items/IOSItemEditorView.swift; sourceTree = "<group>"; };
 		3C5D73139EE2B8C6709C6155 /* IOSGeneratorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSGeneratorView.swift; path = Generator/IOSGeneratorView.swift; sourceTree = "<group>"; };
 		3C79607A4574338F5FDF92F0 /* IOSTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IOSTheme.swift; sourceTree = "<group>"; };
@@ -85,6 +88,7 @@
 		5C2AAD0AC34A2B7790BABB1A /* manifest.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
 		6BA6DC597B8A9DEB11D28645 /* IOSRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IOSRootView.swift; sourceTree = "<group>"; };
 		7B98AE8AF534682E48878211 /* IOSLockView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSLockView.swift; path = Lock/IOSLockView.swift; sourceTree = "<group>"; };
+		837FCA6C537E6C8F078A60DD /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		888219B247F1FF724C58FB8A /* icon128.png */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = image.png; path = icon128.png; sourceTree = "<group>"; };
 		91E0D3AFB732AFBB5E978A6B /* popup.html */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.html; path = popup.html; sourceTree = "<group>"; };
 		A30F16CB52755DCAA05073D7 /* IOSItemListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSItemListView.swift; path = Items/IOSItemListView.swift; sourceTree = "<group>"; };
@@ -163,6 +167,8 @@
 				A30F16CB52755DCAA05073D7 /* IOSItemListView.swift */,
 				4DAA67B61D351115135A0A17 /* IOSVaultModel.swift */,
 				1E74FFD24B6A68BE05EA488D /* Info.plist */,
+				837FCA6C537E6C8F078A60DD /* Assets.xcassets */,
+				31653233A8008CE3BA777E11 /* IOSFaviconLoader.swift */,
 			);
 			name = PasswardsiOS;
 			path = PasswardsiOS;
@@ -361,6 +367,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1676945E466ECDF0F28CA709 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -415,6 +422,7 @@
 				E255C80D0CF5310A969EF3D2 /* IOSItemEditorView.swift in Sources */,
 				9C20EC312336BFA4CA3435E6 /* IOSItemListView.swift in Sources */,
 				B6A6AB8C2A1BFA2D33983B88 /* IOSVaultModel.swift in Sources */,
+				95A5BA21AD01ACE82BACA9DC /* IOSFaviconLoader.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
