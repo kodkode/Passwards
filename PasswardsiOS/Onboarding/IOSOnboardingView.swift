@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import CloudKit
 import PasswardsCore
 import PasswardsOrchestration
 
@@ -257,7 +258,7 @@ struct IOSOnboardingView: View {
         Task {
             do {
                 guard let remote = try await SyncController.fetchRemoteAccount() else {
-                    errorMessage = "No account found in this iCloud account. Create a new one instead."
+                    errorMessage = "No Passwards account was found in this iCloud account. Make sure this device is signed into the same iCloud account as your Mac."
                     isWorking = false
                     return
                 }
@@ -266,6 +267,15 @@ struct IOSOnboardingView: View {
                 errorMessage = "That Secret Key isn't valid. It should start with “A3-” and have 7 groups (34 letters/numbers). Check it on your Mac and re-enter it."
             } catch AccountController.UnlockError.wrongCredentials {
                 errorMessage = "Couldn't unlock with that password + Secret Key. The Secret Key looks valid, so double-check the account password."
+            } catch let ck as CKError {
+                switch ck.code {
+                case .notAuthenticated, .accountTemporarilyUnavailable:
+                    errorMessage = "iCloud isn't available to Passwards. In Settings, sign into iCloud with the same Apple ID as your Mac and turn on iCloud Drive, then try again. (On the Simulator, sign in via Settings → Sign in to your iPhone.)"
+                case .networkUnavailable, .networkFailure, .serviceUnavailable:
+                    errorMessage = "Couldn't reach iCloud. Check your internet connection and try again."
+                default:
+                    errorMessage = "iCloud error: \(ck.localizedDescription)"
+                }
             } catch {
                 errorMessage = "Sign-in failed: \(error.localizedDescription)"
             }
