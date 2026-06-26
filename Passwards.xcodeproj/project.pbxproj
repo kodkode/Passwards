@@ -15,13 +15,19 @@
 		2P00000000000000000000A2 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 2P0000000000000000000092 /* KeyboardShortcuts */; };
 		2P00000000000000000000A3 /* PasswardsOrchestration in Frameworks */ = {isa = PBXBuildFile; productRef = 2P0000000000000000000093 /* PasswardsOrchestration */; };
 		3153234A0D049CBD744372AE /* icon128.png in Resources */ = {isa = PBXBuildFile; fileRef = 888219B247F1FF724C58FB8A /* icon128.png */; };
+		4847B5BD1BBD5AD7DC9387C4 /* IOSRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BA6DC597B8A9DEB11D28645 /* IOSRootView.swift */; };
 		48D19478BCC651384B7EF853 /* AppGroupRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD610223516AB5E35ED409D /* AppGroupRelay.swift */; };
+		4B666944E2161FFEEA60BEDA /* PasswardsOrchestration in Frameworks */ = {isa = PBXBuildFile; productRef = D4E9F712E5142CD76EF17F26 /* PasswardsOrchestration */; };
+		5B480B735E188FA45027C00E /* PasswardsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 8228F4E48AABA1B58AA13D4B /* PasswardsCore */; };
 		6DE1B35EA6C8DC4BEC92BFDE /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0BB4B057C85DF0A7A34A1272 /* Cocoa.framework */; };
 		881583FE32C657233834CA3D /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27F94A17EBF12379095D5B56 /* SafariWebExtensionHandler.swift */; };
 		9BBB6947548C8979559D05F6 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 5C2AAD0AC34A2B7790BABB1A /* manifest.json */; };
 		BBA149A4DFB1D37D7821A8C2 /* SafariExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C953A583FDE3A32EC5CB1235 /* SafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E189B8F447FDBF4CCF31F3A9 /* PasswardsiOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB5E46E93FC0AC93A70F4A92 /* PasswardsiOSApp.swift */; };
 		E5F056DC0E6B8ED953DB9D57 /* pairing.js in Resources */ = {isa = PBXBuildFile; fileRef = 30A7958388FB23B0560D9275 /* pairing.js */; };
 		F0C1160D0A282B365F51B2FC /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = B59E7DC146DD322AF69015A7 /* background.js */; };
+		F2047817F55AF284E2D17507 /* IOSPlatformServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6148B14A9049605479D693 /* IOSPlatformServices.swift */; };
+		FEF9622317AEF3F345DD81EE /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E76C93216B40C92EE0852798 /* Foundation.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,18 +62,34 @@
 		2F2EE795FF81D15868668853 /* SafariExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = SafariExtension.entitlements; sourceTree = "<group>"; };
 		2P0000000000000000000031 /* Passwards.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Passwards.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		30A7958388FB23B0560D9275 /* pairing.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = pairing.js; sourceTree = "<group>"; };
+		4ED93C27E9218E550CD509DE /* PasswardsiOS.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = PasswardsiOS.entitlements; sourceTree = "<group>"; };
 		56E6AEF91A7642D16D9C8468 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5C2AAD0AC34A2B7790BABB1A /* manifest.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
+		6BA6DC597B8A9DEB11D28645 /* IOSRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IOSRootView.swift; sourceTree = "<group>"; };
 		888219B247F1FF724C58FB8A /* icon128.png */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = image.png; path = icon128.png; sourceTree = "<group>"; };
 		91E0D3AFB732AFBB5E978A6B /* popup.html */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.html; path = popup.html; sourceTree = "<group>"; };
+		ABD8B729D23E4924360D53C9 /* PasswardsiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PasswardsiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B59E7DC146DD322AF69015A7 /* background.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = background.js; sourceTree = "<group>"; };
+		BD6148B14A9049605479D693 /* IOSPlatformServices.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSPlatformServices.swift; path = Platform/IOSPlatformServices.swift; sourceTree = "<group>"; };
 		C3F91B6A4D3F09C3D565450B /* content.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = content.js; sourceTree = "<group>"; };
 		C953A583FDE3A32EC5CB1235 /* SafariExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SafariExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		DB5E46E93FC0AC93A70F4A92 /* PasswardsiOSApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PasswardsiOSApp.swift; sourceTree = "<group>"; };
 		E302C64EFFC69A9252332901 /* pairing.html */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.html; path = pairing.html; sourceTree = "<group>"; };
+		E76C93216B40C92EE0852798 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		2P0000000000000000000011 /* Passwards */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Passwards; sourceTree = "<group>"; };
+		2P0000000000000000000011 /* Passwards */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Passwards;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,9 +111,31 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		EEED50E1EB522BEB6E67A628 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FEF9622317AEF3F345DD81EE /* Foundation.framework in Frameworks */,
+				5B480B735E188FA45027C00E /* PasswardsCore in Frameworks */,
+				4B666944E2161FFEEA60BEDA /* PasswardsOrchestration in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		203272E69B3D98F403544F6E /* PasswardsiOS */ = {
+			isa = PBXGroup;
+			children = (
+				6BA6DC597B8A9DEB11D28645 /* IOSRootView.swift */,
+				DB5E46E93FC0AC93A70F4A92 /* PasswardsiOSApp.swift */,
+				BD6148B14A9049605479D693 /* IOSPlatformServices.swift */,
+				4ED93C27E9218E550CD509DE /* PasswardsiOS.entitlements */,
+			);
+			name = PasswardsiOS;
+			path = PasswardsiOS;
+			sourceTree = SOURCE_ROOT;
+		};
 		2P0000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
@@ -99,6 +143,7 @@
 				2P0000000000000000000012 /* Products */,
 				E3478F2A3E1DDAC3797F81A2 /* Frameworks */,
 				332B7F864B7921F8059A4095 /* SafariExtension */,
+				203272E69B3D98F403544F6E /* PasswardsiOS */,
 			);
 			sourceTree = "<group>";
 		};
@@ -107,6 +152,7 @@
 			children = (
 				2P0000000000000000000031 /* Passwards.app */,
 				C953A583FDE3A32EC5CB1235 /* SafariExtension.appex */,
+				ABD8B729D23E4924360D53C9 /* PasswardsiOS.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -121,6 +167,14 @@
 				A381014291F78377486DD07E /* Resources */,
 			);
 			path = SafariExtension;
+			sourceTree = "<group>";
+		};
+		5F43FDAEFED9F7BC10D3AE10 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				E76C93216B40C92EE0852798 /* Foundation.framework */,
+			);
+			name = iOS;
 			sourceTree = "<group>";
 		};
 		A381014291F78377486DD07E /* Resources */ = {
@@ -142,6 +196,7 @@
 			isa = PBXGroup;
 			children = (
 				FC731DDC69CFFEDA94D91697 /* OS X */,
+				5F43FDAEFED9F7BC10D3AE10 /* iOS */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -201,6 +256,27 @@
 			productReference = C953A583FDE3A32EC5CB1235 /* SafariExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		97312A343927D487244D51D9 /* PasswardsiOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F10F688F240AF574951F488E /* Build configuration list for PBXNativeTarget "PasswardsiOS" */;
+			buildPhases = (
+				A91DFC86B674BF0435E024B6 /* Sources */,
+				EEED50E1EB522BEB6E67A628 /* Frameworks */,
+				4AA1E49DC9D0B8CAD042EDEC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PasswardsiOS;
+			packageProductDependencies = (
+				8228F4E48AABA1B58AA13D4B /* PasswardsCore */,
+				D4E9F712E5142CD76EF17F26 /* PasswardsOrchestration */,
+			);
+			productName = PasswardsiOS;
+			productReference = ABD8B729D23E4924360D53C9 /* PasswardsiOS.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -227,7 +303,7 @@
 			mainGroup = 2P0000000000000000000001;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				2P0000000000000000000081 /* XCLocalSwiftPackageReference "Packages/PasswardsCore" */,
+				2P0000000000000000000081 /* XCLocalSwiftPackageReference "PasswardsCore" */,
 				2P0000000000000000000082 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 			);
 			productRefGroup = 2P0000000000000000000012 /* Products */;
@@ -236,12 +312,20 @@
 			targets = (
 				2P0000000000000000000041 /* Passwards */,
 				311FBE36D739AE8505EEDAD4 /* SafariExtension */,
+				97312A343927D487244D51D9 /* PasswardsiOS */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		2P0000000000000000000023 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4AA1E49DC9D0B8CAD042EDEC /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -282,6 +366,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A91DFC86B674BF0435E024B6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4847B5BD1BBD5AD7DC9387C4 /* IOSRootView.swift in Sources */,
+				E189B8F447FDBF4CCF31F3A9 /* PasswardsiOSApp.swift in Sources */,
+				F2047817F55AF284E2D17507 /* IOSPlatformServices.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -294,6 +388,71 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		1259E636587FCA4908770525 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = PasswardsiOS/PasswardsiOS.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L5774582ZK;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Passwards;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Unlock your Passwards vault with Face ID.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.michael.passwards;
+				PRODUCT_NAME = Passwards;
+				SDKROOT = iphoneos;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		16F0822FE26B3076E694F37A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = PasswardsiOS/PasswardsiOS.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L5774582ZK;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Passwards;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Unlock your Passwards vault with Face ID.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.michael.passwards;
+				PRODUCT_NAME = Passwards;
+				SDKROOT = iphoneos;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		2P0000000000000000000052 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -496,10 +655,19 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		F10F688F240AF574951F488E /* Build configuration list for PBXNativeTarget "PasswardsiOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				16F0822FE26B3076E694F37A /* Release */,
+				1259E636587FCA4908770525 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		2P0000000000000000000081 /* XCLocalSwiftPackageReference "Packages/PasswardsCore" */ = {
+		2P0000000000000000000081 /* XCLocalSwiftPackageReference "PasswardsCore" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/PasswardsCore;
 		};
@@ -527,6 +695,14 @@
 			productName = KeyboardShortcuts;
 		};
 		2P0000000000000000000093 /* PasswardsOrchestration */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PasswardsOrchestration;
+		};
+		8228F4E48AABA1B58AA13D4B /* PasswardsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PasswardsCore;
+		};
+		D4E9F712E5142CD76EF17F26 /* PasswardsOrchestration */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PasswardsOrchestration;
 		};
