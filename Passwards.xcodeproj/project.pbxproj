@@ -15,13 +15,17 @@
 		2P00000000000000000000A2 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 2P0000000000000000000092 /* KeyboardShortcuts */; };
 		2P00000000000000000000A3 /* PasswardsOrchestration in Frameworks */ = {isa = PBXBuildFile; productRef = 2P0000000000000000000093 /* PasswardsOrchestration */; };
 		3153234A0D049CBD744372AE /* icon128.png in Resources */ = {isa = PBXBuildFile; fileRef = 888219B247F1FF724C58FB8A /* icon128.png */; };
+		3E8839DA5178B83BE8BE032F /* IOSOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF38FB2E095C7CC71132B189 /* IOSOnboardingView.swift */; };
 		4847B5BD1BBD5AD7DC9387C4 /* IOSRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BA6DC597B8A9DEB11D28645 /* IOSRootView.swift */; };
 		48D19478BCC651384B7EF853 /* AppGroupRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD610223516AB5E35ED409D /* AppGroupRelay.swift */; };
 		4B666944E2161FFEEA60BEDA /* PasswardsOrchestration in Frameworks */ = {isa = PBXBuildFile; productRef = D4E9F712E5142CD76EF17F26 /* PasswardsOrchestration */; };
 		5B480B735E188FA45027C00E /* PasswardsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 8228F4E48AABA1B58AA13D4B /* PasswardsCore */; };
 		6DE1B35EA6C8DC4BEC92BFDE /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0BB4B057C85DF0A7A34A1272 /* Cocoa.framework */; };
 		881583FE32C657233834CA3D /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27F94A17EBF12379095D5B56 /* SafariWebExtensionHandler.swift */; };
+		93F327D6A5F25130C7D40577 /* IOSLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B98AE8AF534682E48878211 /* IOSLockView.swift */; };
 		9BBB6947548C8979559D05F6 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 5C2AAD0AC34A2B7790BABB1A /* manifest.json */; };
+		B19C127825CBCFDF2B62ED48 /* IOSHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D7B0AE86146C42ED4E384AA /* IOSHomeView.swift */; };
+		B46FCD8DA8B24C1886FE7D81 /* IOSTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C79607A4574338F5FDF92F0 /* IOSTheme.swift */; };
 		BBA149A4DFB1D37D7821A8C2 /* SafariExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C953A583FDE3A32EC5CB1235 /* SafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E189B8F447FDBF4CCF31F3A9 /* PasswardsiOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB5E46E93FC0AC93A70F4A92 /* PasswardsiOSApp.swift */; };
 		E5F056DC0E6B8ED953DB9D57 /* pairing.js in Resources */ = {isa = PBXBuildFile; fileRef = 30A7958388FB23B0560D9275 /* pairing.js */; };
@@ -57,20 +61,24 @@
 /* Begin PBXFileReference section */
 		0BB4B057C85DF0A7A34A1272 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		1AF8AC0BDBE2902682E6BF2D /* popup.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = popup.js; sourceTree = "<group>"; };
+		1D7B0AE86146C42ED4E384AA /* IOSHomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSHomeView.swift; path = Home/IOSHomeView.swift; sourceTree = "<group>"; };
 		27F94A17EBF12379095D5B56 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
 		2DD610223516AB5E35ED409D /* AppGroupRelay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppGroupRelay.swift; sourceTree = "<group>"; };
 		2F2EE795FF81D15868668853 /* SafariExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = SafariExtension.entitlements; sourceTree = "<group>"; };
 		2P0000000000000000000031 /* Passwards.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Passwards.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		30A7958388FB23B0560D9275 /* pairing.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = pairing.js; sourceTree = "<group>"; };
+		3C79607A4574338F5FDF92F0 /* IOSTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IOSTheme.swift; sourceTree = "<group>"; };
 		4ED93C27E9218E550CD509DE /* PasswardsiOS.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = PasswardsiOS.entitlements; sourceTree = "<group>"; };
 		56E6AEF91A7642D16D9C8468 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5C2AAD0AC34A2B7790BABB1A /* manifest.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
 		6BA6DC597B8A9DEB11D28645 /* IOSRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IOSRootView.swift; sourceTree = "<group>"; };
+		7B98AE8AF534682E48878211 /* IOSLockView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSLockView.swift; path = Lock/IOSLockView.swift; sourceTree = "<group>"; };
 		888219B247F1FF724C58FB8A /* icon128.png */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = image.png; path = icon128.png; sourceTree = "<group>"; };
 		91E0D3AFB732AFBB5E978A6B /* popup.html */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.html; path = popup.html; sourceTree = "<group>"; };
 		ABD8B729D23E4924360D53C9 /* PasswardsiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PasswardsiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B59E7DC146DD322AF69015A7 /* background.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = background.js; sourceTree = "<group>"; };
 		BD6148B14A9049605479D693 /* IOSPlatformServices.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSPlatformServices.swift; path = Platform/IOSPlatformServices.swift; sourceTree = "<group>"; };
+		BF38FB2E095C7CC71132B189 /* IOSOnboardingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IOSOnboardingView.swift; path = Onboarding/IOSOnboardingView.swift; sourceTree = "<group>"; };
 		C3F91B6A4D3F09C3D565450B /* content.js */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.javascript; path = content.js; sourceTree = "<group>"; };
 		C953A583FDE3A32EC5CB1235 /* SafariExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SafariExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB5E46E93FC0AC93A70F4A92 /* PasswardsiOSApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PasswardsiOSApp.swift; sourceTree = "<group>"; };
@@ -131,6 +139,10 @@
 				DB5E46E93FC0AC93A70F4A92 /* PasswardsiOSApp.swift */,
 				BD6148B14A9049605479D693 /* IOSPlatformServices.swift */,
 				4ED93C27E9218E550CD509DE /* PasswardsiOS.entitlements */,
+				1D7B0AE86146C42ED4E384AA /* IOSHomeView.swift */,
+				3C79607A4574338F5FDF92F0 /* IOSTheme.swift */,
+				7B98AE8AF534682E48878211 /* IOSLockView.swift */,
+				BF38FB2E095C7CC71132B189 /* IOSOnboardingView.swift */,
 			);
 			name = PasswardsiOS;
 			path = PasswardsiOS;
@@ -373,6 +385,10 @@
 				4847B5BD1BBD5AD7DC9387C4 /* IOSRootView.swift in Sources */,
 				E189B8F447FDBF4CCF31F3A9 /* PasswardsiOSApp.swift in Sources */,
 				F2047817F55AF284E2D17507 /* IOSPlatformServices.swift in Sources */,
+				B19C127825CBCFDF2B62ED48 /* IOSHomeView.swift in Sources */,
+				B46FCD8DA8B24C1886FE7D81 /* IOSTheme.swift in Sources */,
+				93F327D6A5F25130C7D40577 /* IOSLockView.swift in Sources */,
+				3E8839DA5178B83BE8BE032F /* IOSOnboardingView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

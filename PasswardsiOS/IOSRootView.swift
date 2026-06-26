@@ -1,52 +1,56 @@
 import SwiftUI
 import PasswardsOrchestration
 
-/// Root view: switches on the shared `AccountController` phase, exactly like the
-/// macOS `RootView`. The per-phase screens are placeholders for now (Phase 1a);
-/// the real lock/onboarding/items UI lands in the following steps.
+/// Root view: switches on the shared `AccountController` phase, like macOS `RootView`.
 struct IOSRootView: View {
     let core: AccountController
 
     var body: some View {
         switch core.phase {
         case .loading:
-            ProgressView()
+            ZStack {
+                Theme.lockBackdrop.ignoresSafeArea()
+                ProgressView().tint(.white)
+            }
         case .onboarding:
-            IOSPhasePlaceholder(symbol: "person.crop.circle.badge.plus",
-                                title: "Welcome to Passwards",
-                                subtitle: "Onboarding & sign-in coming next.")
+            IOSOnboardingView(core: core)
         case .databaseError:
-            IOSPhasePlaceholder(symbol: "exclamationmark.triangle.fill",
-                                title: "Vault Unavailable",
-                                subtitle: core.bootstrapError ?? "The vault could not be opened.")
+            IOSDatabaseErrorView(core: core)
         case .locked:
-            IOSPhasePlaceholder(symbol: "lock.fill",
-                                title: "Locked",
-                                subtitle: "Lock screen (Face ID + password) coming next.")
+            IOSLockView(core: core)
         case .unlocked:
-            IOSPhasePlaceholder(symbol: "checkmark.seal.fill",
-                                title: "Unlocked",
-                                subtitle: "Items · Generator · Settings coming next.")
+            IOSHomeView(core: core)
         }
     }
 }
 
-private struct IOSPhasePlaceholder: View {
-    let symbol: String
-    let title: String
-    let subtitle: String
+/// Minimal vault-error screen (retry). Mirrors the macOS DatabaseErrorView's
+/// safe stance — never offers to create a fresh account over an existing vault.
+private struct IOSDatabaseErrorView: View {
+    let core: AccountController
 
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: symbol)
-                .font(.system(size: 56))
-                .foregroundStyle(.tint)
-            Text(title).font(.title2.bold())
-            Text(subtitle)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+        ZStack {
+            Theme.lockBackdrop.ignoresSafeArea()
+            VStack(spacing: 16) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 52))
+                    .foregroundStyle(.yellow)
+                Text("Vault Unavailable")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                Text(core.bootstrapError ?? "The vault could not be opened.")
+                    .font(.callout)
+                    .foregroundStyle(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                Button("Try Again") {
+                    Task { await core.retryOpeningVault() }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.accent)
+                .padding(.top, 8)
+            }
+            .padding(40)
         }
-        .padding(40)
     }
 }

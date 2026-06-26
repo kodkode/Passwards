@@ -50,11 +50,40 @@ struct PasswardsiOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            IOSRootView(core: model.core)
-                .task { await model.boot() }
-                .onChange(of: scenePhase) { _, phase in
-                    model.scenePhaseChanged(phase)
-                }
+            #if DEBUG
+            if let preview = Self.screenshotPreview(core: model.core) {
+                preview   // renders one screen directly (no bootstrap) for capture
+            } else {
+                liveRoot
+            }
+            #else
+            liveRoot
+            #endif
         }
     }
+
+    private var liveRoot: some View {
+        IOSRootView(core: model.core)
+            .task { await model.boot() }
+            .onChange(of: scenePhase) { _, phase in
+                model.scenePhaseChanged(phase)
+            }
+    }
+
+    #if DEBUG
+    /// Renders a single screen for screenshot/design review when launched with
+    /// `-uiPreview <name>`. Bypasses bootstrap so screens render with a fresh,
+    /// empty controller. Debug-only.
+    static func screenshotPreview(core: AccountController) -> AnyView? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-uiPreview"), i + 1 < args.count else { return nil }
+        switch args[i + 1] {
+        case "welcome": return AnyView(IOSOnboardingView(core: core, initialStep: .welcome))
+        case "credentials": return AnyView(IOSOnboardingView(core: core, initialStep: .credentials))
+        case "lock": return AnyView(IOSLockView(core: core))
+        case "home": return AnyView(IOSHomeView(core: core))
+        default: return nil
+        }
+    }
+    #endif
 }
