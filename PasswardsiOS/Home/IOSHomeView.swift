@@ -42,6 +42,16 @@ private struct IOSSettingsView: View {
 
     var body: some View {
         List {
+            Section("iCloud") {
+                HStack {
+                    Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                    Spacer()
+                    Text(syncStatusText)
+                        .font(.callout)
+                        .foregroundStyle(syncStatusColor)
+                }
+            }
+
             Section("Security") {
                 Button {
                     core.lock()
@@ -55,6 +65,25 @@ private struct IOSSettingsView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    private var syncStatusText: String {
+        switch core.sync.status {
+        case .disabled: "Off"
+        case .idle: "Up to date"
+        case .syncing: "Syncing…"
+        case .error(let message): message
+        case .accountUnavailable: "iCloud unavailable"
+        }
+    }
+
+    private var syncStatusColor: Color {
+        switch core.sync.status {
+        case .idle: .secondary
+        case .syncing: Theme.accent
+        case .error, .accountUnavailable: .orange
+        case .disabled: .secondary
         }
     }
 }
