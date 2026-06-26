@@ -24,7 +24,16 @@ struct IOSHomeView: View {
             }
         }
         .tint(Theme.accent)
-        .task { await vault.load() }
+        .task {
+            await vault.load()
+            // CloudKit delivers items in the background (especially right after a
+            // new-device sign-in); reload the list when a sync round finishes, and
+            // kick one now to pull anything already queued. Mirrors macOS MainWindow.
+            core.sync.onRemoteChanges = { [weak vault] in
+                Task { await vault?.load() }
+            }
+            core.sync.kick()
+        }
     }
 }
 

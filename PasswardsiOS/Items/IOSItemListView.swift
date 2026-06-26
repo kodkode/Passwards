@@ -23,12 +23,9 @@ struct IOSItemListView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if vault.visibleSummaries.isEmpty {
-                    emptyState
-                } else {
-                    list
-                }
+            list
+            .overlay {
+                if vault.visibleSummaries.isEmpty { emptyState }
             }
             .navigationTitle("Items")
             .searchable(text: $vault.searchText, prompt: "Search")
@@ -59,6 +56,7 @@ struct IOSItemListView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .refreshable { await vault.refresh() }
     }
 
     private func rows(_ items: [ItemSummary]) -> some View {
