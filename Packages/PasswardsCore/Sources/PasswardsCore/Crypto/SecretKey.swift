@@ -60,9 +60,12 @@ public struct SecretKey: Sendable, Equatable {
     /// Raw key material used for derivation (the 26 secret characters as UTF-8).
     public var keyMaterial: Data { Data(secret.utf8) }
 
-    /// Parses user input: tolerant of dashes, spaces, and lowercase.
+    /// Parses user input: tolerant of lowercase and ANY separators — hyphens,
+    /// en/em dashes (iOS "smart punctuation" substitutes these), and any
+    /// whitespace — by keeping only alphanumerics. The version/account-ID/secret
+    /// are all from the unambiguous alphabet, so this can't drop real characters.
     public init?(parsing input: String) {
-        let cleaned = input.uppercased().filter { !"- ".contains($0) }
+        let cleaned = String(input.uppercased().unicodeScalars.filter(CharacterSet.alphanumerics.contains))
         guard cleaned.hasPrefix(SecretKey.version) else { return nil }
         let body = cleaned.dropFirst(SecretKey.version.count)
         guard body.count == SecretKey.accountIDLength + SecretKey.secretLength,

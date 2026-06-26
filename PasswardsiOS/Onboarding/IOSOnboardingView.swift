@@ -225,10 +225,16 @@ struct IOSOnboardingView: View {
             SecureField("Account Password", text: $password, prompt: Text("Account password"))
                 .textContentType(.password)
             Divider()
-            TextField("Secret Key", text: $signInSecretKey, prompt: Text("A3-XXXXXX-XXXXXX-…"))
+            // Wrap (axis: .vertical) so the WHOLE key is visible — a single-line
+            // field scrolls the leading "A3-…" off the left edge, hiding mistakes.
+            TextField("Secret Key", text: $signInSecretKey, prompt: Text("A3-XXXXXX-XXXXXX-XXXXX-XXXXX-XXXXX-XXXXX"), axis: .vertical)
                 .font(.callout.monospaced())
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
+                .lineLimit(2...4)
+            Text("Your Secret Key starts with “A3-” and has 7 groups.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
 
             errorText
 
@@ -256,8 +262,12 @@ struct IOSOnboardingView: View {
                     return
                 }
                 try await core.signInToExistingAccount(remote: remote, password: password, typedSecretKey: signInSecretKey)
+            } catch AccountController.UnlockError.invalidSecretKeyFormat {
+                errorMessage = "That Secret Key isn't valid. It should start with “A3-” and have 7 groups (34 letters/numbers). Check it on your Mac and re-enter it."
+            } catch AccountController.UnlockError.wrongCredentials {
+                errorMessage = "Couldn't unlock with that password + Secret Key. The Secret Key looks valid, so double-check the account password."
             } catch {
-                errorMessage = "Sign-in failed. Check your password and Secret Key."
+                errorMessage = "Sign-in failed: \(error.localizedDescription)"
             }
             isWorking = false
         }

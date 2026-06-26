@@ -75,6 +75,13 @@ struct SecretKeyTests {
         #expect(SecretKey(parsing: key.formatted) == key)
         #expect(SecretKey(parsing: key.formatted.lowercased()) == key)
         #expect(SecretKey(parsing: key.formatted.replacingOccurrences(of: "-", with: " ")) == key)
+        // iOS "smart punctuation" substitutes en/em dashes and odd whitespace for
+        // hyphens — these must still parse (otherwise sign-in fails on a key that
+        // looks correct on screen).
+        #expect(SecretKey(parsing: key.formatted.replacingOccurrences(of: "-", with: "\u{2013}")) == key) // en dash
+        #expect(SecretKey(parsing: key.formatted.replacingOccurrences(of: "-", with: "\u{2014}")) == key) // em dash
+        #expect(SecretKey(parsing: key.formatted.replacingOccurrences(of: "-", with: "\u{00A0}")) == key) // non-breaking space
+        #expect(SecretKey(parsing: "  \(key.formatted)  ") == key) // leading/trailing whitespace
         #expect(SecretKey(parsing: "B4-AAAAAA-AAAAAA-AAAAA-AAAAA-AAAAA-AAAAA") == nil)
         #expect(SecretKey(parsing: "A3-SHORT") == nil)
         #expect(SecretKey(parsing: "A3-AAAAA0-AAAAAA-AAAAA-AAAAA-AAAAA-AAAAA") == nil) // '0' not in alphabet

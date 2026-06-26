@@ -205,7 +205,7 @@ public final class AccountController {
     /// New-device flow: adopt a remote account record after verifying the
     /// typed credentials can actually unwrap the master key.
     public func signInToExistingAccount(remote: AccountCrypto.AccountKeyRecord, password: String, typedSecretKey: String) async throws {
-        guard let secretKey = SecretKey(parsing: typedSecretKey) else { throw UnlockError.wrongCredentials }
+        guard let secretKey = SecretKey(parsing: typedSecretKey) else { throw UnlockError.invalidSecretKeyFormat }
         let masterKey: SymmetricKeyBox
         do {
             masterKey = try await Task.detached(priority: .userInitiated) {
@@ -229,13 +229,17 @@ public final class AccountController {
     public enum UnlockError: Error {
         case wrongCredentials
         case missingSecretKey
+        /// The typed Secret Key isn't a valid key (wrong format/length/prefix) —
+        /// distinct from "the credentials didn't unlock", so the UI can guide the
+        /// user to re-check the key itself.
+        case invalidSecretKeyFormat
     }
 
     public func unlock(password: String, typedSecretKey: String? = nil) async throws {
         guard let account else { throw UnlockError.wrongCredentials }
         let secretKey: SecretKey
         if let typed = typedSecretKey, !typed.isEmpty {
-            guard let parsed = SecretKey(parsing: typed) else { throw UnlockError.wrongCredentials }
+            guard let parsed = SecretKey(parsing: typed) else { throw UnlockError.invalidSecretKeyFormat }
             secretKey = parsed
         } else if let stored = KeychainStore.loadSecretKey(accountID: account.id) {
             secretKey = stored

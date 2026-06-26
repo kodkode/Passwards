@@ -91,6 +91,7 @@ struct PasswardsiOSApp: App {
         switch args[i + 1] {
         case "welcome": return AnyView(IOSOnboardingView(core: core, initialStep: .welcome))
         case "credentials": return AnyView(IOSOnboardingView(core: core, initialStep: .credentials))
+        case "signin": return AnyView(IOSOnboardingView(core: core, initialStep: .signIn))
         case "lock": return AnyView(IOSLockView(core: core))
         case "home": return AnyView(IOSHomeView(vault: seeded()))
         case "list": return AnyView(IOSItemListView(vault: seeded()))
