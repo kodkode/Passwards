@@ -45,15 +45,16 @@ private struct IOSSettingsView: View {
 
     var body: some View {
         List {
-            Section("iCloud") {
+            Section {
                 HStack {
                     Label("Sync", systemImage: "arrow.triangle.2.circlepath")
                     Spacer()
                     Text(syncStatusText)
-                        .font(.callout)
+                        .font(Theme.text(15, .medium))
                         .foregroundStyle(syncStatusColor)
                 }
-            }
+            } header: { caps("iCloud") }
+            .listRowBackground(Theme.surface)
 
             Section {
                 if BiometricUnlock.isAvailable {
@@ -66,24 +67,34 @@ private struct IOSSettingsView: View {
                 Button {
                     core.lock()
                 } label: {
-                    Label("Lock Now", systemImage: "lock.fill")
+                    Label("Lock Now", systemImage: "lock.fill").foregroundStyle(.white)
                 }
             } header: {
-                Text("Security")
+                caps("Security")
             } footer: {
                 if let faceIDError {
                     Text(faceIDError).foregroundStyle(.orange)
                 } else if BiometricUnlock.isAvailable {
                     Text("Re-enable Face ID on each new device. Your account password is still required from time to time.")
+                        .foregroundStyle(Theme.labelDim)
                 }
             }
+            .listRowBackground(Theme.surface)
 
             Section {
                 Text("Watchtower, attachments, recovery, and backup settings are coming in a later step.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.labelDim)
             }
+            .listRowBackground(Theme.surface)
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.background)
+        .tint(Theme.accent)
+    }
+
+    private func caps(_ text: String) -> some View {
+        Text(text.uppercased()).font(Theme.caps(11)).tracking(0.5).foregroundStyle(Theme.labelDim)
     }
 
     private func setFaceID(_ on: Bool) {

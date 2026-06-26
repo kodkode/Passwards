@@ -161,30 +161,35 @@ struct IOSItemListView: View {
     }
 }
 
-/// A single list row: category/custom/favicon icon, title, subtitle, favorite star.
+/// A single list row (Stitch Vault Home): monochrome glyph tile, title, and a
+/// masked password preview for items that have a password (subtitle otherwise).
 struct ItemRow: View {
     let summary: ItemSummary
 
     var body: some View {
         HStack(spacing: 12) {
-            ItemIcon(overview: summary.overview, size: 38)
-            VStack(alignment: .leading, spacing: 1) {
+            MonoIcon(overview: summary.overview, size: 40)
+            VStack(alignment: .leading, spacing: 2) {
                 Text(summary.overview.title.isEmpty ? "Untitled" : summary.overview.title)
-                    .font(.body)
+                    .font(Theme.text(16, .medium))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                if !summary.overview.subtitle.isEmpty {
-                    Text(summary.overview.subtitle)
-                        .font(.callout)
-                        .foregroundStyle(Theme.labelDim)
-                        .lineLimit(1)
-                }
+                secondaryLine
             }
             Spacer()
             if summary.overview.isFavorite {
                 Image(systemName: "star.fill").font(.caption).foregroundStyle(Theme.accent)
             }
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder private var secondaryLine: some View {
+        if summary.overview.strengthBucket != nil {
+            // Has a password → masked preview, like the Stitch mock.
+            Text("••••••••••").font(Theme.mono(13)).foregroundStyle(Theme.labelDim)
+        } else if !summary.overview.subtitle.isEmpty {
+            Text(summary.overview.subtitle).font(Theme.text(14)).foregroundStyle(Theme.labelDim).lineLimit(1)
+        }
     }
 }

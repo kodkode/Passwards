@@ -58,7 +58,7 @@ struct IOSOnboardingView: View {
             Spacer(minLength: 40)
             AppMark(size: 96)
             Text("Welcome to Passwards")
-                .font(.largeTitle.bold())
+                .font(Theme.display(34, .bold))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
             Text("The safest place for your passwords,\nnow on your iPhone.")
@@ -143,7 +143,7 @@ struct IOSOnboardingView: View {
                        subtitle: "This key encrypts your data together with your password. It's kept in this iPhone's Keychain — save it somewhere safe in case you set up a new device.") {
             if let result {
                 Text(result.secretKey.formatted)
-                    .font(.system(.callout, design: .monospaced).weight(.semibold))
+                    .font(Theme.mono(15, .semibold))
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
@@ -299,10 +299,10 @@ private struct OnboardingCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             if !title.isEmpty {
-                Text(title).font(.title2.bold())
+                Text(title).font(Theme.title(22, .bold))
             }
             if !subtitle.isEmpty {
-                Text(subtitle).font(.callout).foregroundStyle(.secondary)
+                Text(subtitle).font(Theme.text(15)).foregroundStyle(.secondary)
             }
             content
         }

@@ -219,6 +219,23 @@ struct ItemIcon: View {
     }
 }
 
+/// Monochrome list-row icon (Stitch Vault Home): a dark rounded tile with a white
+/// category/custom glyph. (Brand favicons appear on the detail header instead.)
+struct MonoIcon: View {
+    let overview: ItemOverview
+    var size: CGFloat = 40
+    var body: some View {
+        RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+            .fill(Theme.surfaceHigh)
+            .frame(width: size, height: size)
+            .overlay {
+                Image(systemName: overview.iconSymbol ?? overview.category.symbolName)
+                    .font(.system(size: size * 0.44, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+    }
+}
+
 /// Five-segment password strength bar with label, as in the 1P8 generator.
 struct StrengthBar: View {
     let score: PasswordStrength.Score

@@ -17,13 +17,13 @@ struct IOSLockView: View {
 
     var body: some View {
         ZStack {
-            Theme.lockBackdrop.ignoresSafeArea()
+            Theme.heroGradient.ignoresSafeArea()
 
             VStack(spacing: 22) {
                 Spacer()
                 AppMark(size: 96)
                 Text("Passwards")
-                    .font(.title.bold())
+                    .font(Theme.title(28, .bold))
                     .foregroundStyle(.white)
 
                 if core.needsSecretKeyEntry {
@@ -102,7 +102,7 @@ struct IOSLockView: View {
 
     private var secretKeyField: some View {
         TextField("", text: $typedSecretKey, prompt: Text("Secret Key").foregroundStyle(.white.opacity(0.4)))
-            .font(.callout.monospaced())
+            .font(Theme.mono(15))
             .textInputAutocapitalization(.characters)
             .autocorrectionDisabled()
             .foregroundStyle(.white)

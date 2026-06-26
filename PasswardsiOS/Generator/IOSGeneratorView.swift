@@ -30,61 +30,71 @@ struct IOSGeneratorView: View {
     var body: some View {
         Form {
             Section {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("GENERATED PASSWORD").font(Theme.caps(11)).tracking(0.5).foregroundStyle(Theme.labelDim)
                     Text(coloredOutput)
-                        .font(.system(.title3, design: .monospaced).weight(.medium))
+                        .font(Theme.mono(22, .semibold))
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .lineLimit(2)
                         .minimumScaleFactor(0.6)
-                    if !output.isEmpty { StrengthBar(score: score) }
-                    HStack {
+                    if !output.isEmpty {
+                        HStack(spacing: 8) {
+                            Text(score.label.uppercased()).font(Theme.caps(11)).foregroundStyle(Theme.strengthColor(score))
+                            StrengthBar(score: score, showLabel: false)
+                        }
+                    }
+                    HStack(spacing: 12) {
+                        Button { regenerate() } label: {
+                            Label("Regenerate", systemImage: "arrow.clockwise").frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered).tint(Theme.label)
                         Button {
                             UIPasteboard.general.string = output
                             withAnimation { copied = true }
                         } label: {
-                            Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                            Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc").frame(maxWidth: .infinity)
                         }
-                        .tint(copied ? .green : Theme.accent)
-                        Spacer()
-                        Button {
-                            regenerate()
-                        } label: {
-                            Label("Regenerate", systemImage: "arrow.clockwise")
-                        }
-                        .tint(Theme.accent)
+                        .buttonStyle(.borderedProminent).tint(copied ? Theme.accent : Theme.link)
                     }
-                    .buttonStyle(.bordered)
+                    .font(Theme.text(15, .semibold))
                 }
                 .padding(.vertical, 4)
+                .listRowBackground(Theme.surface)
             }
 
             Picker("Type", selection: $mode) {
                 ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented)
+            .listRowBackground(Color.clear)
 
             switch mode {
             case .random:
-                Section("Options") {
+                Section {
                     Stepper("Length: \(Int(length))", value: $length, in: 8...100)
-                    Toggle("Numbers", isOn: $includeNumbers)
-                    Toggle("Symbols", isOn: $includeSymbols)
-                }
+                    Toggle("Numbers", isOn: $includeNumbers).tint(Theme.link)
+                    Toggle("Symbols", isOn: $includeSymbols).tint(Theme.link)
+                } header: { Text("OPTIONS").font(Theme.caps(11)).foregroundStyle(Theme.labelDim) }
+                .listRowBackground(Theme.surface)
             case .memorable:
-                Section("Options") {
+                Section {
                     Stepper("Words: \(Int(wordCount))", value: $wordCount, in: 3...15)
                     Picker("Separator", selection: $separator) {
                         ForEach(PasswordGenerator.Separator.allCases) { Text($0.displayName).tag($0) }
                     }
-                    Toggle("Capitalize", isOn: $capitalize)
-                }
+                    Toggle("Capitalize", isOn: $capitalize).tint(Theme.link)
+                } header: { Text("OPTIONS").font(Theme.caps(11)).foregroundStyle(Theme.labelDim) }
+                .listRowBackground(Theme.surface)
             case .pin:
-                Section("Options") {
+                Section {
                     Stepper("Digits: \(Int(pinLength))", value: $pinLength, in: 3...12)
-                }
+                } header: { Text("OPTIONS").font(Theme.caps(11)).foregroundStyle(Theme.labelDim) }
+                .listRowBackground(Theme.surface)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.background)
         .navigationTitle("Generator")
         .onAppear { if output.isEmpty { regenerate() } }
         .onChange(of: mode) { _, _ in regenerate() }

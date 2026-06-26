@@ -11,6 +11,7 @@ struct IOSItemDetailView: View {
     @State private var item: VaultItem?
     @State private var showEditor = false
     @Environment(\.openURL) private var openURL
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         Group {
@@ -18,12 +19,13 @@ struct IOSItemDetailView: View {
                 content(item)
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Theme.background)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Edit") { showEditor = true }.disabled(item == nil)
+                Button("Edit") { showEditor = true }.disabled(item == nil).tint(Theme.accent)
             }
         }
         .task(id: itemID) { item = await vault.item(id: itemID) }
@@ -40,38 +42,56 @@ struct IOSItemDetailView: View {
     private func content(_ item: VaultItem) -> some View {
         List {
             Section {
-                HStack(spacing: 14) {
-                    ItemIcon(overview: item.overview, size: 56)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(item.overview.title.isEmpty ? "Untitled" : item.overview.title)
-                            .font(.title2.bold())
-                            .lineLimit(2)
-                        Text(item.overview.category.displayName)
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
+                VStack(spacing: 10) {
+                    ItemIcon(overview: item.overview, size: 64)
+                    Text(item.overview.title.isEmpty ? "Untitled" : item.overview.title)
+                        .font(Theme.title(24, .bold)).foregroundStyle(.white)
+                        .multilineTextAlignment(.center).lineLimit(2)
+                    Text(item.overview.category.displayName)
+                        .font(Theme.text(14)).foregroundStyle(Theme.labelDim)
                 }
-                .padding(.vertical, 4)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .listRowBackground(Color.clear)
             }
 
             ForEach(item.details.sections) { section in
                 let fields = section.fields.filter { !$0.value.isEmpty }
                 if !fields.isEmpty {
-                    Section(section.title) {
+                    Section {
                         ForEach(fields) { field in
-                            IOSFieldRow(field: field, openURL: openURL)
+                            IOSFieldRow(field: field, openURL: openURL).listRowBackground(Theme.surface)
                         }
+                    } header: {
+                        if !section.title.isEmpty { sectionLabel(section.title) }
                     }
                 }
             }
 
             if !item.details.notes.isEmpty {
-                Section("Notes") {
-                    Text(item.details.notes).font(.body)
+                Section {
+                    Text(item.details.notes).font(Theme.text(15)).listRowBackground(Theme.surface)
+                } header: { sectionLabel("Notes") }
+            }
+
+            Section {
+                Button {
+                    if let summary = vault.summaries.first(where: { $0.id == item.id }) {
+                        Task { await vault.moveToTrash(summary); dismiss() }
+                    }
+                } label: {
+                    Text("Delete Item").font(Theme.text(16, .semibold))
+                        .foregroundStyle(Theme.danger).frame(maxWidth: .infinity)
                 }
+                .listRowBackground(Theme.surface)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.background)
+    }
+
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text.uppercased()).font(Theme.caps(11)).foregroundStyle(Theme.labelDim).tracking(0.5)
     }
 }
 
@@ -89,27 +109,38 @@ private struct IOSFieldRow: View {
     private var canReveal: Bool { field.kind == .concealed || field.kind == .sshKey }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 5) {
             HStack {
-                Text(field.label)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(field.label.uppercased())
+                    .font(Theme.caps(11)).tracking(0.5)
+                    .foregroundStyle(Theme.labelDim)
                 Spacer()
                 if copied {
-                    Label("Copied", systemImage: "checkmark").font(.caption2).foregroundStyle(.green)
-                } else if canReveal {
-                    Button {
-                        revealed.toggle()
-                    } label: {
-                        Image(systemName: revealed ? "eye.slash" : "eye").font(.callout)
+                    Label("Copied", systemImage: "checkmark").font(Theme.caps(11)).foregroundStyle(Theme.accent)
+                } else {
+                    HStack(spacing: 14) {
+                        if canReveal {
+                            Button { revealed.toggle() } label: {
+                                Image(systemName: revealed ? "eye.slash" : "eye").font(.callout)
+                            }
+                            .buttonStyle(.plain).foregroundStyle(Theme.labelDim)
+                        }
+                        Image(systemName: "doc.on.doc").font(.callout).foregroundStyle(Theme.labelDim)
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
                 }
             }
             value
+            if field.purpose == .password, !field.value.isEmpty {
+                let score = PasswordStrength.score(field.value)
+                HStack(spacing: 8) {
+                    Text(score.label.uppercased()).font(Theme.caps(10))
+                        .foregroundStyle(Theme.strengthColor(score))
+                    StrengthBar(score: score, showLabel: false)
+                }
+                .padding(.top, 3)
+            }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
         .contentShape(Rectangle())
         .onTapGesture { copy() }
     }
@@ -119,12 +150,12 @@ private struct IOSFieldRow: View {
         case .concealed, .sshKey:
             if revealed {
                 Text(coloredSecret(field.value))
-                    .font(.body.monospaced())
+                    .font(Theme.mono(15))
                     .textSelection(.enabled)
                     .lineLimit(field.kind == .sshKey ? 8 : 1)
             } else {
                 Text(String(repeating: "•", count: min(max(field.value.count, 6), 16)))
-                    .font(.body.monospaced())
+                    .font(Theme.mono(15))
             }
         case .otp:
             TOTPRow(secret: field.value)
@@ -132,11 +163,11 @@ private struct IOSFieldRow: View {
             Button {
                 if let url = normalizedURL(field.value) { openURL(url) }
             } label: {
-                Text(field.value).foregroundStyle(Theme.accent).underline().lineLimit(1)
+                Text(field.value).font(Theme.text(16)).foregroundStyle(Theme.link).underline().lineLimit(1)
             }
             .buttonStyle(.plain)
         default:
-            Text(field.value).font(.body)
+            Text(field.value).font(Theme.text(16)).foregroundStyle(.white)
         }
     }
 
@@ -160,7 +191,7 @@ private struct TOTPRow: View {
                 let remaining = gen.secondsRemaining(at: ctx.date)
                 HStack(spacing: 10) {
                     Text(grouped(code))
-                        .font(.title3.monospaced().weight(.medium))
+                        .font(Theme.mono(20, .semibold))
                         .foregroundStyle(Theme.accent)
                         .contentTransition(.numericText())
                     Text("\(remaining)s")
