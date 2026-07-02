@@ -26,21 +26,26 @@ final class IOSVaultModel {
 
     /// Populates the model with sample data for `-uiPreview` screenshots.
     func seedPreview() {
-        let samples: [(id: String, title: String, sub: String, cat: PasswardsCore.Category, fav: Bool, day: Double)] = [
-            ("1", "GitHub", "octocat", .login, true, 0),
-            ("2", "Personal Email", "me@example.com", .emailAccount, false, 1),
-            ("3", "Visa", "•••• 4242", .creditCard, false, 2),
-            ("4", "AWS Production", "AKIA…", .apiCredential, false, 9),
-            ("5", "Home Wi-Fi", "Living room", .wirelessRouter, false, 12),
+        let samples: [(id: String, title: String, sub: String, cat: PasswardsCore.Category, fav: Bool, day: Double, tags: [String], archived: Bool, trashed: Bool)] = [
+            ("1", "GitHub", "octocat", .login, true, 0, ["work", "dev"], false, false),
+            ("2", "Personal Email", "me@example.com", .emailAccount, false, 1, ["personal"], false, false),
+            ("3", "Visa", "•••• 4242", .creditCard, false, 2, ["finance"], false, false),
+            ("4", "AWS Production", "AKIA…", .apiCredential, false, 9, ["work"], false, false),
+            ("5", "Home Wi-Fi", "Living room", .wirelessRouter, false, 12, [], false, false),
+            ("6", "Old Dropbox", "user@old.com", .login, false, 40, [], true, false),     // archived
+            ("7", "Deleted Note", "scratch pad", .secureNote, false, 30, [], false, true), // trashed
         ]
         let base = Date(timeIntervalSince1970: 1_717_200_000) // 2024-06
         summaries = samples.map { s in
-            ItemSummary(
-                id: s.id, vaultID: "v",
-                overview: ItemOverview(title: s.title, subtitle: s.sub,
-                                       urls: s.id == "1" ? ["https://github.com"] : [],
-                                       isFavorite: s.fav, category: s.cat),
-                createdAt: base, updatedAt: base.addingTimeInterval(-s.day * 86_400), trashedAt: nil
+            var ov = ItemOverview(title: s.title, subtitle: s.sub,
+                                  urls: s.id == "1" ? ["https://github.com"] : [],
+                                  isFavorite: s.fav, category: s.cat)
+            ov.tags = s.tags
+            ov.isArchived = s.archived
+            return ItemSummary(
+                id: s.id, vaultID: "v", overview: ov,
+                createdAt: base, updatedAt: base.addingTimeInterval(-s.day * 86_400),
+                trashedAt: s.trashed ? base.addingTimeInterval(-s.day * 86_400) : nil
             )
         }
         var gh = VaultItem(id: "1", vaultID: "v")
@@ -172,5 +177,54 @@ final class IOSVaultModel {
     func deletePermanently(_ summary: ItemSummary) async {
         try? await items?.deletePermanently(itemID: summary.id)
         await refresh()
+    }
+
+    func setArchived(_ summary: ItemSummary, _ archived: Bool) async {
+        var overview = summary.overview
+        overview.isArchived = archived
+        try? await items?.updateOverview(overview, itemID: summary.id)
+        await refresh()
+    }
+
+    // MARK: Browse (favorites / categories / tags / archive / trash)
+
+    var activeSummaries: [ItemSummary] {
+        VaultQuery.filteredSorted(summaries, filter: .allItems, search: "",
+                                  categoryFilter: nil, sortKey: .title, ascending: true)
+    }
+    var archivedSummaries: [ItemSummary] {
+        VaultQuery.filteredSorted(summaries, filter: .archive, search: "",
+                                  categoryFilter: nil, sortKey: .title, ascending: true)
+    }
+    var trashedSummaries: [ItemSummary] {
+        VaultQuery.filteredSorted(summaries, filter: .trash, search: "",
+                                  categoryFilter: nil, sortKey: .dateEdited, ascending: false)
+    }
+    var archiveCount: Int { summaries.lazy.filter { $0.trashedAt == nil && $0.overview.isArchived }.count }
+
+    func items(in category: PasswardsCore.Category) -> [ItemSummary] {
+        VaultQuery.filteredSorted(summaries, filter: .category(category), search: "",
+                                  categoryFilter: nil, sortKey: .title, ascending: true)
+    }
+    func items(taggedWith tag: String) -> [ItemSummary] {
+        VaultQuery.filteredSorted(summaries, filter: .tag(tag), search: "",
+                                  categoryFilter: nil, sortKey: .title, ascending: true)
+    }
+
+    /// Active-item category counts (sorted by count desc, then name).
+    var categoryCounts: [(category: PasswardsCore.Category, count: Int)] {
+        var counts: [PasswardsCore.Category: Int] = [:]
+        for s in activeSummaries { counts[s.overview.category, default: 0] += 1 }
+        return counts.map { (category: $0.key, count: $0.value) }
+            .sorted { $0.count != $1.count ? $0.count > $1.count
+                                           : $0.category.displayName < $1.category.displayName }
+    }
+
+    /// Active-item tag counts (sorted by count desc, then name).
+    var tagCounts: [(tag: String, count: Int)] {
+        var counts: [String: Int] = [:]
+        for s in activeSummaries { for t in s.overview.tags { counts[t, default: 0] += 1 } }
+        return counts.map { (tag: $0.key, count: $0.value) }
+            .sorted { $0.count != $1.count ? $0.count > $1.count : $0.tag < $1.tag }
     }
 }

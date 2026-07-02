@@ -20,7 +20,7 @@ struct IOSRootView: View {
         case .locked:
             IOSLockView(core: core)
         case .unlocked:
-            IOSHomeView(vault: model.vault)
+            IOSHomeView(vault: model.vault, watchtower: model.watchtower)
         }
     }
 }

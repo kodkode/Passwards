@@ -7,6 +7,7 @@ import PasswardsCore
 struct IOSItemDetailView: View {
     let vault: IOSVaultModel
     let itemID: String
+    var watchtower: IOSWatchtowerModel? = nil
 
     @State private var item: VaultItem?
     @State private var showEditor = false
@@ -24,6 +25,14 @@ struct IOSItemDetailView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if let summary = vault.summaries.first(where: { $0.id == itemID }) {
+                    Button { Task { await vault.toggleFavorite(summary) } } label: {
+                        Image(systemName: summary.overview.isFavorite ? "star.fill" : "star")
+                            .foregroundStyle(summary.overview.isFavorite ? .yellow : Theme.link)
+                    }
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Edit") { showEditor = true }.disabled(item == nil).tint(Theme.accent)
             }
@@ -45,7 +54,7 @@ struct IOSItemDetailView: View {
                 VStack(spacing: 10) {
                     ItemIcon(overview: item.overview, size: 64)
                     Text(item.overview.title.isEmpty ? "Untitled" : item.overview.title)
-                        .font(Theme.title(24, .bold)).foregroundStyle(.white)
+                        .font(Theme.title(24, .bold)).foregroundStyle(Theme.primaryLabel)
                         .multilineTextAlignment(.center).lineLimit(2)
                     Text(item.overview.category.displayName)
                         .font(Theme.text(14)).foregroundStyle(Theme.labelDim)
@@ -53,6 +62,11 @@ struct IOSItemDetailView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
                 .listRowBackground(Color.clear)
+            }
+
+            if let watchtower,
+               let check = watchtower.checks(for: item.id).min(by: { $0.severity < $1.severity }) {
+                Section { warningCard(check) }.listRowBackground(Color.clear)
             }
 
             ForEach(item.details.sections) { section in
@@ -75,15 +89,22 @@ struct IOSItemDetailView: View {
             }
 
             Section {
-                Button {
-                    if let summary = vault.summaries.first(where: { $0.id == item.id }) {
-                        Task { await vault.moveToTrash(summary); dismiss() }
+                if let summary = vault.summaries.first(where: { $0.id == item.id }) {
+                    Button {
+                        Task { await vault.setArchived(summary, !summary.overview.isArchived); dismiss() }
+                    } label: {
+                        Label(summary.overview.isArchived ? "Unarchive" : "Archive", systemImage: "archivebox")
+                            .foregroundStyle(Theme.primaryLabel)
                     }
-                } label: {
-                    Text("Delete Item").font(Theme.text(16, .semibold))
-                        .foregroundStyle(Theme.danger).frame(maxWidth: .infinity)
+                    .listRowBackground(Theme.surface)
+                    Button(role: .destructive) {
+                        Task { await vault.moveToTrash(summary); dismiss() }
+                    } label: {
+                        Text("Move to Trash").font(Theme.text(16, .semibold))
+                            .foregroundStyle(Theme.danger).frame(maxWidth: .infinity)
+                    }
+                    .listRowBackground(Theme.surface)
                 }
-                .listRowBackground(Theme.surface)
             }
         }
         .scrollContentBackground(.hidden)
@@ -92,6 +113,22 @@ struct IOSItemDetailView: View {
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text.uppercased()).font(Theme.caps(11)).foregroundStyle(Theme.labelDim).tracking(0.5)
+    }
+
+    private func warningCard(_ check: WatchtowerCheck) -> some View {
+        let color = check.severity == 0 ? Theme.danger : (check.severity == 1 ? Theme.warn : Theme.link)
+        return HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(color).padding(.top, 1)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(check.displayName).font(Theme.text(15, .semibold)).foregroundStyle(color)
+                Text(check.explanation).font(Theme.text(14)).foregroundStyle(color.opacity(0.85))
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(color.opacity(0.3), lineWidth: 1))
     }
 }
 
@@ -167,7 +204,7 @@ private struct IOSFieldRow: View {
             }
             .buttonStyle(.plain)
         default:
-            Text(field.value).font(Theme.text(16)).foregroundStyle(.white)
+            Text(field.value).font(Theme.text(16)).foregroundStyle(Theme.primaryLabel)
         }
     }
 

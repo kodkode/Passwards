@@ -2,39 +2,46 @@ import SwiftUI
 import UIKit
 import PasswardsCore
 
-/// "Vault Sentinel" — the iOS design system from the owner's Stitch
-/// "SecurePass Mobile Vault": deep-navy / near-black dark surfaces, Security Green
-/// as the primary accent (active tab, FAB, strength, positive states), and an
-/// iOS blue for links / secondary actions. Dark-first.
+/// iOS visual language — a faithful port of the macOS 1Password 8 clone: the
+/// system font (SF Pro), 1Password's azure-blue accent, and **adaptive light/dark
+/// surfaces** built on iOS's native grouped-list semantics (white cards on a light
+/// gray base; `#1C1C1E` cards on black in dark). The lock/onboarding stay branded
+/// navy like the Mac. The user picks Light / Dark / System in Settings.
 enum Theme {
     static func hex(_ v: UInt) -> Color {
         Color(.sRGB, red: Double((v >> 16) & 0xFF) / 255,
               green: Double((v >> 8) & 0xFF) / 255, blue: Double(v & 0xFF) / 255)
     }
 
-    // Brand accents
-    static let accent = hex(0x10B981)       // Security Green
-    static let accentDeep = hex(0x059669)
-    static let link = hex(0x60A5FA)         // iOS blue — links / secondary actions
+    // Brand accents (1Password) — constant across light & dark.
+    static let accent = hex(0x0572EC)       // Azure Radiance (1P blue)
+    static let accentDeep = hex(0x0364D3)    // Science Blue
+    static let link = accent                 // links use the brand blue
 
-    // Dark surfaces
-    static let background = hex(0x101216)   // app base (near-black)
-    static let navy = hex(0x0A192F)         // deep navy (hero / lock)
-    static let surface = hex(0x1C1D22)      // cards
-    static let surfaceHigh = hex(0x26272D)  // raised / chips / fields
-    static let surfaceLow = hex(0x16171B)
-    static let cardBorder = Color.white.opacity(0.06)
-    static let label = hex(0xC5C6CD)        // primary gray text
-    static let labelDim = hex(0x83858E)     // dim / uppercase labels
-    static let danger = hex(0xFF6B6B)
+    // Adaptive surfaces (native iOS grouped look).
+    static let background = Color(uiColor: .systemGroupedBackground)        // light #F2F2F7 / dark #000
+    static let surface = Color(uiColor: .secondarySystemGroupedBackground)  // light #FFF / dark #1C1C1E
+    static let surfaceHigh = Color(light: UIColor(white: 0.92, alpha: 1),   // chips / fields / raised
+                                   dark: UIColor(red: 0x2C/255, green: 0x2C/255, blue: 0x2E/255, alpha: 1))
+    static let surfaceLow = Color(uiColor: .systemGroupedBackground)
+    static let cardBorder = Color(uiColor: .separator)
 
-    /// Hero / lock backdrop: deep navy fading to near-black.
+    // Text (semantic — adapts automatically).
+    static let primaryLabel = Color(uiColor: .label)
+    static let label = Color(uiColor: .secondaryLabel)
+    static let labelDim = Color(uiColor: .tertiaryLabel)
+
+    static let danger = Color(uiColor: .systemRed)
+    static let warn = Color(uiColor: .systemOrange)
+    static let track = Color(uiColor: .systemGray5)   // gauge / bar unfilled track
+
+    // Lock / onboarding stay branded navy (like the Mac lock screen) in both modes.
+    static let navy = hex(0x0A192F)
     static let heroGradient = LinearGradient(
-        colors: [hex(0x0A192F), hex(0x070D17)], startPoint: .top, endPoint: .bottom
+        colors: [hex(0x0364D3), hex(0x022C66)], startPoint: .top, endPoint: .bottom
     )
-
-    static let lockBackdrop = background
-    static let lockField = surfaceHigh
+    static let lockBackdrop = hex(0x0A192F)
+    static let lockField = Color.white.opacity(0.12)
     static let lockFocus = accent
 
     static func color(token: String) -> Color {
@@ -75,42 +82,46 @@ enum Theme {
         }
     }
 
-    // MARK: Fonts (Vault Sentinel)
-    // Hanken Grotesk → headlines/body · Geist → uppercase labels · Geist Mono →
-    // passwords, TOTP codes, Secret Key. `relativeTo` keeps Dynamic Type scaling.
+    // MARK: Fonts — Apple's system font (SF Pro / SF Mono), like 1Password.
 
     static func display(_ size: CGFloat, _ weight: Font.Weight = .bold) -> Font {
-        .custom("Hanken Grotesk", size: size, relativeTo: .largeTitle).weight(weight)
+        .system(size: size, weight: weight)
     }
     static func title(_ size: CGFloat, _ weight: Font.Weight = .semibold) -> Font {
-        .custom("Hanken Grotesk", size: size, relativeTo: .title2).weight(weight)
+        .system(size: size, weight: weight)
     }
     static func text(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
-        .custom("Hanken Grotesk", size: size, relativeTo: .body).weight(weight)
+        .system(size: size, weight: weight)
     }
     static func caps(_ size: CGFloat = 12, _ weight: Font.Weight = .semibold) -> Font {
-        .custom("Geist", size: size, relativeTo: .caption).weight(weight)
+        .system(size: size, weight: weight)
     }
     static func mono(_ size: CGFloat, _ weight: Font.Weight = .medium) -> Font {
-        .custom("Geist Mono", size: size, relativeTo: .body).weight(weight)
+        .system(size: size, weight: weight, design: .monospaced)
     }
 
-    /// Dark, blended navigation bar with Hanken Grotesk titles. Call once at launch.
+    /// Native translucent navigation bar that adapts to light/dark. Call once at launch.
     static func configureAppearance() {
         let bar = UINavigationBarAppearance()
-        bar.configureWithOpaqueBackground()
-        bar.backgroundColor = UIColor(background)
-        bar.shadowColor = .clear
-        func hanken(_ size: CGFloat, _ w: UIFont.Weight) -> UIFont {
-            let base = UIFont(name: "Hanken Grotesk", size: size) ?? .systemFont(ofSize: size, weight: w)
-            let d = base.fontDescriptor.addingAttributes([.traits: [UIFontDescriptor.TraitKey.weight: w]])
-            return UIFont(descriptor: d, size: size)
-        }
-        bar.largeTitleTextAttributes = [.font: hanken(32, .bold), .foregroundColor: UIColor.white]
-        bar.titleTextAttributes = [.font: hanken(17, .semibold), .foregroundColor: UIColor.white]
+        bar.configureWithDefaultBackground()
+        bar.titleTextAttributes = [.foregroundColor: UIColor.label]
+        bar.largeTitleTextAttributes = [.foregroundColor: UIColor.label]
         UINavigationBar.appearance().standardAppearance = bar
         UINavigationBar.appearance().scrollEdgeAppearance = bar
         UINavigationBar.appearance().compactAppearance = bar
+    }
+}
+
+/// User appearance preference (Settings → Appearance), persisted via `@AppStorage`.
+enum IOSAppearance: String, CaseIterable, Identifiable {
+    case system, light, dark
+    static let storageKey = "ios.appearance"
+    var id: String { rawValue }
+    var label: String {
+        switch self { case .system: "System"; case .light: "Light"; case .dark: "Dark" }
+    }
+    var colorScheme: ColorScheme? {
+        switch self { case .system: nil; case .light: .light; case .dark: .dark }
     }
 }
 
@@ -151,7 +162,7 @@ struct AppMark: View {
                     .frame(width: size, height: size)
             }
         }
-        .shadow(color: .black.opacity(0.35), radius: size / 8, y: size / 14)
+        .shadow(color: .black.opacity(0.25), radius: size / 8, y: size / 14)
     }
 }
 
@@ -190,7 +201,7 @@ struct IconTile: View {
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.2), radius: size / 40, y: size / 60)
             }
-            .shadow(color: .black.opacity(0.2), radius: size / 28, y: size / 32)
+            .shadow(color: .black.opacity(0.12), radius: size / 28, y: size / 32)
     }
 }
 
@@ -219,20 +230,31 @@ struct ItemIcon: View {
     }
 }
 
-/// Monochrome list-row icon (Stitch Vault Home): a dark rounded tile with a white
-/// category/custom glyph. (Brand favicons appear on the detail header instead.)
-struct MonoIcon: View {
-    let overview: ItemOverview
-    var size: CGFloat = 40
+/// Circular score gauge (Watchtower): a colored arc filled to `fraction`, with a
+/// centered big number + uppercase label. Used on the Vault Home card + Security.
+struct CircularGauge: View {
+    let fraction: Double          // 0…1
+    let value: String             // e.g. "92"
+    let label: String             // e.g. "EXCELLENT"
+    var color: Color = Theme.accent
+    var size: CGFloat = 128
+    var valueFont: CGFloat = 34
+    var labelColor: Color = Theme.accent
+
     var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-            .fill(Theme.surfaceHigh)
-            .frame(width: size, height: size)
-            .overlay {
-                Image(systemName: overview.iconSymbol ?? overview.category.symbolName)
-                    .font(.system(size: size * 0.44, weight: .semibold))
-                    .foregroundStyle(.white)
+        ZStack {
+            Circle()
+                .stroke(Theme.track, lineWidth: size * 0.075)
+            Circle()
+                .trim(from: 0, to: max(0.001, min(1, fraction)))
+                .stroke(color, style: StrokeStyle(lineWidth: size * 0.075, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            VStack(spacing: 2) {
+                Text(value).font(Theme.display(valueFont, .heavy)).foregroundStyle(Theme.primaryLabel)
+                Text(label.uppercased()).font(Theme.caps(11)).tracking(0.8).foregroundStyle(labelColor)
             }
+        }
+        .frame(width: size, height: size)
     }
 }
 
