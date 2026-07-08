@@ -7,29 +7,82 @@ import PasswardsCore
 /// (same framing) — all crypto happens at the two ends.
 nonisolated enum BrowserHostMode {
     static func run() -> Never {
-        var fd = connect()
-
-        // App not running (or bridge not up yet): launch it and retry.
-        if fd < 0 {
-            launchApp()
-            for _ in 0..<40 where fd < 0 {
-                usleep(250_000)
-                fd = connect()
-            }
-        }
-        guard fd >= 0 else {
-            emitError("Passwards isn’t running. Open the app and try again.")
+        guard let firstMessage = readFirstMessage(from: 0) else {
+            emitError("protocol error")
             exit(1)
         }
 
+        var fd = connect()
+
+        // App not running (or bridge not up yet): launch only for explicitly
+        // user-initiated native messages.
+        if fd < 0 {
+            if firstMessage.message.allowLaunch == true {
+                launchApp()
+                for _ in 0..<40 where fd < 0 {
+                    usleep(250_000)
+                    fd = connect()
+                }
+            } else {
+                emitError("Passwards isn’t running. Open the app and try again.", cid: firstMessage.message.cid)
+                exit(1)
+            }
+        }
+        guard fd >= 0 else {
+            emitError("Passwards isn’t running. Open the app and try again.", cid: firstMessage.message.cid)
+            exit(1)
+        }
+
+        guard writeAll(firstMessage.frame, to: fd) else {
+            close(fd)
+            emitError("Passwards isn’t running. Open the app and try again.", cid: firstMessage.message.cid)
+            exit(1)
+        }
+
+        let socketFD = fd
+
         // socket → stdout on a second thread; stdin → socket here.
         let reader = Thread {
-            pump(from: fd, to: 1)
+            pump(from: socketFD, to: 1)
             exit(0) // app closed the connection
         }
         reader.start()
-        pump(from: 0, to: fd) // returns on stdin EOF = browser closed the port
+        pump(from: 0, to: socketFD) // returns on stdin EOF = browser closed the port
         exit(0)
+    }
+
+    private struct FirstMessage {
+        var frame: Data
+        var message: BrowserWireMessage
+    }
+
+    private static func readFirstMessage(from source: Int32) -> FirstMessage? {
+        guard let lengthBytes = readExactly(from: source, count: 4) else { return nil }
+        let length = lengthBytes.withUnsafeBytes { $0.loadUnaligned(as: UInt32.self) }.littleEndian
+        guard Int(length) <= NativeMessageFraming.maxFrameLength else { return nil }
+        guard let body = readExactly(from: source, count: Int(length)),
+              let message = try? NativeMessageFraming.decodeMessage(body) else {
+            return nil
+        }
+        var frame = Data()
+        frame.append(lengthBytes)
+        frame.append(body)
+        return FirstMessage(frame: frame, message: message)
+    }
+
+    private static func readExactly(from source: Int32, count: Int) -> Data? {
+        var data = Data(count: count)
+        var offset = 0
+        let complete = data.withUnsafeMutableBytes { raw -> Bool in
+            guard let base = raw.baseAddress else { return count == 0 }
+            while offset < count {
+                let n = read(source, base.advanced(by: offset), count - offset)
+                guard n > 0 else { return false }
+                offset += n
+            }
+            return true
+        }
+        return complete ? data : nil
     }
 
     private static func connect() -> Int32 {
@@ -86,10 +139,23 @@ nonisolated enum BrowserHostMode {
         }
     }
 
+    private static func writeAll(_ data: Data, to destination: Int32) -> Bool {
+        data.withUnsafeBytes { raw in
+            guard let base = raw.baseAddress else { return true }
+            var written = 0
+            while written < raw.count {
+                let n = write(destination, base.advanced(by: written), raw.count - written)
+                guard n > 0 else { return false }
+                written += n
+            }
+            return true
+        }
+    }
+
     /// Frame an error message to the extension so it can tell the user.
-    private static func emitError(_ message: String) {
+    private static func emitError(_ message: String, cid: String? = nil) {
         guard let frame = try? NativeMessageFraming.encodeMessage(
-            BrowserWireMessage(type: .error, message: message)) else { return }
-        frame.withUnsafeBytes { _ = write(1, $0.baseAddress, $0.count) }
+            BrowserWireMessage(type: .error, cid: cid, message: message)) else { return }
+        _ = writeAll(frame, to: 1)
     }
 }

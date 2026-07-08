@@ -42,6 +42,8 @@ public struct BrowserWireMessage: Codable, Sendable, Equatable {
     /// Connection id minted per extension port; routes every message to its
     /// session/pairing state in the app, independent of socket identity.
     public var cid: String?
+    /// Native-host launch policy for the first message on a browser port.
+    public var allowLaunch: Bool?
     /// Base64 X25519 static public key (pairing identity).
     public var publicKey: String?
     /// Base64 X25519 ephemeral public key (session handshake).
@@ -53,10 +55,12 @@ public struct BrowserWireMessage: Codable, Sendable, Equatable {
     /// Human-readable detail for `error`.
     public var message: String?
 
-    public init(type: Kind, cid: String? = nil, publicKey: String? = nil, ephemeralKey: String? = nil,
+    public init(type: Kind, cid: String? = nil, allowLaunch: Bool? = nil,
+                publicKey: String? = nil, ephemeralKey: String? = nil,
                 seq: UInt64? = nil, payload: String? = nil, message: String? = nil) {
         self.type = type
         self.cid = cid
+        self.allowLaunch = allowLaunch
         self.publicKey = publicKey
         self.ephemeralKey = ephemeralKey
         self.seq = seq

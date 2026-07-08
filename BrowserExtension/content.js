@@ -55,7 +55,7 @@
   async function checkPendingFill() {
     let creds;
     try {
-      creds = await chrome.runtime.sendMessage({ cmd: "pending-fill" });
+      creds = await chrome.runtime.sendMessage({ cmd: "pending-fill", allowLaunch: false });
     } catch { return; }
     if (!creds?.password) return;
 
@@ -147,24 +147,24 @@
   async function maybeOfferSave(captured) {
     let state;
     try {
-      state = await chrome.runtime.sendMessage({ cmd: "state" });
+      state = await chrome.runtime.sendMessage({ cmd: "state", allowLaunch: false });
     } catch { return; }
     if (!state?.paired || state.locked) return;
 
-    const query = await chrome.runtime.sendMessage({ cmd: "query", url: captured.url });
+    const query = await chrome.runtime.sendMessage({ cmd: "query", url: captured.url, allowLaunch: false });
     const existing = (query?.matches ?? []).find((m) => m.username === captured.username);
     if (existing) {
       // Only offer an update if the password actually changed.
       const current = await chrome.runtime.sendMessage({
-        cmd: "fill-credentials", url: captured.url, itemID: existing.itemID,
+        cmd: "fill-credentials", url: captured.url, itemID: existing.itemID, allowLaunch: false,
       });
       if (!current || current.password === captured.password) return;
       showBanner(`Update password for “${existing.title}” in Passwards?`, "Update", async () => {
-        await chrome.runtime.sendMessage({ cmd: "save-login", ...captured });
+        await chrome.runtime.sendMessage({ cmd: "save-login", allowLaunch: true, ...captured });
       });
     } else {
       showBanner("Save this login in Passwards?", "Save", async () => {
-        await chrome.runtime.sendMessage({ cmd: "save-login", ...captured });
+        await chrome.runtime.sendMessage({ cmd: "save-login", allowLaunch: true, ...captured });
       });
     }
   }

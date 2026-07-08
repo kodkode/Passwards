@@ -20,7 +20,7 @@ chrome.runtime.onMessage.addListener((message) => {
 
 async function start() {
   show("code");
-  const result = await chrome.runtime.sendMessage({ cmd: "pair" });
+  const result = await chrome.runtime.sendMessage({ cmd: "pair", allowLaunch: true });
   if (result?.ok) {
     show("done");
     setTimeout(() => window.close(), 4000);
@@ -35,6 +35,6 @@ document.getElementById("start").addEventListener("click", start);
 document.getElementById("retry").addEventListener("click", start);
 
 // If we're already paired (e.g. tab reopened), skip straight to done.
-chrome.runtime.sendMessage({ cmd: "state" }).then((state) => {
+chrome.runtime.sendMessage({ cmd: "state", allowLaunch: true }).then((state) => {
   if (state?.paired) show("done");
 });

@@ -21,7 +21,7 @@ function hideStatus() {
 }
 
 async function send(message) {
-  return chrome.runtime.sendMessage(message);
+  return chrome.runtime.sendMessage({ ...message, allowLaunch: true });
 }
 
 async function init() {

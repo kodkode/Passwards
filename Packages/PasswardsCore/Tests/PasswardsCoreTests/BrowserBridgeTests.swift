@@ -11,6 +11,8 @@ struct BrowserBridgeTests {
     @Test func framingRoundTripsAcrossChunkedDelivery() throws {
         let messages = [
             BrowserWireMessage(type: .pairRequest, publicKey: "AAAA"),
+            BrowserWireMessage(type: .sessionStart, cid: "session", allowLaunch: false,
+                               publicKey: "AAAA", ephemeralKey: "BBBB"),
             BrowserWireMessage(type: .enc, seq: 7, payload: "BBBB"),
             BrowserWireMessage(type: .error, message: "nope"),
         ]
@@ -42,6 +44,17 @@ struct BrowserBridgeTests {
             var buffer = bogus
             _ = try NativeMessageFraming.drainFrames(from: &buffer)
         }
+    }
+
+    @Test func launchPolicyIsOptionalForOlderWireMessages() throws {
+        let oldMessage = Data(#"{"type":"session-start","cid":"session"}"#.utf8)
+        let decoded = try JSONDecoder().decode(BrowserWireMessage.self, from: oldMessage)
+        #expect(decoded.allowLaunch == nil)
+
+        let encoded = try JSONEncoder().encode(BrowserWireMessage(
+            type: .sessionStart, cid: "session", allowLaunch: false))
+        let roundTrip = try JSONDecoder().decode(BrowserWireMessage.self, from: encoded)
+        #expect(roundTrip.allowLaunch == false)
     }
 
     // MARK: Pairing

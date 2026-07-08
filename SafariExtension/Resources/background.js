@@ -136,14 +136,15 @@ async function getStoredPairing() {
 
 // Pair with the app. onCode is called with the verification code so the
 // popup can display it while the user approves in Passwards.
-async function pair(onCode) {
+async function pair(onCode, options = {}) {
   const keyPair = await x25519Generate();
   const extPub = new Uint8Array(await crypto.subtle.exportKey("raw", keyPair.publicKey));
   const cid = crypto.randomUUID();
+  const allowLaunch = options.allowLaunch !== false;
 
   const port = connectPort();
   try {
-    postRaw(port, { type: "pair-request", cid, publicKey: b64.encode(extPub) });
+    postRaw(port, { type: "pair-request", cid, allowLaunch, publicKey: b64.encode(extPub) });
     const response = await nextFromPort(port);
     if (response.type === "error") throw new Error(response.message);
     if (response.type !== "pair-response") throw new Error("unexpected " + response.type);
@@ -177,7 +178,7 @@ async function pair(onCode) {
   }
 }
 
-async function startSession() {
+async function startSession(options = {}) {
   const stored = await getStoredPairing();
   if (!stored) throw new Error("not-paired");
 
@@ -185,9 +186,11 @@ async function startSession() {
   const ephPub = new Uint8Array(await crypto.subtle.exportKey("raw", eph.publicKey));
   const cid = crypto.randomUUID();
   const port = connectPort();
+  const allowLaunch = options.allowLaunch !== false;
   postRaw(port, {
     type: "session-start",
     cid,
+    allowLaunch,
     publicKey: stored.staticKeyPair.publicRaw,
     ephemeralKey: b64.encode(ephPub),
   });
@@ -212,9 +215,9 @@ async function startSession() {
   return session;
 }
 
-async function rpc(method, params = {}, retried = false) {
+async function rpc(method, params = {}, options = {}, retried = false) {
   let s = session;
-  if (!s) s = await startSession();
+  if (!s) s = await startSession(options);
   // Serialize exchanges so seq counters match the app's expectations.
   const run = s.busy.then(async () => {
     const request = { id: ++s.rpcID, method, ...params };
@@ -234,7 +237,7 @@ async function rpc(method, params = {}, retried = false) {
     // reconnects, idle TTL, or service-worker suspension). Re-handshake once
     // and retry transparently before surfacing the failure.
     if (!retried && error.message !== "not-paired") {
-      return rpc(method, params, true);
+      return rpc(method, params, options, true);
     }
     throw error;
   }
@@ -250,38 +253,40 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (sender.tab && ["query", "fill-credentials", "save-login", "pending-fill"].includes(message.cmd)) {
         message.url = sender.tab.url;
       }
+      const allowLaunch = message.allowLaunch === true;
+      const launchOptions = { allowLaunch };
       switch (message.cmd) {
         case "state": {
           const paired = !!(await getStoredPairing());
           if (!paired) return sendResponse({ paired: false });
-          const status = await rpc("status");
+          const status = await rpc("status", {}, launchOptions);
           return sendResponse({ paired: true, locked: !!status.locked });
         }
         case "pair": {
           await pair((code) => {
             chrome.runtime.sendMessage({ event: "pairing-code", code }).catch(() => {});
-          });
+          }, launchOptions);
           return sendResponse({ ok: true });
         }
         case "query": {
-          const result = await rpc("credentials.query", { url: message.url });
+          const result = await rpc("credentials.query", { url: message.url }, launchOptions);
           return sendResponse(result);
         }
         case "fill-credentials": {
-          const result = await rpc("credentials.fill", { url: message.url, itemID: message.itemID });
+          const result = await rpc("credentials.fill", { url: message.url, itemID: message.itemID }, launchOptions);
           return sendResponse(result);
         }
         case "pending-fill": {
           // Don't trigger pairing UI from a page load; only ask when paired.
           if (!(await getStoredPairing())) return sendResponse({});
-          const result = await rpc("fill.pending", { url: message.url });
+          const result = await rpc("fill.pending", { url: message.url }, launchOptions);
           return sendResponse(result);
         }
         case "save-login": {
           const result = await rpc("login.save", {
             url: message.url, username: message.username,
             password: message.password, title: message.title,
-          });
+          }, launchOptions);
           return sendResponse(result);
         }
         case "stash-pending-save": {
