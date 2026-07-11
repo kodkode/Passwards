@@ -86,6 +86,11 @@ final class IOSWatchtowerModel {
         }
     }
 
+    /// Longer explanatory copy for the Sentinel screen body.
+    var scoreBody: String {
+        "Think of this as your password fitness score — squash the issues below to level up."
+    }
+
     var scoreStatus: String {
         switch score {
         case 90...: "Status: Excellent. You're well protected."

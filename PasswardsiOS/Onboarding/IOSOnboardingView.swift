@@ -4,10 +4,9 @@ import CloudKit
 import PasswardsCore
 import PasswardsOrchestration
 
-/// iOS account setup: welcome → email + password → Secret Key → Face ID, plus a
-/// "sign in to an existing account" path that pulls the account from iCloud.
-/// Mirrors the macOS onboarding copy/steps, rebuilt for iPhone (hero gradient,
-/// card forms, large buttons).
+/// iOS account setup (playful): a 3-slide intro, then email + password → Secret Key
+/// → Face ID, plus a "sign in to an existing account" path that pulls the account
+/// from iCloud. Light lavender background, glossy icons, rounded cards.
 struct IOSOnboardingView: View {
     let core: AccountController
 
@@ -19,6 +18,7 @@ struct IOSOnboardingView: View {
         self.core = core
         _step = State(initialValue: initialStep)
     }
+    @State private var slide = 0
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
@@ -33,56 +33,91 @@ struct IOSOnboardingView: View {
 
     var body: some View {
         ZStack {
-            Theme.heroGradient.ignoresSafeArea()
-            ScrollView {
-                Group {
-                    switch step {
-                    case .welcome: welcome
-                    case .credentials: credentials
-                    case .secretKey: secretKeyStep
-                    case .faceID: faceIDStep
-                    case .signIn: signIn
-                    }
-                }
-                .padding(24)
-                .frame(maxWidth: .infinity)
+            Theme.background.ignoresSafeArea()
+            switch step {
+            case .welcome: intro
+            case .credentials: formScreen { credentials }
+            case .secretKey: formScreen { secretKeyStep }
+            case .faceID: formScreen { faceIDStep }
+            case .signIn: formScreen { signIn }
             }
-            .scrollDismissesKeyboard(.interactively)
         }
     }
 
-    // MARK: Welcome
+    // MARK: Intro slides
 
-    private var welcome: some View {
-        VStack(spacing: 22) {
-            Spacer(minLength: 40)
-            AppMark(size: 96)
-            Text("Welcome to Passwards")
-                .font(Theme.display(34, .bold))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-            Text("The safest place for your passwords,\nnow on your iPhone.")
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.85))
+    private struct Slide { let usesAppMark: Bool; let icon: String; let color: Color; let title: String; let body: String }
+    private let slides: [Slide] = [
+        .init(usesAppMark: true, icon: "shield.fill", color: Theme.accent,
+              title: "Your secrets, locked down", body: "Passwords, cards, notes — all sealed up tight and just for you."),
+        .init(usesAppMark: false, icon: "lock.rectangle.stack.fill", color: Theme.color(token: "teal"),
+              title: "Passwords, but make them strong", body: "One tap and boom — a password no one is guessing. Ever."),
+        .init(usesAppMark: false, icon: "key.fill", color: Theme.color(token: "purple"),
+              title: "Breeze through sign-ins", body: "Autofill swoops in so you can skip the typing and get on with it."),
+    ]
+
+    private var intro: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Button("Skip") { step = .credentials }.font(Theme.text(15, .medium)).foregroundStyle(Theme.label)
+            }
+            .padding(.horizontal, 24).padding(.top, 8)
+
+            TabView(selection: $slide) {
+                ForEach(Array(slides.enumerated()), id: \.offset) { idx, s in
+                    VStack(spacing: 22) {
+                        Spacer()
+                        if s.usesAppMark { AppMark(size: 104) }
+                        else { GlossyIcon(symbol: s.icon, color: s.color, size: 104) }
+                        Text(s.title).font(Theme.display(28, .semibold)).tracking(-0.3)
+                            .foregroundStyle(Theme.primaryLabel).multilineTextAlignment(.center)
+                        Text(s.body).font(Theme.text(15)).foregroundStyle(Theme.label)
+                            .multilineTextAlignment(.center).lineSpacing(3).padding(.horizontal, 20)
+                        Spacer(); Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .tag(idx)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+
+            dots.padding(.bottom, 24)
 
             VStack(spacing: 12) {
                 Button {
-                    step = .credentials
+                    if slide < slides.count - 1 { withAnimation { slide += 1 } } else { step = .credentials }
                 } label: {
-                    Text("Create Your Account").frame(maxWidth: .infinity)
+                    Text(slide < slides.count - 1 ? "Next" : "Get Started")
+                        .font(Theme.text(16, .bold)).frame(maxWidth: .infinity)
                 }
-                .buttonStyle(HeroPrimaryButton())
+                .buttonStyle(PrimaryPill())
 
                 if SyncController.hasCloudKitEntitlement {
                     Button("Sign in to an existing account") { step = .signIn }
-                        .font(.callout.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .padding(.top, 4)
+                        .font(Theme.text(15, .medium)).foregroundStyle(Theme.accent)
                 }
             }
-            .padding(.top, 12)
-            Spacer(minLength: 20)
+            .padding(.horizontal, 24).padding(.bottom, 24)
         }
+    }
+
+    private var dots: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<slides.count, id: \.self) { i in
+                Capsule().fill(i == slide ? Theme.accent : Theme.label.opacity(0.4))
+                    .frame(width: i == slide ? 20 : 6, height: 6)
+            }
+        }
+    }
+
+    // MARK: Form scaffold
+
+    private func formScreen<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        ScrollView {
+            content().padding(20).frame(maxWidth: .infinity)
+        }
+        .scrollDismissesKeyboard(.interactively)
     }
 
     // MARK: Create account
@@ -90,30 +125,22 @@ struct IOSOnboardingView: View {
     private var credentials: some View {
         OnboardingCard(title: "Create your account",
                        subtitle: "Your account password protects everything. Make it long and memorable — it can never be recovered if forgotten.") {
-            TextField("Email", text: $email, prompt: Text("you@example.com"))
-                .textContentType(.username)
-                .keyboardType(.emailAddress)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Divider()
-            SecureField("Account Password", text: $password, prompt: Text("Account password"))
-                .textContentType(.newPassword)
+            field { TextField("Email", text: $email, prompt: Text("you@example.com"))
+                .textContentType(.username).keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never).autocorrectionDisabled() }
+            field { SecureField("Account Password", text: $password, prompt: Text("Account password"))
+                .textContentType(.newPassword) }
             if !password.isEmpty { StrengthBar(score: passwordScore) }
-            Divider()
-            SecureField("Confirm Password", text: $confirmPassword, prompt: Text("Confirm password"))
-                .textContentType(.newPassword)
-
+            field { SecureField("Confirm Password", text: $confirmPassword, prompt: Text("Confirm password"))
+                .textContentType(.newPassword) }
             errorText
-
             HStack {
-                Button("Back") { step = .welcome }.tint(.secondary)
+                Button("Back") { step = .welcome }.foregroundStyle(Theme.label)
                 Spacer()
                 Button(action: create) {
-                    if isWorking { ProgressView() } else { Text("Continue").bold() }
+                    if isWorking { ProgressView().tint(Theme.accentText) } else { Text("Continue").font(Theme.text(16, .bold)) }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.accent)
-                .disabled(!createValid || isWorking)
+                .buttonStyle(PrimaryPill()).disabled(!createValid || isWorking)
             }
         }
     }
@@ -121,17 +148,12 @@ struct IOSOnboardingView: View {
     private func create() {
         errorMessage = nil
         guard passwordScore >= .fair else {
-            errorMessage = "That password is too weak to protect a vault. Add more words or characters."
-            return
+            errorMessage = "That password is too weak to protect a vault. Add more words or characters."; return
         }
         isWorking = true
         Task {
-            do {
-                result = try await core.createAccount(email: email, password: password)
-                step = .secretKey
-            } catch {
-                errorMessage = "Account creation failed: \(error.localizedDescription)"
-            }
+            do { result = try await core.createAccount(email: email, password: password); step = .secretKey }
+            catch { errorMessage = "Account creation failed: \(error.localizedDescription)" }
             isWorking = false
         }
     }
@@ -142,43 +164,25 @@ struct IOSOnboardingView: View {
         OnboardingCard(title: "Your Secret Key",
                        subtitle: "This key encrypts your data together with your password. It's kept in this iPhone's Keychain — save it somewhere safe in case you set up a new device.") {
             if let result {
-                Text(result.secretKey.formatted)
-                    .font(Theme.mono(15, .semibold))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
-                    .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
-
+                Text(result.secretKey.formatted).font(Theme.mono(15, .semibold)).textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                    .background(Theme.surfaceHigh, in: RoundedRectangle(cornerRadius: Theme.rInput))
                 HStack(spacing: 12) {
-                    Button {
-                        UIPasteboard.general.string = result.secretKey.formatted
-                    } label: {
+                    Button { UIPasteboard.general.string = result.secretKey.formatted } label: {
                         Label("Copy", systemImage: "doc.on.doc")
                     }
-                    ShareLink(item: result.secretKey.formatted) {
-                        Label("Share", systemImage: "square.and.arrow.up")
-                    }
+                    ShareLink(item: result.secretKey.formatted) { Label("Share", systemImage: "square.and.arrow.up") }
                 }
-                .font(.callout)
+                .font(Theme.text(14, .medium)).tint(Theme.accent)
             }
-
             Toggle("I've saved my Secret Key somewhere safe", isOn: $savedKitConfirmed)
-                .tint(Theme.accent)
-                .font(.callout)
-
+                .tint(Theme.accent).font(Theme.text(14))
             HStack {
                 Spacer()
                 Button("Continue") {
-                    if BiometricUnlock.isAvailable {
-                        step = .faceID
-                    } else {
-                        core.finishOnboarding()
-                    }
+                    if BiometricUnlock.isAvailable { step = .faceID } else { core.finishOnboarding() }
                 }
-                .bold()
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.accent)
-                .disabled(!savedKitConfirmed)
+                .font(Theme.text(16, .bold)).buttonStyle(PrimaryPill()).disabled(!savedKitConfirmed)
             }
         }
     }
@@ -188,79 +192,59 @@ struct IOSOnboardingView: View {
     private var faceIDStep: some View {
         OnboardingCard(title: "", subtitle: "") {
             VStack(spacing: 14) {
-                Image(systemName: "faceid")
-                    .font(.system(size: 52))
-                    .foregroundStyle(Theme.accent)
-                Text("Unlock with Face ID")
-                    .font(.title2.bold())
+                GlossyIcon(symbol: "faceid", color: Theme.accent, size: 64)
+                Text("Unlock with Face ID").font(Theme.title(20, .semibold)).foregroundStyle(Theme.primaryLabel)
                 Text("Use Face ID to unlock Passwards quickly. Your account password is still required from time to time.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                    .font(Theme.text(14)).foregroundStyle(Theme.label).multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
-
             HStack {
-                Button("Not Now") { core.finishOnboarding() }.tint(.secondary)
+                Button("Not Now") { core.finishOnboarding() }.foregroundStyle(Theme.label)
                 Spacer()
                 Button("Enable Face ID") {
                     Task {
-                        if let masterKey = await core.keyStore.masterKey {
-                            try? BiometricUnlock.enroll(masterKey: masterKey)
-                        }
+                        if let masterKey = await core.keyStore.masterKey { try? BiometricUnlock.enroll(masterKey: masterKey) }
                         core.finishOnboarding()
                     }
                 }
-                .bold()
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.accent)
+                .font(Theme.text(16, .bold)).buttonStyle(PrimaryPill())
             }
         }
     }
 
-    // MARK: Sign in to existing
+    // MARK: Sign in
 
     private var signIn: some View {
         OnboardingCard(title: "Sign in",
                        subtitle: "Your vault will be downloaded from iCloud. You need the account password and the Secret Key from your Emergency Kit.") {
-            SecureField("Account Password", text: $password, prompt: Text("Account password"))
-                .textContentType(.password)
-            Divider()
-            // Wrap (axis: .vertical) so the WHOLE key is visible — a single-line
-            // field scrolls the leading "A3-…" off the left edge, hiding mistakes.
-            TextField("Secret Key", text: $signInSecretKey, prompt: Text("A3-XXXXXX-XXXXXX-XXXXX-XXXXX-XXXXX-XXXXX"), axis: .vertical)
-                .font(.callout.monospaced())
-                .textInputAutocapitalization(.characters)
-                .autocorrectionDisabled()
-                .lineLimit(2...4)
+            field { SecureField("Account Password", text: $password, prompt: Text("Account password"))
+                .textContentType(.password) }
+            field {
+                TextField("Secret Key", text: $signInSecretKey,
+                          prompt: Text("A3-XXXXXX-XXXXXX-XXXXX-XXXXX-XXXXX-XXXXX"), axis: .vertical)
+                    .font(Theme.mono(14)).textInputAutocapitalization(.characters).autocorrectionDisabled().lineLimit(2...4)
+            }
             Text("Your Secret Key starts with “A3-” and has 7 groups.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-
+                .font(Theme.text(12)).foregroundStyle(Theme.label)
             errorText
-
             HStack {
-                Button("Back") { step = .welcome }.tint(.secondary)
+                Button("Back") { step = .welcome }.foregroundStyle(Theme.label)
                 Spacer()
                 Button(action: performSignIn) {
-                    if isWorking { ProgressView() } else { Text("Sign In").bold() }
+                    if isWorking { ProgressView().tint(Theme.accentText) } else { Text("Sign In").font(Theme.text(16, .bold)) }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.accent)
-                .disabled(password.isEmpty || signInSecretKey.isEmpty || isWorking)
+                .buttonStyle(PrimaryPill()).disabled(password.isEmpty || signInSecretKey.isEmpty || isWorking)
             }
         }
     }
 
     private func performSignIn() {
-        isWorking = true
-        errorMessage = nil
+        isWorking = true; errorMessage = nil
         Task {
             do {
                 guard let remote = try await SyncController.fetchRemoteAccount() else {
                     errorMessage = "No Passwards account was found in this iCloud account. Make sure this device is signed into the same iCloud account as your Mac."
-                    isWorking = false
-                    return
+                    isWorking = false; return
                 }
                 try await core.signInToExistingAccount(remote: remote, password: password, typedSecretKey: signInSecretKey)
             } catch AccountController.UnlockError.invalidSecretKeyFormat {
@@ -270,7 +254,7 @@ struct IOSOnboardingView: View {
             } catch let ck as CKError {
                 switch ck.code {
                 case .notAuthenticated, .accountTemporarilyUnavailable:
-                    errorMessage = "iCloud isn't available to Passwards. In Settings, sign into iCloud with the same Apple ID as your Mac and turn on iCloud Drive, then try again. (On the Simulator, sign in via Settings → Sign in to your iPhone.)"
+                    errorMessage = "iCloud isn't available to Passwards. In Settings, sign into iCloud with the same Apple ID as your Mac and turn on iCloud Drive, then try again."
                 case .networkUnavailable, .networkFailure, .serviceUnavailable:
                     errorMessage = "Couldn't reach iCloud. Check your internet connection and try again."
                 default:
@@ -283,14 +267,22 @@ struct IOSOnboardingView: View {
         }
     }
 
+    // MARK: Helpers
+
+    private func field<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        content()
+            .font(Theme.text(16)).padding(.horizontal, 14).padding(.vertical, 12)
+            .background(Theme.surfaceHigh, in: RoundedRectangle(cornerRadius: Theme.rInput, style: .continuous))
+    }
+
     @ViewBuilder private var errorText: some View {
         if let errorMessage {
-            Text(errorMessage).font(.callout).foregroundStyle(.red)
+            Text(errorMessage).font(Theme.text(14)).foregroundStyle(Theme.danger)
         }
     }
 }
 
-/// A white card on the hero gradient, holding an onboarding step's content.
+/// A surface card holding an onboarding step's content.
 private struct OnboardingCard<Content: View>: View {
     let title: String
     let subtitle: String
@@ -298,30 +290,28 @@ private struct OnboardingCard<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if !title.isEmpty {
-                Text(title).font(Theme.title(22, .bold))
-            }
-            if !subtitle.isEmpty {
-                Text(subtitle).font(Theme.text(15)).foregroundStyle(.secondary)
-            }
+            if !title.isEmpty { Text(title).font(Theme.title(24, .semibold)).foregroundStyle(Theme.primaryLabel) }
+            if !subtitle.isEmpty { Text(subtitle).font(Theme.text(14.5)).foregroundStyle(Theme.label) }
             content
         }
         .padding(22)
         .frame(maxWidth: 460)
-        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 18))
-        .shadow(color: .black.opacity(0.25), radius: 20, y: 8)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.rCard, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Theme.rCard, style: .continuous).strokeBorder(Theme.cardBorder, lineWidth: 1))
+        .shadow(color: .black.opacity(0.08), radius: 18, y: 8)
         .padding(.top, 40)
     }
 }
 
-/// Big white pill button for the hero (welcome) screen.
-private struct HeroPrimaryButton: ButtonStyle {
+/// Full-width accent pill button.
+struct PrimaryPill: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
-            .foregroundStyle(Theme.accentDeep)
-            .padding(.vertical, 14)
-            .background(.white, in: Capsule())
+            .foregroundStyle(Theme.accentText)
+            .padding(.vertical, 15).padding(.horizontal, 22)
+            .background(Theme.accent, in: Capsule())
             .opacity(configuration.isPressed ? 0.85 : 1)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(.snappy(duration: 0.15), value: configuration.isPressed)
     }
 }

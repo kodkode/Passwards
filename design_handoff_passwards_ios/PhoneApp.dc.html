@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fredoka:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600;700&family=Instrument+Sans:wght@400;500;600;700&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@keyframes pw-toast-in { from { opacity:0; transform:translate(-50%, 10px); } to { opacity:1; transform:translate(-50%, 0); } }
+@keyframes pw-scan-pulse { 0%, 100% { transform:scale(1); } 50% { transform:scale(1.08); } }
+@keyframes pw-shake { 0%, 100% { transform:translateX(0); } 20% { transform:translateX(-8px); } 40% { transform:translateX(8px); } 60% { transform:translateX(-6px); } 80% { transform:translateX(6px); } }
+</style>
+</helmet>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ isDark }}" hint-size="402,874">
+<div style="position:relative;height:100%;width:100%;overflow:hidden;font-family:{{ fontBody }};{{ st.bg }}{{ st.text }}">
+
+  <div style="position:absolute;inset:0;overflow-y:auto;padding:64px 0 110px;box-sizing:border-box;">
+
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+    <div style="padding:0 20px 8px;display:flex;flex-direction:column;gap:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div onClick="{{ openSettings }}" style="display:flex;align-items:center;gap:7px;cursor:pointer;">
+          <div style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;{{ st.avatar }}">AR</div>
+          <svg width="10" height="7" viewBox="0 0 11 7" fill="none"><path d="M1 1l4.5 4.5L10 1" stroke="{{ colors.textMuted }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </div>
+        <div onClick="{{ openAdd }}" style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ st.surfaceAlt }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line><line x1="5" y1="12" x2="19" y2="12" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line></svg>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:{{ fontHead }};font-weight:{{ weightHead }};font-size:30px;letter-spacing:-0.5px;line-height:1.15;{{ st.text }}">{{ greeting }}</div>
+        <div style="font-size:14.5px;margin-top:3px;{{ st.muted }}">{{ sub }}</div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 17px;border-radius:{{ rCard }}px;{{ st.card }}">
+        <div style="font-size:14.5px;font-weight:600;{{ st.text }}">{{ nudge }}</div>
+        <div style="padding:6px 12px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;{{ st.accentBg }}{{ st.onAccent }}">1 step</div>
+      </div>
+      <div style="position:relative;overflow:hidden;padding:20px;border-radius:{{ rCard }}px;{{ st.accentBg }}">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" style="opacity:0.85;"><circle cx="12" cy="12" r="8" stroke="white" stroke-width="2"></circle><ellipse cx="12" cy="12" rx="3.2" ry="8" stroke="white" stroke-width="2"></ellipse><line x1="4" y1="12" x2="20" y2="12" stroke="white" stroke-width="2"></line></svg>
+        <div style="font-family:{{ fontHead }};font-weight:{{ weightHead }};font-size:18px;margin-top:12px;color:white;">{{ promoTitle }}</div>
+        <div style="font-size:13px;margin-top:6px;color:rgba(255,255,255,0.85);line-height:1.42;">{{ promoBody }}</div>
+      </div>
+      <div>
+        <div onClick="{{ toggleFav }}" style="display:flex;align-items:center;justify-content:space-between;padding:2px 2px 10px;cursor:pointer;">
+          <div style="font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;{{ st.muted }}">Favorites</div>
+          <svg width="10" height="7" viewBox="0 0 11 7" fill="none" style="transition:transform 0.2s;transform:{{ favArrow }};"><path d="M1 1l4.5 4.5L10 1" stroke="{{ colors.textMuted }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </div>
+        <sc-if value="{{ favOpen }}" hint-placeholder-val="{{ true }}">
+          <div style="border-radius:{{ rCard }}px;overflow:hidden;{{ st.card }}">
+            <sc-for list="{{ favItems }}" as="it" hint-placeholder-count="3">
+              <div onClick="{{ it.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;{{ it.rowBorder }}">
+                <div style="width:38px;height:38px;border-radius:11px;background:{{ it.color }};color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;">{{ it.letter }}</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:15px;font-weight:600;{{ st.text }}">{{ it.name }}</div>
+                  <div style="font-size:12.5px;margin-top:1px;{{ st.muted }}">{{ it.sub }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <div>
+        <div onClick="{{ toggleRecent }}" style="display:flex;align-items:center;justify-content:space-between;padding:2px 2px 10px;cursor:pointer;">
+          <div style="font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;{{ st.muted }}">Recently Created</div>
+          <svg width="10" height="7" viewBox="0 0 11 7" fill="none" style="transition:transform 0.2s;transform:{{ recentArrow }};"><path d="M1 1l4.5 4.5L10 1" stroke="{{ colors.textMuted }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </div>
+        <sc-if value="{{ recentOpen }}" hint-placeholder-val="{{ true }}">
+          <div style="border-radius:{{ rCard }}px;overflow:hidden;{{ st.card }}">
+            <sc-for list="{{ recentItems }}" as="it" hint-placeholder-count="3">
+              <div onClick="{{ it.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;{{ it.rowBorder }}">
+                <div style="width:38px;height:38px;border-radius:11px;background:{{ it.color }};color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;">{{ it.letter }}</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:15px;font-weight:600;{{ st.text }}">{{ it.name }}</div>
+                  <div style="font-size:12.5px;margin-top:1px;{{ st.muted }}">{{ it.sub }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isItems }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:0 20px 8px;display:flex;flex-direction:column;gap:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div onClick="{{ openSettings }}" style="display:flex;align-items:center;gap:7px;cursor:pointer;">
+          <div style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;{{ st.avatar }}">AR</div>
+          <svg width="10" height="7" viewBox="0 0 11 7" fill="none"><path d="M1 1l4.5 4.5L10 1" stroke="{{ colors.textMuted }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </div>
+        <div onClick="{{ openAdd }}" style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ st.surfaceAlt }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line><line x1="5" y1="12" x2="19" y2="12" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line></svg>
+        </div>
+      </div>
+      <div style="font-family:{{ fontHead }};font-weight:{{ weightHead }};font-size:30px;letter-spacing:-0.5px;{{ st.text }}">{{ itemsTitle }}</div>
+      <div onClick="{{ openAllItems }}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:{{ rCard }}px;cursor:pointer;{{ st.card }}" style-active="opacity:0.6;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="4" rx="1.5" stroke="{{ colors.text }}" stroke-width="1.8"></rect><rect x="3" y="14" width="18" height="4" rx="1.5" stroke="{{ colors.text }}" stroke-width="1.8"></rect></svg>
+        <div style="flex:1;font-size:15px;font-weight:600;{{ st.text }}">All Items</div>
+        <svg width="7" height="12" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke="{{ colors.textMuted }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:2px 2px 10px;{{ st.muted }}">Vaults</div>
+        <div style="border-radius:{{ rCard }}px;overflow:hidden;{{ st.card }}">
+          <sc-for list="{{ vaults }}" as="v" hint-placeholder-count="2">
+            <div onClick="{{ v.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;{{ v.rowBorder }}" style-active="opacity:0.6;">
+              <dc-import name="GlossyIcon" glyph="{{ v.glyph }}" bg="{{ v.color }}" variant="{{ variant }}" size="32" hint-size="32,32"></dc-import>
+              <div style="flex:1;font-size:15px;font-weight:600;{{ st.text }}">{{ v.name }}</div>
+              <svg width="7" height="12" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke="{{ colors.textMuted }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:2px 2px 10px;{{ st.muted }}">Categories</div>
+        <div style="border-radius:{{ rCard }}px;overflow:hidden;{{ st.card }}">
+          <sc-for list="{{ categories }}" as="cat" hint-placeholder-count="5">
+            <div onClick="{{ cat.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;{{ cat.rowBorder }}" style-active="opacity:0.6;">
+              <dc-import name="GlossyIcon" glyph="{{ cat.glyph }}" bg="{{ cat.color }}" variant="{{ variant }}" size="32" hint-size="32,32"></dc-import>
+              <div style="flex:1;font-size:15px;font-weight:600;{{ st.text }}">{{ cat.label }}</div>
+              <svg width="7" height="12" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke="{{ colors.textMuted }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isSentinel }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:0 20px 8px;display:flex;flex-direction:column;gap:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div onClick="{{ openSettings }}" style="display:flex;align-items:center;gap:7px;cursor:pointer;">
+          <div style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;{{ st.avatar }}">AR</div>
+          <svg width="10" height="7" viewBox="0 0 11 7" fill="none"><path d="M1 1l4.5 4.5L10 1" stroke="{{ colors.textMuted }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </div>
+        <div onClick="{{ openAdd }}" style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ st.surfaceAlt }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line><line x1="5" y1="12" x2="19" y2="12" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line></svg>
+        </div>
+      </div>
+      <div style="font-family:{{ fontHead }};font-weight:{{ weightHead }};font-size:30px;letter-spacing:-0.5px;{{ st.text }}">{{ sentinelTitle }}</div>
+      <div style="display:flex;flex-direction:column;align-items:center;padding:6px 0 0;">
+        <div style="position:relative;width:240px;height:172px;" data-om-raster="">
+          <svg width="240" height="172" viewBox="0 0 240 172" fill="none">
+            <defs>
+              <linearGradient id="sentinelGauge" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#2FB84B"></stop>
+                <stop offset="0.5" stop-color="#28C0BC"></stop>
+                <stop offset="1" stop-color="#3B9EFF"></stop>
+              </linearGradient>
+            </defs>
+            <path d="{{ gaugePath }}" fill="none" stroke="url(#sentinelGauge)" stroke-width="22" stroke-linecap="round"></path>
+            <sc-for list="{{ gaugeTicks }}" as="tk" hint-placeholder-count="12">
+              <line x1="{{ tk.x1 }}" y1="{{ tk.y1 }}" x2="{{ tk.x2 }}" y2="{{ tk.y2 }}" stroke="{{ gaugeBg }}" stroke-width="{{ tk.w }}" stroke-linecap="round"></line>
+            </sc-for>
+            <polygon points="{{ gaugePointer }}" fill="{{ gaugePointerFill }}"></polygon>
+          </svg>
+          <div style="position:absolute;top:56px;left:0;right:0;display:flex;flex-direction:column;align-items:center;">
+            <div style="font-family:{{ fontNum }};font-weight:700;font-size:48px;line-height:1;{{ st.text }}">{{ score }}</div>
+            <div style="font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.9px;margin-top:6px;{{ st.muted }}">{{ scoreLabel }}</div>
+          </div>
+        </div>
+      </div>
+      <div onClick="{{ shareScore }}" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:999px;cursor:pointer;{{ st.card }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12M8 7l4-4 4 4M5 15v3a2 2 0 002 2h10a2 2 0 002-2v-3" stroke="{{ colors.text }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <div style="font-size:14.5px;font-weight:600;{{ st.text }}">Share My Score</div>
+      </div>
+      <div style="font-size:13.5px;line-height:1.5;{{ st.muted }}">{{ scoreBody }}</div>
+      <div style="padding:16px 17px;border-radius:{{ rCard }}px;{{ st.card }}">
+        <div style="font-size:14.5px;font-weight:700;margin-bottom:10px;{{ st.text }}">Overall Password Strength</div>
+        <div style="height:9px;border-radius:999px;background:linear-gradient(90deg, oklch(68% 0.15 150), oklch(80% 0.16 92), oklch(60% 0.19 25));"></div>
+      </div>
+      <sc-for list="{{ alerts }}" as="al" hint-placeholder-count="2">
+        <div style="padding:16px 17px;border-radius:{{ rCard }}px;{{ st.card }}">
+          <div style="font-size:14.5px;font-weight:700;margin-bottom:6px;{{ st.text }}">{{ al.title }}</div>
+          <div style="font-size:13px;line-height:1.5;{{ st.muted }}">{{ al.body }}</div>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isSearch }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:0 20px 8px;display:flex;flex-direction:column;gap:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div onClick="{{ openSettings }}" style="display:flex;align-items:center;gap:7px;cursor:pointer;">
+          <div style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;{{ st.avatar }}">AR</div>
+          <svg width="10" height="7" viewBox="0 0 11 7" fill="none"><path d="M1 1l4.5 4.5L10 1" stroke="{{ colors.textMuted }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </div>
+        <div onClick="{{ openAdd }}" style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ st.surfaceAlt }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line><line x1="5" y1="12" x2="19" y2="12" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line></svg>
+        </div>
+      </div>
+      <div style="font-family:{{ fontHead }};font-weight:{{ weightHead }};font-size:30px;letter-spacing:-0.5px;{{ st.text }}">{{ searchTitle }}</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:14px;{{ st.inputCard }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="{{ colors.textMuted }}" stroke-width="2"></circle><line x1="21" y1="21" x2="16.5" y2="16.5" stroke="{{ colors.textMuted }}" stroke-width="2" stroke-linecap="round"></line></svg>
+        <input value="{{ search }}" onChange="{{ setSearch }}" placeholder="Search your items" style="flex:1;border:none;outline:none;background:transparent;padding:0;margin:0;font-size:15.5px;{{ st.text }}" />
+      </div>
+      <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+        <div style="border-radius:{{ rCard }}px;overflow:hidden;{{ st.card }}">
+          <sc-for list="{{ searchResults }}" as="it" hint-placeholder-count="3">
+            <div onClick="{{ it.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;{{ it.rowBorder }}">
+              <div style="width:38px;height:38px;border-radius:11px;background:{{ it.color }};color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;">{{ it.letter }}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:15px;font-weight:600;{{ st.text }}">{{ it.name }}</div>
+                <div style="font-size:12.5px;margin-top:1px;{{ st.muted }}">{{ it.sub }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;padding:30px 10px;font-size:14px;{{ st.muted }}">No items match your search</div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+  </div>
+
+  <div style="position:absolute;left:18px;right:18px;bottom:14px;z-index:3;display:flex;padding:8px;border-radius:26px;backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);{{ st.glass }}">
+    <div onClick="{{ goHome }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border-radius:18px;cursor:pointer;background:{{ homePillBg }};" style-active="transform:scale(0.92);">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M4 11l8-7 8 7v8a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 19v-8z" stroke="{{ homeColor }}" stroke-width="2" stroke-linejoin="round"></path></svg>
+      <div style="font-size:10.5px;font-weight:700;color:{{ homeColor }};">Home</div>
+    </div>
+    <div onClick="{{ goItems }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border-radius:18px;cursor:pointer;background:{{ itemsPillBg }};" style-active="transform:scale(0.92);">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="6" rx="1.6" stroke="{{ itemsColor }}" stroke-width="2"></rect><rect x="3.5" y="13" width="17" height="6" rx="1.6" stroke="{{ itemsColor }}" stroke-width="2"></rect></svg>
+      <div style="font-size:10.5px;font-weight:700;color:{{ itemsColor }};">Items</div>
+    </div>
+    <div onClick="{{ goSentinel }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border-radius:18px;cursor:pointer;background:{{ sentinelPillBg }};" style-active="transform:scale(0.92);">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M12 3L18.5 5.8V11C18.5 15.8 15.8 19 12 20.6C8.2 19 5.5 15.8 5.5 11V5.8Z" stroke="{{ sentinelColor }}" stroke-width="2" stroke-linejoin="round"></path></svg>
+      <div style="font-size:10.5px;font-weight:700;color:{{ sentinelColor }};">{{ sentinelTitle }}</div>
+    </div>
+    <div onClick="{{ goSearch }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border-radius:18px;cursor:pointer;background:{{ searchPillBg }};" style-active="transform:scale(0.92);">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="{{ searchColor }}" stroke-width="2"></circle><line x1="21" y1="21" x2="16.5" y2="16.5" stroke="{{ searchColor }}" stroke-width="2" stroke-linecap="round"></line></svg>
+      <div style="font-size:10.5px;font-weight:700;color:{{ searchColor }};">Search</div>
+    </div>
+  </div>
+
+  <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;z-index:4;background:rgba(0,0,0,0.45);opacity:{{ backdropOpacity }};pointer-events:{{ backdropEvents }};transition:opacity 0.3s;"></div>
+
+  <div style="position:absolute;left:0;right:0;top:54px;bottom:0;z-index:5;border-radius:34px 34px 0 0;overflow:hidden;display:flex;flex-direction:column;transition:transform 0.35s cubic-bezier(.2,.9,.25,1);transform:translateY({{ addY }});{{ st.card }}">
+    <div style="display:flex;justify-content:center;padding:9px 0 4px;"><div style="width:36px;height:5px;border-radius:99px;background:rgba(128,128,128,0.4);"></div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 14px;">
+      <div style="width:34px;"></div>
+      <div style="font-size:16px;font-weight:700;{{ st.text }}">Add Item</div>
+      <div onClick="{{ closeSheet }}" style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ st.surfaceAlt }}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><line x1="5" y1="5" x2="19" y2="19" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line><line x1="19" y1="5" x2="5" y2="19" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line></svg>
+      </div>
+    </div>
+    <div style="padding:0 20px 14px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:11px 15px;border-radius:14px;{{ st.inputCard }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="{{ colors.textMuted }}" stroke-width="2"></circle><line x1="21" y1="21" x2="16.5" y2="16.5" stroke="{{ colors.textMuted }}" stroke-width="2" stroke-linecap="round"></line></svg>
+        <input value="{{ addQuery }}" onChange="{{ setAddQuery }}" placeholder="{{ addPlaceholder }}" style="flex:1;border:none;outline:none;background:transparent;padding:0;margin:0;font-size:15px;{{ st.text }}" />
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:0 20px 30px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <sc-for list="{{ itemTypesFiltered }}" as="t" hint-placeholder-count="6">
+          <div onClick="{{ t.select }}" style="display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:{{ rCard }}px;cursor:pointer;{{ st.inputCard }}" style-active="transform:scale(0.96);">
+            <dc-import name="GlossyIcon" glyph="{{ t.glyph }}" bg="{{ t.color }}" variant="{{ variant }}" size="38" hint-size="38,38"></dc-import>
+            <div style="font-size:14px;font-weight:700;{{ st.text }}">{{ t.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;top:54px;bottom:0;z-index:5;border-radius:34px 34px 0 0;overflow:hidden;display:flex;flex-direction:column;transition:transform 0.35s cubic-bezier(.2,.9,.25,1);transform:translateY({{ editorY }});{{ st.card }}">
+    <div style="display:flex;justify-content:center;padding:9px 0 4px;"><div style="width:36px;height:5px;border-radius:99px;background:rgba(128,128,128,0.4);"></div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 14px;">
+      <div onClick="{{ cancelEditor }}" style="font-size:15.5px;cursor:pointer;{{ st.muted }}">Cancel</div>
+      <div style="font-size:16px;font-weight:700;{{ st.text }}">{{ editorHeaderTitle }}</div>
+      <div onClick="{{ saveItem }}" style="font-size:15.5px;font-weight:700;cursor:pointer;opacity:{{ saveOpacity }};{{ st.accentColor }}">Save</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:6px 20px 30px;display:flex;flex-direction:column;gap:16px;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <dc-import name="GlossyIcon" glyph="{{ tfGlyph }}" bg="{{ tfColor }}" variant="{{ variant }}" size="46" hint-size="46,46"></dc-import>
+        <input value="{{ editorTitle }}" onChange="{{ setEditorTitle }}" placeholder="Enter a title" style="flex:1;border:none;outline:none;padding:13px 15px;margin:0;border-radius:14px;font-size:16px;font-weight:600;{{ st.inputCard }}{{ st.text }}" />
+      </div>
+      <div style="border-radius:14px;overflow:hidden;{{ st.inputCard }}">
+        <div style="padding:11px 15px;{{ st.f1Border }}">
+          <div style="font-size:12px;font-weight:600;margin-bottom:3px;{{ st.accentColor }}">{{ tfF1 }}</div>
+          <input value="{{ editorF1 }}" onChange="{{ setEditorF1 }}" placeholder="{{ tfF1p }}" style="width:100%;border:none;outline:none;background:transparent;padding:0;margin:0;font-size:15.5px;{{ st.text }}" />
+        </div>
+        <sc-if value="{{ tfHasF2 }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:11px 15px;display:flex;align-items:center;gap:10px;{{ st.f2Border }}">
+            <div style="flex:1;">
+              <div style="font-size:12px;font-weight:600;margin-bottom:3px;{{ st.accentColor }}">{{ tfF2 }}</div>
+              <input value="{{ editorF2 }}" onChange="{{ setEditorF2 }}" placeholder="{{ tfF2p }}" type="{{ f2InputType }}" style="width:100%;border:none;outline:none;background:transparent;padding:0;margin:0;font-size:15.5px;{{ st.text }}" />
+            </div>
+            <sc-if value="{{ tfF2secret }}" hint-placeholder-val="{{ true }}">
+              <div onClick="{{ togglePwVisible }}" style="cursor:pointer;padding:4px;{{ st.muted }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" stroke="currentColor" stroke-width="1.8"></path><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"></circle></svg>
+              </div>
+              <div onClick="{{ generateF2 }}" style="cursor:pointer;padding:4px;{{ st.accentColor }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 4v6h6M20 20v-6h-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path><path d="M4.5 15a8 8 0 0014.5 3.5M19.5 9A8 8 0 005 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ tfHasF3 }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:11px 15px;">
+            <div style="font-size:12px;font-weight:600;margin-bottom:3px;{{ st.accentColor }}">{{ tfF3 }}</div>
+            <input value="{{ editorF3 }}" onChange="{{ setEditorF3 }}" placeholder="{{ tfF3p }}" style="width:100%;border:none;outline:none;background:transparent;padding:0;margin:0;font-size:15.5px;{{ st.text }}" />
+          </div>
+        </sc-if>
+        <sc-if value="{{ tfIsNote }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:11px 15px;">
+            <textarea value="{{ editorNotes }}" onChange="{{ setEditorNotes }}" placeholder="Start typing…" style="width:100%;min-height:120px;border:none;outline:none;background:transparent;padding:0;margin:0;font-size:15.5px;resize:none;font-family:inherit;{{ st.text }}"></textarea>
+          </div>
+        </sc-if>
+      </div>
+      <sc-if value="{{ pwStrengthShown }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:8px;padding:0 2px;">
+          <div style="display:flex;gap:5px;">
+            <sc-for list="{{ pwBars }}" as="b" hint-placeholder-count="4">
+              <div style="flex:1;height:5px;border-radius:99px;background:{{ b.bg }};transition:background 0.2s;"></div>
+            </sc-for>
+          </div>
+          <div style="font-size:12.5px;font-weight:700;color:{{ pwColor }};">{{ pwLabel }}</div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;top:54px;bottom:0;z-index:5;border-radius:34px 34px 0 0;overflow:hidden;display:flex;flex-direction:column;transition:transform 0.35s cubic-bezier(.2,.9,.25,1);transform:translateY({{ settingsY }});{{ st.card }}">
+    <div style="display:flex;justify-content:center;padding:9px 0 4px;"><div style="width:36px;height:5px;border-radius:99px;background:rgba(128,128,128,0.4);"></div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 14px;">
+      <div style="width:44px;"></div>
+      <div style="font-size:16px;font-weight:700;{{ st.text }}">Settings</div>
+      <div onClick="{{ closeSheet }}" style="font-size:15.5px;font-weight:700;cursor:pointer;{{ st.accentColor }}">Done</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:6px 20px 30px;display:flex;flex-direction:column;gap:22px;">
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:{{ rCard }}px;{{ st.inputCard }}">
+        <div style="width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;{{ st.avatar }}">AR</div>
+        <div style="flex:1;">
+          <div style="font-size:15.5px;font-weight:700;{{ st.text }}">Alex Rivera</div>
+          <div style="font-size:12.5px;margin-top:1px;{{ st.muted }}">alex.rivera@mail.com</div>
+        </div>
+        <svg width="7" height="12" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke="{{ colors.textMuted }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;{{ st.muted }}">Appearance</div>
+        <div style="display:flex;padding:4px;border-radius:14px;gap:4px;{{ st.inputCard }}">
+          <div onClick="{{ setLight }}" style="flex:1;text-align:center;padding:9px 0;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:{{ lightSegBg }};color:{{ lightSegColor }};">Light</div>
+          <div onClick="{{ setDark }}" style="flex:1;text-align:center;padding:9px 0;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:{{ darkSegBg }};color:{{ darkSegColor }};">Dark</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;{{ st.muted }}">Security</div>
+        <div style="border-radius:{{ rCard }}px;overflow:hidden;{{ st.inputCard }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid {{ colors.border }};">
+            <div style="font-size:15px;font-weight:600;{{ st.text }}">Unlock with Face ID</div>
+            <div onClick="{{ toggleFaceId }}" style="width:46px;height:27px;border-radius:999px;position:relative;cursor:pointer;transition:background 0.2s;background:{{ faceIdTrackBg }};">
+              <div style="position:absolute;top:2px;left:{{ faceIdKnobX }};width:23px;height:23px;border-radius:50%;background:white;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>
+            </div>
+          </div>
+          <div onClick="{{ cycleAutoLock }}" style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;" style-active="opacity:0.6;">
+            <div style="font-size:15px;font-weight:600;{{ st.text }}">Auto-Lock</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div style="font-size:14px;{{ st.muted }}">{{ autoLockLabel }}</div>
+              <svg width="7" height="12" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke="{{ colors.textMuted }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div onClick="{{ lockNow }}" style="text-align:center;padding:14px;border-radius:{{ rCard }}px;font-size:15px;font-weight:700;cursor:pointer;{{ st.inputCard }}{{ st.text }}">Lock Now</div>
+      <div onClick="{{ signOut }}" style="text-align:center;padding:14px;border-radius:{{ rCard }}px;font-size:15px;font-weight:700;cursor:pointer;color:oklch(62% 0.19 25);{{ st.inputCard }}">Sign Out</div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;top:54px;bottom:0;z-index:5;border-radius:34px 34px 0 0;overflow:hidden;display:flex;flex-direction:column;transition:transform 0.35s cubic-bezier(.2,.9,.25,1);transform:translateY({{ detailY }});{{ st.card }}">
+    <div style="display:flex;justify-content:center;padding:9px 0 4px;"><div style="width:36px;height:5px;border-radius:99px;background:rgba(128,128,128,0.4);"></div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 14px;">
+      <div onClick="{{ closeSheet }}" style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ st.surfaceAlt }}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><line x1="5" y1="5" x2="19" y2="19" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line><line x1="19" y1="5" x2="5" y2="19" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line></svg>
+      </div>
+      <div style="font-size:16px;font-weight:700;{{ st.text }}">{{ detailTypeLabel }}</div>
+      <div onClick="{{ editFromDetail }}" style="font-size:15.5px;font-weight:700;cursor:pointer;{{ st.accentColor }}">Edit</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:6px 20px 30px;display:flex;flex-direction:column;gap:18px;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="width:46px;height:46px;border-radius:14px;background:{{ detailColor }};color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;flex-shrink:0;">{{ detailLetter }}</div>
+        <div style="font-size:19px;font-weight:700;{{ st.text }}">{{ detailName }}</div>
+      </div>
+      <sc-if value="{{ detailNotNote }}" hint-placeholder-val="{{ true }}">
+        <div style="border-radius:14px;overflow:hidden;{{ st.inputCard }}">
+          <sc-for list="{{ detailFields }}" as="fld" hint-placeholder-count="3">
+            <div style="padding:11px 15px;display:flex;align-items:center;gap:10px;{{ fld.rowBorder }}">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:600;margin-bottom:3px;{{ st.accentColor }}">{{ fld.label }}</div>
+                <div style="font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;{{ fld.valueStyle }}">{{ fld.display }}</div>
+              </div>
+              <sc-if value="{{ fld.secret }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ fld.toggle }}" style="cursor:pointer;padding:4px;{{ st.muted }}">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" stroke="currentColor" stroke-width="1.8"></path><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"></circle></svg>
+                </div>
+              </sc-if>
+              <sc-if value="{{ fld.copyable }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ fld.copy }}" style="cursor:pointer;padding:4px;{{ st.muted }}">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"></rect><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2" stroke="currentColor" stroke-width="1.8"></path></svg>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ detailIsNote }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:15px 16px;border-radius:14px;font-size:15.5px;line-height:1.55;white-space:pre-wrap;{{ st.inputCard }}{{ st.text }}">{{ detailNoteText }}</div>
+      </sc-if>
+      <div onClick="{{ deleteDetailItem }}" style="text-align:center;padding:14px;border-radius:{{ rCard }}px;font-size:15px;font-weight:700;cursor:pointer;color:oklch(62% 0.19 25);{{ st.inputCard }}">Delete</div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;top:54px;bottom:0;z-index:5;border-radius:34px 34px 0 0;overflow:hidden;display:flex;flex-direction:column;transition:transform 0.35s cubic-bezier(.2,.9,.25,1);transform:translateY({{ collectionY }});{{ st.card }}">
+    <div style="display:flex;justify-content:center;padding:9px 0 4px;"><div style="width:36px;height:5px;border-radius:99px;background:rgba(128,128,128,0.4);"></div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 14px;">
+      <div onClick="{{ closeSheet }}" style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ st.surfaceAlt }}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><line x1="5" y1="5" x2="19" y2="19" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line><line x1="19" y1="5" x2="5" y2="19" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line></svg>
+      </div>
+      <div style="font-size:16px;font-weight:700;{{ st.text }}">{{ collectionTitle }}</div>
+      <div style="width:34px;"></div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:6px 20px 30px;">
+      <sc-if value="{{ collectionEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;padding:50px 20px;">
+          <div style="font-size:15px;font-weight:600;margin-bottom:6px;{{ st.text }}">Nothing here yet</div>
+          <div style="font-size:13.5px;line-height:1.5;{{ st.muted }}">Items you save to {{ collectionTitle }} will show up here.</div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ collectionNotEmpty }}" hint-placeholder-val="{{ true }}">
+        <div style="border-radius:{{ rCard }}px;overflow:hidden;{{ st.card }}">
+          <sc-for list="{{ collectionItems }}" as="it" hint-placeholder-count="3">
+            <div onClick="{{ it.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;{{ it.rowBorder }}">
+              <div style="width:38px;height:38px;border-radius:11px;background:{{ it.color }};color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;">{{ it.letter }}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:15px;font-weight:600;{{ st.text }}">{{ it.name }}</div>
+                <div style="font-size:12.5px;margin-top:1px;{{ st.muted }}">{{ it.sub }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;top:54px;bottom:0;z-index:5;border-radius:34px 34px 0 0;overflow:hidden;display:flex;flex-direction:column;transition:transform 0.35s cubic-bezier(.2,.9,.25,1);transform:translateY({{ vaultY }});{{ st.card }}">
+    <div style="display:flex;justify-content:center;padding:9px 0 4px;"><div style="width:36px;height:5px;border-radius:99px;background:rgba(128,128,128,0.4);"></div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 14px;">
+      <div onClick="{{ closeSheet }}" style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ st.surfaceAlt }}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><line x1="5" y1="5" x2="19" y2="19" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line><line x1="19" y1="5" x2="5" y2="19" stroke="{{ colors.text }}" stroke-width="2.3" stroke-linecap="round"></line></svg>
+      </div>
+      <div style="font-size:16px;font-weight:700;{{ st.text }}">Vault</div>
+      <div style="width:34px;"></div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:6px 20px 30px;display:flex;flex-direction:column;gap:22px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:4px 0;">
+        <dc-import name="GlossyIcon" glyph="{{ vaultGlyph }}" bg="{{ vaultColor }}" variant="{{ variant }}" size="64" hint-size="64,64"></dc-import>
+        <div style="text-align:center;">
+          <div style="font-family:{{ fontHead }};font-weight:{{ weightHead }};font-size:22px;{{ st.text }}">{{ vaultName }}</div>
+          <div style="font-size:13.5px;margin-top:2px;{{ st.muted }}">{{ vaultItemCount }} items</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;{{ st.muted }}">Members</div>
+        <div style="border-radius:{{ rCard }}px;overflow:hidden;{{ st.inputCard }}">
+          <sc-for list="{{ vaultMembers }}" as="m" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;{{ m.rowBorder }}">
+              <div style="width:38px;height:38px;border-radius:50%;background:{{ m.color }};color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">{{ m.letter }}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:15px;font-weight:600;{{ st.text }}">{{ m.name }}</div>
+                <div style="font-size:12.5px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;{{ st.muted }}">{{ m.email }}</div>
+              </div>
+              <div style="font-size:13px;font-weight:600;{{ st.accentColor }}">{{ m.role }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div onClick="{{ invitePeople }}" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:{{ rCard }}px;font-size:15px;font-weight:700;cursor:pointer;{{ st.accentBg }}{{ st.onAccent }}" style-active="transform:scale(0.98);">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>
+        Invite People
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;{{ st.muted }}">Items</div>
+        <sc-if value="{{ vaultNotEmpty }}" hint-placeholder-val="{{ true }}">
+          <div style="border-radius:{{ rCard }}px;overflow:hidden;{{ st.inputCard }}">
+            <sc-for list="{{ vaultItemsList }}" as="it" hint-placeholder-count="3">
+              <div onClick="{{ it.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;{{ it.rowBorder }}">
+                <div style="width:38px;height:38px;border-radius:11px;background:{{ it.color }};color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;">{{ it.letter }}</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:15px;font-weight:600;{{ st.text }}">{{ it.name }}</div>
+                  <div style="font-size:12.5px;margin-top:1px;{{ st.muted }}">{{ it.sub }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ vaultEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:24px 10px;font-size:13.5px;{{ st.muted }}">No items in this vault yet</div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ toastShown }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;bottom:100px;transform:translateX(-50%);z-index:6;padding:12px 20px;border-radius:999px;font-size:14px;font-weight:600;white-space:nowrap;animation:pw-toast-in 0.25s ease-out;{{ st.card }}{{ st.text }}">{{ toast }}</div>
+  </sc-if>
+
+  <sc-if value="{{ onboardShown }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;{{ st.bg }}">
+    <div style="display:flex;justify-content:flex-end;padding:64px 20px 0;">
+      <div onClick="{{ skipOnboard }}" style="font-size:14.5px;font-weight:600;cursor:pointer;{{ st.muted }}">Skip</div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:20px 34px;text-align:center;">
+      <sc-if value="{{ onboardUseAppIcon }}" hint-placeholder-val="{{ true }}">
+        <img src="uploads/app_icon.png" alt="Passwards" style="width:104px;height:104px;border-radius:24px;object-fit:cover;box-shadow:0 12px 30px rgba(0,0,0,0.2);" />
+      </sc-if>
+      <sc-if value="{{ onboardUseGlyph }}" hint-placeholder-val="{{ false }}">
+        <dc-import name="GlossyIcon" glyph="{{ onboardIcon }}" bg="{{ colors.accent }}" variant="{{ variant }}" size="96" hint-size="96,96"></dc-import>
+      </sc-if>
+      <div>
+        <div style="font-family:{{ fontHead }};font-weight:{{ weightHead }};font-size:24px;line-height:1.25;{{ st.text }}">{{ onboardTitle }}</div>
+        <div style="font-size:15px;line-height:1.5;margin-top:12px;{{ st.muted }}">{{ onboardBody }}</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:center;gap:6px;padding:0 0 24px;">
+      <sc-for list="{{ onboardDots }}" as="d" hint-placeholder-count="3">
+        <div style="{{ d.style }}"></div>
+      </sc-for>
+    </div>
+    <div style="padding:0 24px 46px;">
+      <div onClick="{{ nextOnboard }}" style="text-align:center;padding:16px;border-radius:999px;font-size:16px;font-weight:700;cursor:pointer;{{ st.accentBg }}{{ st.onAccent }}" style-active="transform:scale(0.97);">{{ onboardNextLabel }}</div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ lockShown }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;{{ st.bg }}">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;">
+      <img src="uploads/app_icon.png" alt="Passwards" style="width:92px;height:92px;border-radius:21px;object-fit:cover;box-shadow:0 10px 28px rgba(0,0,0,0.2);" />
+      <div style="text-align:center;">
+        <div style="font-family:{{ fontHead }};font-weight:{{ weightHead }};font-size:22px;{{ st.text }}">Passwards</div>
+        <div style="font-size:14.5px;margin-top:6px;{{ st.muted }}">{{ lockGreeting }}</div>
+      </div>
+    </div>
+    <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:22px;padding:0 30px 56px;">
+      <sc-if value="{{ passcodeMode }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:14px;margin-bottom:6px;{{ passShake }}">
+          <sc-for list="{{ passDots }}" as="pd" hint-placeholder-count="4">
+            <div style="{{ pd.style }}"></div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ passcodeError }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:13.5px;font-weight:600;color:oklch(62% 0.19 25);margin-top:-10px;">Wrong passcode — try again</div>
+        </sc-if>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;width:240px;">
+          <sc-for list="{{ padKeys }}" as="k" hint-placeholder-count="12">
+            <div onClick="{{ k.tap }}" style="height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;cursor:pointer;{{ st.text }}" style-active="background:rgba(128,128,128,0.18);">{{ k.label }}</div>
+          </sc-for>
+        </div>
+        <div onClick="{{ togglePasscodeMode }}" style="font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;{{ st.accentColor }}">Use Face ID Instead</div>
+      </sc-if>
+      <sc-if value="{{ passcodeNotMode }}" hint-placeholder-val="{{ true }}">
+        <div onClick="{{ tapFaceId }}" style="width:74px;height:74px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ scanAnim }}{{ faceIdBtnBg }}" style-active="transform:scale(0.94);">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+            <path d="M4 8V6a2 2 0 012-2h2" stroke="white" stroke-width="2" stroke-linecap="round"></path>
+            <path d="M20 8V6a2 2 0 00-2-2h-2" stroke="white" stroke-width="2" stroke-linecap="round"></path>
+            <path d="M4 16v2a2 2 0 002 2h2" stroke="white" stroke-width="2" stroke-linecap="round"></path>
+            <path d="M20 16v2a2 2 0 01-2 2h-2" stroke="white" stroke-width="2" stroke-linecap="round"></path>
+            <circle cx="9" cy="10" r="1.3" fill="white"></circle>
+            <circle cx="15" cy="10" r="1.3" fill="white"></circle>
+            <path d="M9 15c1 1 5 1 6 0" stroke="white" stroke-width="2" stroke-linecap="round"></path>
+          </svg>
+        </div>
+        <sc-if value="{{ faceIdFailed }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:14px;font-weight:600;color:oklch(62% 0.19 25);">Not recognized — try again</div>
+        </sc-if>
+        <div onClick="{{ togglePasscodeMode }}" style="font-size:14px;font-weight:600;cursor:pointer;{{ st.accentColor }}">Enter Passcode Instead</div>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+</x-import>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: {&quot;width&quot;: 402, &quot;height&quot;: 874},
+  &quot;variant&quot;: {&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;premium&quot;,&quot;options&quot;:[&quot;premium&quot;,&quot;friendly&quot;,&quot;playful&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Theme&quot;},
+  &quot;startDark&quot;: {&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Theme&quot;},
+  &quot;startAt&quot;: {&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;app&quot;,&quot;options&quot;:[&quot;app&quot;,&quot;onboarding&quot;,&quot;lock&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Theme&quot;}
+}">
+const THEMES = {
+  premium: {
+    label: 'Premium & Minimal', tagline: 'Quiet, refined confidence',
+    fontHead: "'Instrument Sans', -apple-system, sans-serif",
+    fontBody: "'Instrument Sans', -apple-system, sans-serif",
+    fontNum: "'IBM Plex Mono', ui-monospace, monospace",
+    weightHead: 600, radiusCard: 20, radiusBadge: 14,
+    greeting: 'Home', sub: 'Welcome back, Alex',
+    nudge: 'Enable Face ID — 1 step',
+    promoTitle: 'Passwards for Safari',
+    promoBody: 'Autofill logins, save new ones, and generate strong passwords right in your browser.',
+    scoreLabel: 'Excellent',
+    scoreBody: 'Your security score reflects the health of your saved items. Resolve the flags below to strengthen it.',
+    addPlaceholder: 'Search item types',
+    itemsTitle: 'Items', sentinelTitle: 'Sentinel', searchTitle: 'Search',
+    score: 88,
+    lockGreeting: 'Welcome back',
+    onboarding: [
+      { icon:'shield', title:'Everything, secured', body:'Passwards keeps your logins, cards, and notes protected with end-to-end encryption.' },
+      { icon:'password', title:'Generate stronger passwords', body:'Create unique, uncrackable passwords in one tap — never reuse one again.' },
+      { icon:'key', title:'Sign in effortlessly', body:'Autofill your credentials wherever you need them, on every device.' },
+    ],
+  },
+  friendly: {
+    label: 'Friendly & Approachable', tagline: 'Warm and easygoing',
+    fontHead: "'Nunito', -apple-system, sans-serif",
+    fontBody: "'Nunito', -apple-system, sans-serif",
+    fontNum: "'Nunito', -apple-system, sans-serif",
+    weightHead: 800, radiusCard: 26, radiusBadge: 18,
+    greeting: 'Welcome back!', sub: 'Alex Rivera',
+    nudge: 'Turn on Face ID for faster unlocks',
+    promoTitle: 'Bring Passwards to your browser',
+    promoBody: "We'll autofill your logins and suggest strong passwords as you go.",
+    scoreLabel: 'Great shape!',
+    scoreBody: 'This score shows how healthy your passwords are. Clear the items below to make it even stronger.',
+    addPlaceholder: 'What are you adding today?',
+    itemsTitle: 'My Items', sentinelTitle: 'Checkup', searchTitle: 'Find Something',
+    score: 88,
+    lockGreeting: 'Good to see you again!',
+    onboarding: [
+      { icon:'shield', title:"We've got you covered", body:'Keep every password, card, and note safe in one cozy, encrypted home.' },
+      { icon:'password', title:'Never guess a password again', body:'We will whip up strong ones for you, so you can stop reusing "password123".' },
+      { icon:'key', title:'Sign in without the hassle', body:'Autofill does the typing so you can get on with your day.' },
+    ],
+  },
+  playful: {
+    label: 'Playful with Character', tagline: 'Bold, bouncy, alive',
+    fontHead: "'Fredoka', -apple-system, sans-serif",
+    fontBody: "'DM Sans', -apple-system, sans-serif",
+    fontNum: "'Fredoka', -apple-system, sans-serif",
+    weightHead: 600, radiusCard: 28, radiusBadge: 20,
+    greeting: 'Hey, Alex!', sub: "Let's keep things secure",
+    nudge: 'Unlock at lightning speed — enable Face ID',
+    promoTitle: 'Passwards, now in your browser',
+    promoBody: 'Autofill, generate, done — browsing just got a lot easier.',
+    scoreLabel: "You're crushing it!",
+    scoreBody: 'Think of this as your password fitness score — squash the issues below to level up.',
+    addPlaceholder: 'What do you want to save?',
+    itemsTitle: 'Your Stuff', sentinelTitle: 'Sentinel', searchTitle: 'Search',
+    score: 88,
+    lockGreeting: "You're back! Let's go",
+    onboarding: [
+      { icon:'shield', title:'Your secrets, locked down', body:'Passwords, cards, notes — all sealed up tight and just for you.' },
+      { icon:'password', title:'Passwords, but make them strong', body:'One tap and boom — a password no one is guessing. Ever.' },
+      { icon:'key', title:'Breeze through sign-ins', body:'Autofill swoops in so you can skip the typing and get on with it.' },
+    ],
+  },
+};
+
+const PALETTES = {
+  premium: {
+    dark:  { bg:'oklch(14% 0.004 258)', surface:'oklch(19% 0.006 258)', surfaceAlt:'oklch(24% 0.007 258)', surfaceGlass:'oklch(19% 0.006 258 / 0.7)', border:'oklch(32% 0.01 258)', text:'oklch(96% 0.002 258)', textMuted:'oklch(66% 0.01 258)', accent:'oklch(62% 0.15 258)', accentSoft:'oklch(30% 0.05 258)', accentText:'oklch(99% 0 0)' },
+    light: { bg:'oklch(97% 0.003 258)', surface:'oklch(99.5% 0.001 258)', surfaceAlt:'oklch(95% 0.005 258)', surfaceGlass:'oklch(99.5% 0.001 258 / 0.75)', border:'oklch(89% 0.006 258)', text:'oklch(18% 0.006 258)', textMuted:'oklch(46% 0.012 258)', accent:'oklch(54% 0.15 258)', accentSoft:'oklch(90% 0.03 258)', accentText:'oklch(99% 0 0)' },
+  },
+  friendly: {
+    dark:  { bg:'oklch(15% 0.01 45)', surface:'oklch(20% 0.012 45)', surfaceAlt:'oklch(25% 0.014 45)', surfaceGlass:'oklch(20% 0.012 45 / 0.7)', border:'oklch(33% 0.014 45)', text:'oklch(96% 0.008 45)', textMuted:'oklch(69% 0.014 45)', accent:'oklch(66% 0.13 248)', accentSoft:'oklch(32% 0.05 248)', accentText:'oklch(99% 0 0)' },
+    light: { bg:'oklch(97% 0.014 60)', surface:'oklch(100% 0.005 60)', surfaceAlt:'oklch(94% 0.016 60)', surfaceGlass:'oklch(100% 0.005 60 / 0.75)', border:'oklch(89% 0.016 60)', text:'oklch(21% 0.012 50)', textMuted:'oklch(47% 0.014 50)', accent:'oklch(58% 0.13 248)', accentSoft:'oklch(90% 0.04 248)', accentText:'oklch(99% 0 0)' },
+  },
+  playful: {
+    dark:  { bg:'oklch(15% 0.016 280)', surface:'oklch(20% 0.02 280)', surfaceAlt:'oklch(25% 0.022 280)', surfaceGlass:'oklch(20% 0.02 280 / 0.7)', border:'oklch(33% 0.022 280)', text:'oklch(97% 0.008 280)', textMuted:'oklch(71% 0.016 280)', accent:'oklch(64% 0.19 264)', accentSoft:'oklch(33% 0.07 264)', accentText:'oklch(99% 0 0)' },
+    light: { bg:'oklch(97% 0.016 280)', surface:'oklch(100% 0.007 280)', surfaceAlt:'oklch(94% 0.02 280)', surfaceGlass:'oklch(100% 0.007 280 / 0.75)', border:'oklch(88% 0.022 280)', text:'oklch(19% 0.016 280)', textMuted:'oklch(47% 0.018 280)', accent:'oklch(58% 0.19 264)', accentSoft:'oklch(90% 0.05 264)', accentText:'oklch(99% 0 0)' },
+  },
+};
+
+const CATEGORIES = [
+  { key:'logins', label:'Logins', glyph:'key', color:'#3B82F6' },
+  { key:'notes', label:'Secure Notes', glyph:'note', color:'#F59E0B' },
+  { key:'cards', label:'Credit Cards', glyph:'card', color:'#0EA5E9' },
+  { key:'identities', label:'Identities', glyph:'id', color:'#22C55E' },
+  { key:'wifi', label:'Wi-Fi Passwords', glyph:'wifi', color:'#8B5CF6' },
+];
+
+const VAULTS = [
+  { name:'Personal', glyph:'shield', color:'#64748B' },
+  { name:'Shared', glyph:'password', color:'#2563EB' },
+];
+
+const ITEM_TYPES = [
+  { key:'login', label:'Login', glyph:'key', color:'#3B82F6' },
+  { key:'password', label:'Password', glyph:'password', color:'#0D9488' },
+  { key:'note', label:'Secure Note', glyph:'note', color:'#F59E0B' },
+  { key:'card', label:'Credit Card', glyph:'card', color:'#0EA5E9' },
+  { key:'identity', label:'Identity', glyph:'id', color:'#22C55E' },
+  { key:'wifi', label:'Wi-Fi Password', glyph:'wifi', color:'#8B5CF6' },
+];
+
+const SAMPLE_ITEMS = [
+  { name:'Northwind Bank', sub:'alex.rivera@mail.com', username:'alex.rivera@mail.com', password:'Qz7#mK2vLpXw9Rt4', site:'northwindbank.com', color:'#3B82F6', letter:'N', fav:true, recent:true, vault:'Personal', category:'logins' },
+  { name:'Cedar Market', sub:'alex.rivera', username:'alex.rivera', password:'Hb4$nW8jQeYz1Ku6', site:'cedarmarket.com', color:'#F59E0B', letter:'C', fav:true, recent:false, vault:'Personal', category:'logins' },
+  { name:'Meridian Cloud', sub:'admin', username:'admin', password:'Xr2!pL9vTmCq5Ye3', site:'meridiancloud.io', color:'#8B5CF6', letter:'M', fav:true, recent:true, vault:'Shared', category:'logins' },
+  { name:'Horizon Air', sub:'Signs in with Apple', username:'alex.rivera@icloud.com', password:'Fk8&vB3nRtGz7Mq1', site:'horizonair.com', color:'#EF4444', letter:'H', fav:false, recent:true, vault:'Personal', category:'logins' },
+  { name:'Lumen Energy', sub:'a.rivera@mail.com', username:'a.rivera@mail.com', password:'Wp5@cJ4kNxVs2Tb9', site:'lumenenergy.com', color:'#10B981', letter:'L', fav:false, recent:false, vault:'Personal', category:'logins' },
+  { name:'Cascade Studio', sub:'alex@studio.io', username:'alex@studio.io', password:'Dm6#zQ1wYh8Lf3Ke', site:'cascadestudio.io', color:'#06B6D4', letter:'C', fav:false, recent:false, vault:'Shared', category:'logins' },
+  { name:'Talus Fitness', sub:'alex.rivera@mail.com', username:'alex.rivera@mail.com', password:'Nt3$rV7bXq2Mj9Zc', site:'talusfitness.com', color:'#F43F5E', letter:'T', fav:false, recent:false, vault:'Personal', category:'logins' },
+  { name:'Fernwood Reads', sub:'reader_alex', username:'reader_alex', password:'Gy1!kP6dWe4Ru8Ao', site:'fernwoodreads.com', color:'#84CC16', letter:'F', fav:false, recent:false, vault:'Personal', category:'logins' },
+];
+
+const ALERTS = [
+  { title:'2 passwords are reused', body:'Reusing a password means one leak puts every linked account at risk.' },
+  { title:'1 login has no two-factor', body:'Turn on an extra verification step wherever it is offered.' },
+];
+
+const TYPE_FIELDS = {
+  'Login':          { glyph:'key',      color:'#3B82F6', f1:'Username', f1p:'you@email.com', f2:'Password', f2p:'', f2secret:true, f3:'Website', f3p:'https://example.com' },
+  'Password':       { glyph:'password', color:'#0D9488', f1:'Username', f1p:'you@email.com', f2:'Password', f2p:'', f2secret:true, f3:'Website', f3p:'https://example.com' },
+  'Secure Note':    { glyph:'note',     color:'#F59E0B', f1:'Note title', f1p:'Untitled note', isNote:true },
+  'Credit Card':    { glyph:'card',     color:'#0EA5E9', f1:'Cardholder Name', f1p:'Alex Rivera', f2:'Card Number', f2p:'•••• •••• •••• ••••', f2secret:true, f3:'Expiry', f3p:'MM / YY' },
+  'Identity':       { glyph:'id',       color:'#22C55E', f1:'Full Name', f1p:'Alex Rivera', f2:'Email', f2p:'alex.rivera@mail.com', f2secret:false, f3:'Phone', f3p:'(555) 000-0000' },
+  'Wi-Fi Password': { glyph:'wifi',     color:'#8B5CF6', f1:'Network Name', f1p:'Home-WiFi', f2:'Password', f2p:'', f2secret:true },
+};
+
+const TYPE_TO_CAT = { 'Login':'logins', 'Password':'logins', 'Secure Note':'notes', 'Credit Card':'cards', 'Identity':'identities', 'Wi-Fi Password':'wifi' };
+const CAT_TO_TYPE = { logins:'Login', notes:'Secure Note', cards:'Credit Card', identities:'Identity', wifi:'Wi-Fi Password' };
+const AUTOLOCK_OPTS = ['Immediately', '30 seconds', '1 minute', '5 minutes'];
+const CORRECT_PASSCODE = '1234';
+const VAULT_MEMBERS = {
+  Personal: [
+    { name:'Alex Rivera', email:'alex.rivera@mail.com', role:'Owner', letter:'AR', color:'#2563EB' },
+  ],
+  Shared: [
+    { name:'Alex Rivera', email:'alex.rivera@mail.com', role:'Owner', letter:'AR', color:'#2563EB' },
+    { name:'Jordan Lee', email:'jordan.lee@mail.com', role:'Can edit', letter:'JL', color:'#F59E0B' },
+    { name:'Sam Patel', email:'sam.patel@work.io', role:'Can view', letter:'SP', color:'#22C55E' },
+  ],
+};
+
+function withDividers(arr, borderColor) {
+  return arr.map((item, i) => ({
+    ...item,
+    rowBorder: i === arr.length - 1 ? '' : ('border-bottom:1px solid ' + borderColor + ';'),
+  }));
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      stage: props.startAt || 'app',
+      onboardStep: 0,
+      passcodeMode: false, passcodeDigits: '', scanning: false,
+      faceIdAttempts: 0, faceIdFailed: false,
+      tab: 'home', sheet: null,
+      dark: props.startDark !== false,
+      favOpen: true, recentOpen: true,
+      search: '', addQuery: '',
+      pendingType: 'Login',
+      editorTitle: '', editorF1: '', editorF2: '', editorF3: '', editorNotes: '',
+      pwVisible: false, faceId: true, toast: '',
+      detailItem: null, detailPwVisible: false,
+      addedItems: [], deletedIds: [], editingId: null, editingFav: false,
+      autoLockIdx: 2, vaultName: 'Personal', passcodeError: false,
+      collectionKind: null, collectionValue: null, collectionTitle: '',
+    };
+  }
+
+  componentWillUnmount() {
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+  }
+
+  go(tab) { this.setState({ tab, sheet: null }); }
+  openSheet(name) { this.setState({ sheet: name }); }
+  closeSheet() { this.setState({ sheet: null }); }
+  toggleFav() { this.setState(s => ({ favOpen: !s.favOpen })); }
+  toggleRecent() { this.setState(s => ({ recentOpen: !s.recentOpen })); }
+  toggleFaceId() { this.setState(s => ({ faceId: !s.faceId })); }
+  setSearch(e) { this.setState({ search: e.target.value }); }
+  setAddQuery(e) { this.setState({ addQuery: e.target.value }); }
+
+  showToast(msg) {
+    this.setState({ toast: msg });
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => this.setState({ toast: '' }), 2200);
+  }
+
+  openEditor(typeLabel) {
+    const prefill = (typeLabel === 'Login' || typeLabel === 'Password') ? 'alex.rivera@mail.com' : '';
+    this.setState({
+      sheet: 'editor', pendingType: typeLabel,
+      editorTitle: '', editorF1: prefill, editorF2: '', editorF3: '', editorNotes: '',
+      editingId: null, editingFav: false, pwVisible: false,
+    });
+  }
+  cancelEditor() { this.setState({ sheet: null }); }
+  saveItem() {
+    const title = this.state.editorTitle.trim();
+    if (!title) return;
+    const tf = TYPE_FIELDS[this.state.pendingType] || TYPE_FIELDS['Login'];
+    const cat = TYPE_TO_CAT[this.state.pendingType] || 'logins';
+    const editing = this.state.editingId;
+    const item = {
+      id: editing || ('u' + Date.now()),
+      name: title,
+      sub: this.state.editorF1 || (tf.isNote ? 'Secure note' : ''),
+      username: this.state.editorF1,
+      password: this.state.editorF2,
+      site: this.state.editorF3,
+      notes: this.state.editorNotes,
+      color: tf.color,
+      letter: title[0].toUpperCase(),
+      fav: editing ? this.state.editingFav : false,
+      recent: true,
+      vault: 'Personal',
+      category: cat,
+    };
+    this.setState(s => ({
+      addedItems: [item, ...s.addedItems.filter(x => x.id !== item.id)],
+      sheet: null, editingId: null,
+    }));
+    this.showToast(editing ? 'Changes saved' : 'Saved to Personal');
+  }
+  togglePwVisible() { this.setState(s => ({ pwVisible: !s.pwVisible })); }
+  generateF2() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+    let out = '';
+    for (let i = 0; i < 16; i++) out += chars[Math.floor(Math.random() * chars.length)];
+    this.setState({ editorF2: out, pwVisible: true });
+  }
+  setEditorTitle(e) { this.setState({ editorTitle: e.target.value }); }
+  setEditorF1(e) { this.setState({ editorF1: e.target.value }); }
+  setEditorF2(e) { this.setState({ editorF2: e.target.value }); }
+  setEditorF3(e) { this.setState({ editorF3: e.target.value }); }
+  setEditorNotes(e) { this.setState({ editorNotes: e.target.value }); }
+
+  nextOnboard() {
+    this.setState(s => {
+      const slides = (THEMES[this.props.variant] || THEMES.premium).onboarding || [];
+      if (s.onboardStep >= slides.length - 1) return { stage: 'lock' };
+      return { onboardStep: s.onboardStep + 1 };
+    });
+  }
+  skipOnboard() { this.setState({ stage: 'lock' }); }
+
+  tapFaceId() {
+    const attempt = this.state.faceIdAttempts + 1;
+    this.setState({ scanning: true, faceIdAttempts: attempt });
+    setTimeout(() => {
+      if (attempt === 1) {
+        this.setState({ scanning: false, faceIdFailed: true });
+        setTimeout(() => this.setState({ faceIdFailed: false }), 1300);
+      } else {
+        this.setState({ stage: 'app', scanning: false, passcodeMode: false, passcodeDigits: '', faceIdAttempts: 0, faceIdFailed: false });
+      }
+    }, 600);
+  }
+  togglePasscodeMode() { this.setState(s => ({ passcodeMode: !s.passcodeMode, passcodeDigits: '' })); }
+  tapDigit(d) {
+    if (this.state.passcodeDigits.length >= 4) return;
+    const next = (this.state.passcodeDigits + d).slice(0, 4);
+    this.setState({ passcodeDigits: next, passcodeError: false });
+    if (next.length === 4) {
+      setTimeout(() => {
+        if (next === CORRECT_PASSCODE) {
+          this.setState({ stage: 'app', passcodeDigits: '', passcodeMode: false, passcodeError: false });
+        } else {
+          this.setState({ passcodeError: true });
+          setTimeout(() => this.setState({ passcodeDigits: '', passcodeError: false }), 650);
+        }
+      }, 220);
+    }
+  }
+  backspaceDigit() { this.setState(s => ({ passcodeDigits: s.passcodeDigits.slice(0, -1) })); }
+  lockNow() { this.setState({ stage: 'lock', sheet: null, passcodeMode: false, passcodeDigits: '', faceIdAttempts: 0, faceIdFailed: false }); }
+
+  openDetail(item) { this.setState({ sheet: 'detail', detailItem: item, detailPwVisible: false }); }
+  toggleDetailPw() { this.setState(s => ({ detailPwVisible: !s.detailPwVisible })); }
+  copyField(label) { this.showToast(label + ' copied'); }
+  deleteDetailItem() {
+    const it = this.state.detailItem;
+    if (!it) return;
+    this.setState(s => ({ sheet: null, deletedIds: [...s.deletedIds, it.id] }));
+    this.showToast('Deleted');
+  }
+  editFromDetail() {
+    const it = this.state.detailItem;
+    if (!it) return;
+    const typeLabel = CAT_TO_TYPE[it.category || 'logins'] || 'Login';
+    this.setState({
+      sheet: 'editor', pendingType: typeLabel,
+      editorTitle: it.name, editorF1: it.username || it.sub || '', editorF2: it.password || '', editorF3: it.site || '',
+      editorNotes: it.notes || '',
+      editingId: it.id, editingFav: !!it.fav, pwVisible: false,
+    });
+  }
+
+  openVaultCollection(name) { this.setState({ sheet: 'collection', collectionKind: 'vault', collectionValue: name, collectionTitle: name }); }
+  openCategoryCollection(key, label) { this.setState({ sheet: 'collection', collectionKind: 'category', collectionValue: key, collectionTitle: label }); }
+  openAllCollection() { this.setState({ sheet: 'collection', collectionKind: 'all', collectionValue: null, collectionTitle: 'All Items' }); }
+  openVaultDetail(name) { this.setState({ sheet: 'vault', vaultName: name }); }
+  cycleAutoLock() { this.setState(s => ({ autoLockIdx: (s.autoLockIdx + 1) % AUTOLOCK_OPTS.length })); }
+  signOut() { this.setState({ stage: 'lock', sheet: null, passcodeMode: false, passcodeDigits: '', faceIdAttempts: 0, faceIdFailed: false }); }
+
+  renderVals() {
+    const variant = THEMES[this.props.variant] ? this.props.variant : 'premium';
+    const theme = THEMES[variant];
+    const pal = PALETTES[variant];
+    const s = this.state;
+    const isDark = s.dark;
+    const c = isDark ? pal.dark : pal.light;
+    const baseItems = SAMPLE_ITEMS.map((it, i) => ({ ...it, id: it.id || ('s' + i) }));
+    const overrides = {};
+    s.addedItems.forEach(it => { overrides[it.id] = it; });
+    const merged = [
+      ...s.addedItems.filter(it => String(it.id).charAt(0) !== 's'),
+      ...baseItems.map(it => overrides[it.id] || it),
+    ];
+    const liveItems = merged.filter(i => s.deletedIds.indexOf(i.id) === -1);
+    const withOpen = (arr) => arr.map(it => ({ ...it, open: () => this.openDetail(it) }));
+
+    const tf = TYPE_FIELDS[s.pendingType] || TYPE_FIELDS['Login'];
+    const tfHasF2 = !!tf.f2 && !tf.isNote;
+    const tfHasF3 = !!tf.f3 && !tf.isNote;
+    const tfIsNote = !!tf.isNote;
+    const canSave = s.editorTitle.trim().length > 0;
+
+    const st = {
+      bg: 'background:' + c.bg + ';',
+      text: 'color:' + c.text + ';',
+      muted: 'color:' + c.textMuted + ';',
+      card: 'background:' + c.surface + ';border:1px solid ' + c.border + ';',
+      inputCard: 'background:' + c.surfaceAlt + ';border:1px solid ' + c.border + ';',
+      surfaceAlt: 'background:' + c.surfaceAlt + ';',
+      accentBg: 'background:' + c.accent + ';',
+      onAccent: 'color:' + c.accentText + ';',
+      avatar: 'background:' + c.accentSoft + ';color:' + c.accent + ';',
+      accentColor: 'color:' + c.accent + ';',
+      glass: 'background:' + c.surfaceGlass + ';border:1px solid ' + c.border + ';',
+      f1Border: (tfHasF2 || tfIsNote) ? ('border-bottom:1px solid ' + c.border + ';') : '',
+      f2Border: tfHasF3 ? ('border-bottom:1px solid ' + c.border + ';') : '',
+    };
+
+    const query = s.search.trim().toLowerCase();
+    const searchResults = withDividers(
+      query ? withOpen(liveItems.filter(it => it.name.toLowerCase().includes(query))) : [],
+      c.border
+    );
+    const hasQuery = query.length > 0;
+    const noResults = hasQuery && searchResults.length === 0;
+
+    const addQ = s.addQuery.trim().toLowerCase();
+    const itemTypesFiltered = (addQ ? ITEM_TYPES.filter(t => t.label.toLowerCase().includes(addQ)) : ITEM_TYPES)
+      .map(t => ({ ...t, select: () => this.openEditor(t.label) }));
+
+    const favItems = withDividers(withOpen(liveItems.filter(i => i.fav)), c.border);
+    const recentItems = withDividers(withOpen(liveItems.filter(i => i.recent)), c.border);
+    const categories = withDividers(CATEGORIES.map(cat => ({ ...cat, open: () => this.openCategoryCollection(cat.key, cat.label) })), c.border);
+    const vaults = withDividers(VAULTS.map(v => ({ ...v, open: () => this.openVaultDetail(v.name) })), c.border);
+    const alerts = withDividers(ALERTS, c.border);
+
+    let collectionItems = [];
+    if (s.collectionKind === 'vault') collectionItems = liveItems.filter(i => (i.vault || 'Personal') === s.collectionValue);
+    else if (s.collectionKind === 'category') collectionItems = liveItems.filter(i => (i.category || 'logins') === s.collectionValue);
+    else if (s.collectionKind === 'all') collectionItems = liveItems.slice();
+    collectionItems = withDividers(withOpen(collectionItems), c.border);
+    const collectionEmpty = collectionItems.length === 0;
+
+    const onboardSlides = theme.onboarding || [];
+    const onboardCurrent = onboardSlides[s.onboardStep] || onboardSlides[0] || {};
+    const onboardDots = onboardSlides.map((_, i) => ({
+      style: i === s.onboardStep
+        ? ('width:20px;height:6px;border-radius:999px;background:' + c.accent + ';transition:all 0.25s;')
+        : ('width:6px;height:6px;border-radius:999px;background:' + c.textMuted + ';opacity:0.4;transition:all 0.25s;'),
+    }));
+    const onboardShown = s.stage === 'onboarding';
+    const lockShown = s.stage === 'lock';
+
+    const passDots = [0, 1, 2, 3].map(i => ({
+      style: i < s.passcodeDigits.length
+        ? ('width:14px;height:14px;border-radius:50%;background:' + c.accent + ';transition:all 0.15s;')
+        : ('width:14px;height:14px;border-radius:50%;background:transparent;border:1.5px solid ' + c.textMuted + ';transition:all 0.15s;'),
+    }));
+    const padKeys = ['1','2','3','4','5','6','7','8','9','','0','del'].map(k => ({
+      label: k === 'del' ? '⌫' : k,
+      tap: k === '' ? (() => {}) : (k === 'del' ? (() => this.backspaceDigit()) : (() => this.tapDigit(k))),
+    }));
+
+    const pwVal = s.editorF2 || '';
+    let pwScore = 0;
+    if (pwVal.length >= 8) pwScore++;
+    if (pwVal.length >= 14) pwScore++;
+    if (/[a-z]/.test(pwVal) && /[A-Z]/.test(pwVal)) pwScore++;
+    if (/[0-9]/.test(pwVal)) pwScore++;
+    if (/[^A-Za-z0-9]/.test(pwVal)) pwScore++;
+    if (pwVal.length < 8) pwScore = Math.min(pwScore, 1);
+    const PW_LEVELS = [
+      { label: 'Very weak', color: 'oklch(62% 0.19 25)' },
+      { label: 'Weak', color: 'oklch(62% 0.19 25)' },
+      { label: 'Fair', color: 'oklch(72% 0.16 65)' },
+      { label: 'Good', color: 'oklch(72% 0.16 65)' },
+      { label: 'Strong', color: 'oklch(62% 0.14 150)' },
+      { label: 'Very strong', color: 'oklch(58% 0.15 150)' },
+    ];
+    const pwLevel = PW_LEVELS[pwScore] || PW_LEVELS[0];
+    const pwFilled = Math.max(1, Math.round(pwScore / 5 * 4));
+    const pwBars = [0,1,2,3].map(i => ({ bg: i < pwFilled ? pwLevel.color : 'rgba(128,128,128,0.2)' }));
+    const pwStrengthShown = tfHasF2 && !!tf.f2secret && pwVal.length > 0;
+
+    const vaultInfo = VAULTS.find(v => v.name === s.vaultName) || VAULTS[0];
+    const vaultMembers = withDividers((VAULT_MEMBERS[s.vaultName] || VAULT_MEMBERS.Personal), c.border);
+    const vaultItemsList = withDividers(withOpen(liveItems.filter(i => (i.vault || 'Personal') === s.vaultName)), c.border);
+
+    const onboardUseAppIcon = s.onboardStep === 0;
+
+    // Sentinel speedometer gauge geometry
+    const gCx = 120, gCy = 118, gR = 90, gStart = 135, gSweep = 270;
+    const gXY = (ang, r) => [gCx + r * Math.cos(ang * Math.PI / 180), gCy + r * Math.sin(ang * Math.PI / 180)];
+    const gs = gXY(gStart, gR), ge = gXY(gStart + gSweep, gR);
+    const gaugePath = 'M ' + gs[0].toFixed(1) + ' ' + gs[1].toFixed(1) + ' A ' + gR + ' ' + gR + ' 0 1 1 ' + ge[0].toFixed(1) + ' ' + ge[1].toFixed(1);
+    const gaugeTicks = [];
+    const GN = 36;
+    for (let i = 0; i <= GN; i++) {
+      const ang = gStart + gSweep * (i / GN);
+      const a = gXY(ang, gR - 13), b = gXY(ang, gR + 13);
+      gaugeTicks.push({ x1: a[0].toFixed(1), y1: a[1].toFixed(1), x2: b[0].toFixed(1), y2: b[1].toFixed(1), w: (i % 3 === 0) ? 2 : 1.3 });
+    }
+    const gpf = Math.max(0, Math.min(1, (theme.score || 0) / 100));
+    const gpAng = gStart + gSweep * (1 - gpf);
+    const pt = gXY(gpAng, gR - 15), pb1 = gXY(gpAng - 3.4, gR - 27), pb2 = gXY(gpAng + 3.4, gR - 27);
+    const gaugePointer = pt[0].toFixed(1) + ',' + pt[1].toFixed(1) + ' ' + pb1[0].toFixed(1) + ',' + pb1[1].toFixed(1) + ' ' + pb2[0].toFixed(1) + ',' + pb2[1].toFixed(1);
+
+    const di = s.detailItem || {};
+    const detailPwText = s.detailPwVisible ? (di.password || '') : '••••••••••••';
+    const dtf = TYPE_FIELDS[CAT_TO_TYPE[di.category || 'logins'] || 'Login'] || TYPE_FIELDS['Login'];
+    const detailIsNote = !!dtf.isNote;
+    const detailRows = [];
+    if (!detailIsNote) {
+      detailRows.push({ label: dtf.f1, value: di.username || di.sub || '', secret: false, copyable: true });
+      if (dtf.f2) detailRows.push({ label: dtf.f2, value: di.password || '', secret: !!dtf.f2secret, copyable: true });
+      if (dtf.f3) detailRows.push({ label: dtf.f3, value: di.site || '', secret: false, copyable: dtf.f3 !== 'Website', accent: dtf.f3 === 'Website' });
+    }
+    const detailFields = detailRows.map((r, i) => ({
+      label: r.label,
+      display: r.secret && !s.detailPwVisible ? '••••••••••••' : (r.value || '—'),
+      secret: r.secret, copyable: r.copyable,
+      valueStyle: r.accent ? ('color:' + c.accent + ';') : (r.secret ? ('letter-spacing:0.5px;color:' + c.text + ';') : ('color:' + c.text + ';')),
+      toggle: () => this.toggleDetailPw(),
+      copy: () => this.copyField(r.label),
+      rowBorder: i === detailRows.length - 1 ? '' : ('border-bottom:1px solid ' + c.border + ';'),
+    }));
+
+    return {
+      variant, isDark, colors: c, st,
+      fontHead: theme.fontHead, fontBody: theme.fontBody, fontNum: theme.fontNum,
+      weightHead: theme.weightHead, rCard: theme.radiusCard, rBadge: theme.radiusBadge,
+
+      greeting: theme.greeting, sub: theme.sub, nudge: theme.nudge,
+      promoTitle: theme.promoTitle, promoBody: theme.promoBody,
+      scoreLabel: theme.scoreLabel, scoreBody: theme.scoreBody,
+      addPlaceholder: theme.addPlaceholder,
+      itemsTitle: theme.itemsTitle, sentinelTitle: theme.sentinelTitle, searchTitle: theme.searchTitle,
+      score: theme.score,
+
+      isHome: s.tab === 'home', isItems: s.tab === 'items', isSentinel: s.tab === 'sentinel', isSearch: s.tab === 'search',
+      goHome: () => this.go('home'), goItems: () => this.go('items'), goSentinel: () => this.go('sentinel'), goSearch: () => this.go('search'),
+      homeColor: s.tab === 'home' ? c.accent : c.textMuted,
+      itemsColor: s.tab === 'items' ? c.accent : c.textMuted,
+      sentinelColor: s.tab === 'sentinel' ? c.accent : c.textMuted,
+      searchColor: s.tab === 'search' ? c.accent : c.textMuted,
+      homePillBg: s.tab === 'home' ? c.accentSoft : 'transparent',
+      itemsPillBg: s.tab === 'items' ? c.accentSoft : 'transparent',
+      sentinelPillBg: s.tab === 'sentinel' ? c.accentSoft : 'transparent',
+      searchPillBg: s.tab === 'search' ? c.accentSoft : 'transparent',
+
+      openAdd: () => this.openSheet('add'),
+      openSettings: () => this.openSheet('settings'),
+      closeSheet: () => this.closeSheet(),
+
+      sheetAdd: s.sheet === 'add', sheetEditor: s.sheet === 'editor', sheetSettings: s.sheet === 'settings',
+      addY: s.sheet === 'add' ? '0' : '100%',
+      editorY: s.sheet === 'editor' ? '0' : '100%',
+      settingsY: s.sheet === 'settings' ? '0' : '100%',
+      detailY: s.sheet === 'detail' ? '0' : '100%',
+      collectionY: s.sheet === 'collection' ? '0' : '100%',
+      backdropOpacity: s.sheet ? 1 : 0,
+      backdropEvents: s.sheet ? 'auto' : 'none',
+
+      addQuery: s.addQuery, setAddQuery: (e) => this.setAddQuery(e),
+      itemTypesFiltered,
+
+      favItems, favOpen: s.favOpen, toggleFav: () => this.toggleFav(),
+      favArrow: s.favOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+      recentItems, recentOpen: s.recentOpen, toggleRecent: () => this.toggleRecent(),
+      recentArrow: s.recentOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+
+      categories, vaults, alerts,
+      openAllItems: () => this.openAllCollection(),
+
+      search: s.search, setSearch: (e) => this.setSearch(e),
+      searchResults, hasQuery, noResults,
+
+      editorHeaderTitle: (s.editingId ? 'Edit ' : 'New ') + s.pendingType,
+      editorTitle: s.editorTitle, setEditorTitle: (e) => this.setEditorTitle(e),
+      editorF1: s.editorF1, setEditorF1: (e) => this.setEditorF1(e),
+      editorF2: s.editorF2, setEditorF2: (e) => this.setEditorF2(e),
+      editorF3: s.editorF3, setEditorF3: (e) => this.setEditorF3(e),
+      editorNotes: s.editorNotes, setEditorNotes: (e) => this.setEditorNotes(e),
+      tfGlyph: tf.glyph, tfColor: tf.color,
+      tfF1: tf.f1, tfF1p: tf.f1p,
+      tfF2: tf.f2 || '', tfF2p: tf.f2p || '', tfF2secret: !!tf.f2secret, tfHasF2,
+      tfF3: tf.f3 || '', tfF3p: tf.f3p || '', tfHasF3,
+      tfIsNote,
+      f2InputType: (tf.f2secret && !s.pwVisible) ? 'password' : 'text',
+      pwVisible: s.pwVisible, togglePwVisible: () => this.togglePwVisible(),
+      generateF2: () => this.generateF2(),
+      canSave, saveOpacity: canSave ? 1 : 0.45,
+      cancelEditor: () => this.cancelEditor(),
+      saveItem: () => this.saveItem(),
+      pwStrengthShown, pwBars, pwColor: pwLevel.color, pwLabel: pwLevel.label,
+
+      setLight: () => this.setState({ dark: false }),
+      setDark: () => this.setState({ dark: true }),
+      lightSegBg: !isDark ? c.accent : 'transparent',
+      lightSegColor: !isDark ? c.accentText : c.textMuted,
+      darkSegBg: isDark ? c.accent : 'transparent',
+      darkSegColor: isDark ? c.accentText : c.textMuted,
+      toggleFaceId: () => this.toggleFaceId(),
+      faceIdTrackBg: s.faceId ? c.accent : c.surfaceAlt,
+      faceIdKnobX: s.faceId ? '21px' : '2px',
+      lockNow: () => this.lockNow(),
+      autoLockLabel: AUTOLOCK_OPTS[s.autoLockIdx], cycleAutoLock: () => this.cycleAutoLock(),
+      signOut: () => this.signOut(),
+
+      shareScore: () => this.showToast('Score shared'),
+      toast: s.toast, toastShown: !!s.toast,
+
+      onboardShown, onboardOpacity: onboardShown ? 1 : 0, onboardEvents: onboardShown ? 'auto' : 'none',
+      onboardIcon: onboardCurrent.icon, onboardTitle: onboardCurrent.title, onboardBody: onboardCurrent.body,
+      onboardUseAppIcon, onboardUseGlyph: !onboardUseAppIcon,
+      onboardNextLabel: s.onboardStep >= onboardSlides.length - 1 ? 'Get Started' : 'Next',
+      onboardDots, nextOnboard: () => this.nextOnboard(), skipOnboard: () => this.skipOnboard(),
+
+      lockShown, lockOpacity: lockShown ? 1 : 0, lockEvents: lockShown ? 'auto' : 'none',
+      lockGreeting: theme.lockGreeting,
+      scanAnim: s.scanning ? 'animation:pw-scan-pulse 0.6s ease-in-out infinite;' : (s.faceIdFailed ? 'animation:pw-shake 0.4s ease-in-out;' : ''),
+      faceIdBtnBg: s.faceIdFailed ? 'background:oklch(58% 0.19 25);' : st.accentBg,
+      faceIdFailed: s.faceIdFailed,
+      tapFaceId: () => this.tapFaceId(),
+      passcodeMode: s.passcodeMode, passcodeNotMode: !s.passcodeMode,
+      togglePasscodeMode: () => this.togglePasscodeMode(),
+      passDots, padKeys,
+      passcodeError: s.passcodeError,
+      passShake: s.passcodeError ? 'animation:pw-shake 0.4s ease-in-out;' : '',
+
+      sheetDetail: s.sheet === 'detail',
+      detailTypeLabel: CAT_TO_TYPE[di.category || 'logins'] || 'Login',
+      detailFields, detailIsNote, detailNotNote: !detailIsNote, detailNoteText: di.notes || '—',
+      detailName: di.name || '', detailUsername: di.username || di.sub || '', detailSite: di.site || '',
+      detailColor: di.color || '#94A3B8', detailLetter: di.letter || '',
+      detailPwText, toggleDetailPw: () => this.toggleDetailPw(),
+      copyUsername: () => this.copyField('Username'),
+      copyPassword: () => this.copyField('Password'),
+      deleteDetailItem: () => this.deleteDetailItem(),
+      editFromDetail: () => this.editFromDetail(),
+
+      sheetCollection: s.sheet === 'collection',
+      collectionTitle: s.collectionTitle,
+      collectionItems, collectionEmpty, collectionNotEmpty: !collectionEmpty,
+
+      sheetVault: s.sheet === 'vault', vaultY: s.sheet === 'vault' ? '0' : '100%',
+      vaultName: s.vaultName, vaultGlyph: vaultInfo.glyph, vaultColor: vaultInfo.color,
+      vaultMembers, vaultItemsList, vaultItemCount: vaultItemsList.length,
+      vaultEmpty: vaultItemsList.length === 0, vaultNotEmpty: vaultItemsList.length > 0,
+      invitePeople: () => this.showToast('Invitation link copied'),
+      gaugePath, gaugeTicks, gaugePointer, gaugeBg: c.bg, gaugePointerFill: '#34C759',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -80,6 +80,15 @@ struct PasswardsiOSApp: App {
             }
             .preferredColorScheme(appearance.colorScheme)   // Light / Dark / System (Settings)
             .tint(Theme.accent)
+            // Privacy screen: when the app leaves the foreground (app switcher /
+            // multitasking), cover the unlocked vault so its snapshot never leaks —
+            // like 1Password. Shown the moment the scene goes inactive.
+            .overlay {
+                if scenePhase != .active && model.core.phase == .unlocked {
+                    PrivacyCover().transition(.opacity)
+                }
+            }
+            .animation(.easeOut(duration: 0.12), value: scenePhase)
         }
     }
 
@@ -109,20 +118,16 @@ struct PasswardsiOSApp: App {
         case "signin": return AnyView(IOSOnboardingView(core: core, initialStep: .signIn))
         case "lock": return AnyView(IOSLockView(core: core))
         case "home": return AnyView(IOSHomeView(vault: seeded(), watchtower: seededWt()))
-        case "vault": return AnyView(IOSVaultHomeView(vault: seeded(), watchtower: seededWt(), selectedTab: .constant(.vault)))
-        case "security": return AnyView(IOSSecurityView(watchtower: seededWt(), vault: seeded()))
-        case "settings": return AnyView(NavigationStack { IOSSettingsView(vault: seeded()) })
-        case "categories": return AnyView(NavigationStack { IOSCategoriesView(vault: seeded()) })
-        case "trash": return AnyView(NavigationStack {
-            IOSItemList(vault: seeded(), source: { $0.trashedSummaries }, title: "Trash",
-                        emptyText: "Trash is empty", mode: .trash)
-        })
+        case "items": return AnyView(IOSItemsTab(vault: seeded(), present: { _ in }))
+        case "sentinel": return AnyView(IOSSentinelTab(vault: seeded(), watchtower: seededWt(), present: { _ in }))
+        case "search": return AnyView(IOSSearchTab(vault: seeded(), present: { _ in }))
+        case "add": return AnyView(IOSAddSheet(vault: seeded()))
+        case "settings": return AnyView(IOSSettingsSheet(vault: seeded()))
+        case "collection": return AnyView(IOSCollectionSheet(vault: seeded(), kind: .all, watchtower: seededWt()))
         case "detail": return AnyView(NavigationStack { IOSItemDetailView(vault: seeded(), itemID: "1", watchtower: seededWt()) })
         case "editor": return AnyView(NavigationStack {
             IOSItemEditorView(vault: seeded(), original: vault.seededDetailItem, isNew: false, showsCancel: true, onClose: {})
         })
-        case "picker": return AnyView(IOSCategoryPickerView(vault: seeded()))
-        case "generator": return AnyView(NavigationStack { IOSGeneratorView() })
         default: return nil
         }
     }

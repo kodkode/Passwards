@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+  body { margin: 0; }
+</style>
+</helmet>
+<section id="t3" style="padding:48px 56px 40px;background:#f2f1ee;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif;">
+
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:6px;">
+    <img src="uploads/app_icon.png" alt="Passwards icon" style="width:56px;height:56px;border-radius:14px;object-fit:cover;box-shadow:0 4px 14px rgba(0,0,0,0.18);" />
+    <div>
+      <div style="font-size:24px;font-weight:700;color:#18181b;">Passwards</div>
+      <div style="font-size:14px;color:rgba(0,0,0,0.55);margin-top:2px;">Committed direction — playful, light mode. Now wired end-to-end.</div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:baseline;gap:10px;margin:30px 0 20px;">
+    <a href="#t3" style="font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none;">3</a>
+    <span style="font:600 13px system-ui,sans-serif;color:#1a1a1a;"><a href="#2b" style="color:#1a1a1a;">2b</a> is the direction — made real</span>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start;">
+    <div id="3a" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:baseline;gap:8px;">
+        <a href="#3a" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none;">3a</a>
+        <span style="font-size:13px;color:rgba(0,0,0,.75);font-weight:600;">Passwards — the app</span>
+        <span style="font-size:12px;color:rgba(0,0,0,.42);">Playful, light mode, fully functional</span>
+      </div>
+      <dc-import name="PhoneApp" variant="playful" start-at="app" start-dark="{{ false }}" hint-size="402,874"></dc-import>
+    </div>
+  </div>
+
+  <p style="margin:26px 0 0;font:12px/1.6 system-ui,sans-serif;color:rgba(0,0,0,.5);max-width:640px;">This is the real thing now: tap <b>+</b>, pick a type, fill in a title and Save — your item shows up under Recently Created, in Search, and in its category under Items. In the editor, the <b>password field shows a live strength meter</b> (try the generate button). Tap any item for a type-aware detail view, then <b>Edit</b> or <b>Delete</b>. Under Items, tap a <b>Vault</b> (Personal / Shared) to open its detail with <b>members, roles, and Invite People</b>. On the lock screen, <b>Sign Out</b> and Auto-Lock work; the demo passcode is <b>1234</b> — enter anything else to see it shake and reject. Try next: "let me change a member's role" &middot; "add a shared-vault activity log" &middot; "tune the strength-meter thresholds"</p>
+
+</section>
+
+<section id="t2" style="padding:48px 56px 40px;background:#f2f1ee;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif;">
+
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:6px;">
+    <img src="uploads/app_icon.png" alt="Passwards icon" style="width:56px;height:56px;border-radius:14px;object-fit:cover;box-shadow:0 4px 14px rgba(0,0,0,0.18);" />
+    <div>
+      <div style="font-size:24px;font-weight:700;color:#18181b;">Passwards</div>
+      <div style="font-size:14px;color:rgba(0,0,0,0.55);margin-top:2px;">Primary direction, built out — onboarding, lock screen, and item detail added.</div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:baseline;gap:10px;margin:30px 0 20px;">
+    <a href="#t2" style="font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none;">2</a>
+    <span style="font:600 13px system-ui,sans-serif;color:#1a1a1a;">Full flow, built out from <a href="#1c" style="color:#1a1a1a;">1c</a></span>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start;">
+
+    <div id="2a" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:baseline;gap:8px;">
+        <a href="#2a" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none;">2a</a>
+        <span style="font-size:13px;color:rgba(0,0,0,.75);font-weight:600;">Passwards — full app</span>
+        <span style="font-size:12px;color:rgba(0,0,0,.42);">Onboarding → Lock → Home, with item detail</span>
+      </div>
+      <dc-import name="PhoneApp" variant="playful" start-at="onboarding" hint-size="402,874"></dc-import>
+    </div>
+
+    <div id="2b" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:baseline;gap:8px;">
+        <a href="#2b" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none;">2b</a>
+        <span style="font-size:13px;color:rgba(0,0,0,.75);font-weight:600;">Same app — light mode</span>
+        <span style="font-size:12px;color:rgba(0,0,0,.42);">Jumps straight to Home</span>
+      </div>
+      <dc-import name="PhoneApp" variant="playful" start-at="app" start-dark="{{ false }}" hint-size="402,874"></dc-import>
+    </div>
+
+  </div>
+
+  <p style="margin:26px 0 0;font:12px/1.6 system-ui,sans-serif;color:rgba(0,0,0,.5);max-width:640px;">Tap through onboarding (or Skip), then unlock with the Face ID button — it fails once on purpose, tap again to get in (or use "Enter Passcode Instead", any 4 digits works). Inside the app, tap any saved item to open its detail view (copy/reveal/edit/delete), or tap a Vault/Category row under Items to drill into a filtered list — try a category other than Logins to see the empty state. <a href="#2b" style="color:rgba(0,0,0,.5);">2b</a> is the same app pinned to light mode; toggle either one anytime in Settings → Appearance. Try next: "add a vault detail screen with sharing" &middot; "tune the light-mode contrast" &middot; "add a failed-passcode shake too"</p>
+
+</section>
+
+<section id="t1" style="padding:48px 56px 90px;background:#f2f1ee;min-height:100vh;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif;">
+
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:6px;">
+    <img src="uploads/app_icon.png" alt="Passwards icon" style="width:56px;height:56px;border-radius:14px;object-fit:cover;box-shadow:0 4px 14px rgba(0,0,0,0.18);" />
+    <div>
+      <div style="font-size:24px;font-weight:700;color:#18181b;">Passwards</div>
+      <div style="font-size:14px;color:rgba(0,0,0,0.55);margin-top:2px;">Three tone directions — each phone is fully tappable, not a static mockup.</div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:baseline;gap:10px;margin:30px 0 20px;">
+    <a href="#t1" style="font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none;">1</a>
+    <span style="font:600 13px system-ui,sans-serif;color:#1a1a1a;">Three directions to react to</span>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start;">
+
+    <div id="1a" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:baseline;gap:8px;">
+        <a href="#1a" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none;">1a</a>
+        <span style="font-size:13px;color:rgba(0,0,0,.75);font-weight:600;">Premium &amp; Minimal</span>
+        <span style="font-size:12px;color:rgba(0,0,0,.42);">Instrument Sans + IBM Plex Mono</span>
+      </div>
+      <dc-import name="PhoneApp" variant="premium" hint-size="402,874"></dc-import>
+    </div>
+
+    <div id="1b" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:baseline;gap:8px;">
+        <a href="#1b" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none;">1b</a>
+        <span style="font-size:13px;color:rgba(0,0,0,.75);font-weight:600;">Friendly &amp; Approachable</span>
+        <span style="font-size:12px;color:rgba(0,0,0,.42);">Nunito</span>
+      </div>
+      <dc-import name="PhoneApp" variant="friendly" hint-size="402,874"></dc-import>
+    </div>
+
+    <div id="1c" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:baseline;gap:8px;">
+        <a href="#1c" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none;">1c</a>
+        <span style="font-size:13px;color:rgba(0,0,0,.75);font-weight:600;">Playful with Character</span>
+        <span style="font-size:12px;color:rgba(0,0,0,.42);">Fredoka + DM Sans</span>
+      </div>
+      <dc-import name="PhoneApp" variant="playful" hint-size="402,874"></dc-import>
+    </div>
+
+  </div>
+
+  <p style="margin:30px 0 0;font:12px/1.6 system-ui,sans-serif;color:rgba(0,0,0,.5);max-width:640px;">Tap through each one — the tab bar, the + button to add an item (try Login, then Generate a password), and Settings (tap the avatar, top-left) to flip Light/Dark live. Try next: "make <a href="#1b" style="color:rgba(0,0,0,.5);">1b</a> the direction, refine the tab bar" &middot; "more contrast in <a href="#1c" style="color:rgba(0,0,0,.5);">1c</a>" &middot; "combine <a href="#1a" style="color:rgba(0,0,0,.5);">1a</a>'s layout with <a href="#1c" style="color:rgba(0,0,0,.5);">1c</a>'s colors"</p>
+
+</section>
+
+</x-dc>
+</body>
+</html>

@@ -2,35 +2,83 @@ import SwiftUI
 import PasswardsCore
 import PasswardsOrchestration
 
-enum IOSTab: Hashable { case vault, generator, security, settings }
+/// The four main tabs (playful design). Generator is not a tab — generation lives
+/// in the editor; Settings is a sheet, not a tab.
+enum IOSTab: Hashable { case home, items, sentinel, search }
 
-/// The unlocked shell: the 4-tab bar (Stitch) — Vault, Generator, Security
-/// (Watchtower), Settings. Loads the vault + runs Watchtower on appear.
+/// A modal bottom sheet the shell can present.
+enum SheetRoute: Identifiable, Hashable {
+    case add
+    case settings
+    case detail(String)                 // item id
+    case collection(CollectionKind)
+    case vault(String)                  // vault name
+    var id: String {
+        switch self {
+        case .add: "add"; case .settings: "settings"
+        case .detail(let i): "detail-\(i)"
+        case .collection(let k): "collection-\(k.title)"
+        case .vault(let v): "vault-\(v)"
+        }
+    }
+}
+
+/// What a Collection sheet lists.
+enum CollectionKind: Hashable {
+    case all, favorites, recent, archive, trash
+    case category(PasswardsCore.Category)
+    case vault(String)
+    case tag(String)
+    case flagged(WatchtowerCheck)       // Sentinel alert drill-down
+
+    var title: String {
+        switch self {
+        case .all: "All Items"; case .favorites: "Favorites"; case .recent: "Recently Created"
+        case .archive: "Archive"; case .trash: "Trash"
+        case .category(let c): c.displayName
+        case .vault(let v): v
+        case .tag(let t): t
+        case .flagged(let c): c.displayName
+        }
+    }
+}
+
+/// The unlocked shell: a full-bleed tab content area under a floating pill tab bar,
+/// with modal bottom sheets. Loads the vault + runs Watchtower on appear.
 struct IOSHomeView: View {
-    let vault: IOSVaultModel
+    @Bindable var vault: IOSVaultModel
     let watchtower: IOSWatchtowerModel
-    @State private var selectedTab: IOSTab = .vault
     private var core: AccountController { vault.core }
 
+    @State private var tab: IOSTab = .home
+    @State private var sheet: SheetRoute?
+    @AppStorage(IOSAppearance.storageKey) private var appearanceRaw = IOSAppearance.system.rawValue
+    private var appearance: IOSAppearance { IOSAppearance(rawValue: appearanceRaw) ?? .system }
+
     var body: some View {
-        TabView(selection: $selectedTab) {
-            Tab("Vault", systemImage: "lock.fill", value: IOSTab.vault) {
-                IOSVaultHomeView(vault: vault, watchtower: watchtower, selectedTab: $selectedTab)
+        ZStack(alignment: .bottom) {
+            Theme.background.ignoresSafeArea()
+
+            Group {
+                switch tab {
+                case .home: IOSHomeTab(vault: vault, watchtower: watchtower, present: present, selectTab: { tab = $0 })
+                case .items: IOSItemsTab(vault: vault, present: present)
+                case .sentinel: IOSSentinelTab(vault: vault, watchtower: watchtower, present: present)
+                case .search: IOSSearchTab(vault: vault, present: present)
+                }
             }
-            Tab("Generator", systemImage: "key.fill", value: IOSTab.generator) {
-                NavigationStack { IOSGeneratorView() }
-            }
-            Tab("Security", systemImage: "checkmark.shield.fill", value: IOSTab.security) {
-                IOSSecurityView(watchtower: watchtower, vault: vault)
-            }
-            Tab("Settings", systemImage: "gearshape.fill", value: IOSTab.settings) {
-                NavigationStack { IOSSettingsView(vault: vault) }
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            TabPill(tab: $tab)
         }
-        .tint(Theme.accent)
+        .sheet(item: $sheet) { route in
+            // Sheets are a separate presentation context, so the root's
+            // preferredColorScheme doesn't reach an already-open sheet — apply it
+            // here too so the Appearance toggle re-themes the open Settings sheet live.
+            sheetContent(route).preferredColorScheme(appearance.colorScheme)
+        }
         .task {
             await vault.load()
-            // Reload list + re-audit when CloudKit delivers changes; kick a sync now.
             core.sync.onRemoteChanges = { [weak vault, weak watchtower] in
                 Task { await vault?.load(); await watchtower?.run() }
             }
@@ -38,144 +86,239 @@ struct IOSHomeView: View {
             await watchtower.run()
         }
     }
+
+    private func present(_ route: SheetRoute) { sheet = route }
+
+    @ViewBuilder private func sheetContent(_ route: SheetRoute) -> some View {
+        switch route {
+        case .add:
+            IOSAddSheet(vault: vault)
+        case .settings:
+            IOSSettingsSheet(vault: vault)
+        case .detail(let id):
+            NavigationStack {
+                IOSItemDetailView(vault: vault, itemID: id, watchtower: watchtower)
+            }
+            .presentationCornerRadius(Theme.rSheet)
+        case .collection(let kind):
+            IOSCollectionSheet(vault: vault, kind: kind, watchtower: watchtower)
+        case .vault(let name):
+            IOSVaultSheet(vault: vault, vaultName: name)
+        }
+    }
 }
 
-/// Settings (Stitch "Settings (Dark)"): profile row, Security, Appearance, Data
-/// sections, and a Lock Application button.
-struct IOSSettingsView: View {
-    let vault: IOSVaultModel
-    private var core: AccountController { vault.core }
+// MARK: - Shared header (shown atop every tab)
 
-    @State private var faceIDOn = BiometricUnlock.isEnrolled
-    @State private var faceIDError: String?
-    @AppStorage(IOSAppearance.storageKey) private var appearanceRaw = IOSAppearance.system.rawValue
-
-    private var appearance: Binding<IOSAppearance> {
-        Binding(get: { IOSAppearance(rawValue: appearanceRaw) ?? .system },
-                set: { appearanceRaw = $0.rawValue })
-    }
+/// The row shared across all four tabs: tappable avatar + chevron (→ Settings) on
+/// the left, a circular "+" (→ Add) on the right.
+struct AppHeader: View {
+    var initials: String = "AR"
+    var onSettings: () -> Void
+    var onAdd: () -> Void
 
     var body: some View {
-        List {
-            // Profile
-            Section {
-                HStack(spacing: 16) {
-                    AppMark(size: 56)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(core.account?.email ?? "Your Account")
-                            .font(Theme.title(20, .semibold)).foregroundStyle(Theme.primaryLabel).lineLimit(1)
-                        Text("Passwards account").font(Theme.text(14)).foregroundStyle(Theme.labelDim)
-                    }
-                    Spacer()
+        HStack {
+            Button(action: onSettings) {
+                HStack(spacing: 7) {
+                    Avatar(initials: initials, size: 40)
+                    Image(systemName: "chevron.down").font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Theme.label)
                 }
-                .padding(.vertical, 4)
-                .listRowBackground(Theme.surface)
             }
-
-            // Security
-            Section {
-                if BiometricUnlock.isAvailable {
-                    Toggle(isOn: $faceIDOn) {
-                        rowLabel("Face ID Unlock", icon: "faceid", tint: Theme.link)
-                    }
-                    .tint(Theme.accent)
-                    .onChange(of: faceIDOn) { _, on in setFaceID(on) }
-                }
-                Button { core.lock() } label: {
-                    HStack {
-                        rowLabel("Lock Now", icon: "lock.fill", tint: Theme.accent)
-                        Spacer()
-                    }
-                }
-            } header: { caps("Security") } footer: {
-                if let faceIDError { Text(faceIDError).foregroundStyle(.orange) }
+            .buttonStyle(.plain)
+            Spacer()
+            Button(action: onAdd) {
+                Image(systemName: "plus").font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Theme.primaryLabel)
+                    .frame(width: 40, height: 40)
+                    .background(Theme.surfaceHigh, in: Circle())
             }
-            .listRowBackground(Theme.surface)
-
-            // Appearance
-            Section {
-                Picker(selection: appearance) {
-                    ForEach(IOSAppearance.allCases) { Text($0.label).tag($0) }
-                } label: {
-                    rowLabel("Theme", icon: "circle.lefthalf.filled", tint: Theme.accent)
-                }
-                .pickerStyle(.menu)
-                .tint(Theme.labelDim)
-            } header: { caps("Appearance") }
-            .listRowBackground(Theme.surface)
-
-            // Data
-            Section {
-                HStack {
-                    rowLabel("Sync", icon: "arrow.triangle.2.circlepath", tint: Theme.accent)
-                    Spacer()
-                    Text(syncStatusText).font(Theme.text(15)).foregroundStyle(syncStatusColor)
-                }
-                HStack {
-                    rowLabel("Vaults", icon: "folder.fill", tint: Theme.link)
-                    Spacer()
-                    Text("\(max(vault.vaults.count, 1))").font(Theme.text(15)).foregroundStyle(Theme.labelDim)
-                }
-            } header: { caps("Data") }
-            .listRowBackground(Theme.surface)
-
-            // Lock Application
-            Section {
-                Button { core.lock() } label: {
-                    Text("Lock Application").font(Theme.text(16, .medium))
-                        .foregroundStyle(Theme.danger).frame(maxWidth: .infinity)
-                }
-                .listRowBackground(Theme.surface)
-            }
+            .buttonStyle(.plain)
         }
-        .scrollContentBackground(.hidden)
-        .background(Theme.background)
-        .navigationTitle("Settings")
-        .tint(Theme.accent)
+    }
+}
+
+/// A tab's scaffold: the shared header, a large Fredoka title (+ optional subtitle),
+/// then scrolling content. Applies the playful screen padding.
+struct TabScaffold<Content: View>: View {
+    let title: String
+    var subtitle: String?
+    var onSettings: () -> Void
+    var onAdd: () -> Void
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                AppHeader(onSettings: onSettings, onAdd: onAdd)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(Theme.display(30, .semibold)).tracking(-0.5)
+                        .foregroundStyle(Theme.primaryLabel)
+                    if let subtitle {
+                        Text(subtitle).font(Theme.text(15)).foregroundStyle(Theme.label)
+                    }
+                }
+                content
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 120)
+        }
+        .scrollIndicators(.hidden)
+    }
+}
+
+// MARK: - Floating pill tab bar
+
+private struct TabPill: View {
+    @Binding var tab: IOSTab
+    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: Theme.rTab, style: .continuous) }
+
+    var body: some View {
+        bar
+            .modifier(TabBarGlass(shape: shape))
+            // Improved ambient shadow for depth + a tighter contact shadow
+            .shadow(color: .black.opacity(0.15), radius: 28, y: 12)
+            .shadow(color: .black.opacity(0.06), radius: 8, y: 4)
+            .padding(.horizontal, 22)
+            .padding(.bottom, 10)
     }
 
-    private func rowLabel(_ text: String, icon: String, tint: Color) -> some View {
+    private var bar: some View {
+        HStack(spacing: 4) {
+            item(.home, "house.fill", "Home")
+            item(.items, "square.stack.fill", "Items")
+            item(.sentinel, "shield.lefthalf.filled", "Sentinel")
+            item(.search, "magnifyingglass", "Search")
+        }
+        .padding(6)
+        // Animate the active tab background pill movement without animating the full screen transition
+        .animation(.snappy(duration: 0.2), value: tab)
+    }
+
+    private func item(_ t: IOSTab, _ icon: String, _ label: String) -> some View {
+        let active = tab == t
+        return Button {
+            tab = t
+        } label: {
+            VStack(spacing: 3) {
+                Image(systemName: icon).font(.system(size: 17, weight: .semibold))
+                Text(label).font(Theme.text(10.5, .semibold))
+            }
+            .foregroundStyle(active ? Theme.accent : Theme.label)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle()) // Ensures the clear background area remains tappable
+            .background(active ? Theme.accentSoft : .clear, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(PressScale(scale: 0.92))
+    }
+}
+
+/// Native Apple **Liquid Glass** for the floating tab bar on iOS 26; a clean
+/// translucent material on iOS 18–25.
+private struct TabBarGlass: ViewModifier {
+    let shape: RoundedRectangle
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular.interactive(), in: shape)
+        } else {
+            content
+                .background(.ultraThinMaterial, in: shape)
+                .overlay(shape.strokeBorder(Theme.cardBorder.opacity(0.5), lineWidth: 0.5))
+                .clipShape(shape)
+        }
+    }
+}
+
+/// Press feedback used across playful tappable cards/buttons.
+struct PressScale: ButtonStyle {
+    var scale: CGFloat = 0.94
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? scale : 1)
+            .animation(.snappy(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Shared card + row building blocks
+
+/// A big rounded surface card (28px radius, hairline border).
+struct Card<Content: View>: View {
+    var padding: CGFloat = 16
+    @ViewBuilder var content: Content
+    var body: some View {
+        content
+            .padding(padding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.rCard, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Theme.rCard, style: .continuous).strokeBorder(Theme.cardBorder, lineWidth: 1))
+    }
+}
+
+/// A tappable item row: glossy/favicon icon, title, subtitle, and (optional) chevron.
+struct ItemRowView: View {
+    let vault: IOSVaultModel
+    let summary: ItemSummary
+    var showChevron = false
+    var onTap: () -> Void
+
+    var body: some View {
+        // Favicons are resolved into IOSVaultModel (the @Observable the tabs already
+        // observe to draw these rows) and handed to ItemIcon as a plain UIImage value.
+        // The leaf holds no @State/.task/UIViewRepresentable, so Home's re-render churn
+        // and the same item appearing in Favorites AND Recent can't strand it.
         HStack(spacing: 12) {
-            Image(systemName: icon).font(.system(size: 15)).foregroundStyle(tint)
-                .frame(width: 30, height: 30).background(Theme.surfaceHigh, in: Circle())
-            Text(text).font(Theme.text(16)).foregroundStyle(Theme.primaryLabel)
-        }
-    }
-
-    private func caps(_ text: String) -> some View {
-        Text(text.uppercased()).font(Theme.caps(11)).tracking(0.5).foregroundStyle(Theme.labelDim)
-    }
-
-    private var syncStatusText: String {
-        switch core.sync.status {
-        case .disabled: "Off"
-        case .idle: "Up to date"
-        case .syncing: "Syncing…"
-        case .error(let m): m
-        case .accountUnavailable: "iCloud unavailable"
-        }
-    }
-    private var syncStatusColor: Color {
-        switch core.sync.status {
-        case .idle: Theme.accent
-        case .syncing: Theme.link
-        case .error, .accountUnavailable: .orange
-        case .disabled: Theme.labelDim
-        }
-    }
-
-    private func setFaceID(_ on: Bool) {
-        faceIDError = nil
-        Task {
-            if on {
-                guard let masterKey = await core.keyStore.masterKey else {
-                    faceIDOn = false; faceIDError = "Unlock first, then enable Face ID."; return
+            ItemIcon(overview: summary.overview, favicon: vault.favicon(for: summary.overview), size: 40)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(summary.overview.title.isEmpty ? "Untitled" : summary.overview.title)
+                    .font(Theme.text(15, .semibold)).foregroundStyle(Theme.primaryLabel).lineLimit(1)
+                if !summary.overview.subtitle.isEmpty {
+                    Text(summary.overview.subtitle).font(Theme.text(12.5)).foregroundStyle(Theme.label).lineLimit(1)
                 }
-                do { try BiometricUnlock.enroll(masterKey: masterKey) }
-                catch { faceIDOn = false; faceIDError = "Couldn't enable Face ID: \(error.localizedDescription)" }
-            } else {
-                BiometricUnlock.disable()
+            }
+            Spacer(minLength: 8)
+            if summary.overview.isFavorite {
+                Image(systemName: "star.fill").font(.system(size: 12)).foregroundStyle(Theme.warn)
+            }
+            if showChevron {
+                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.label)
             }
         }
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onTap)
+    }
+}
+
+/// A section header: uppercase DM Sans, with an optional trailing chevron for
+/// collapsible sections.
+struct SectionHeader: View {
+    let title: String
+    var systemImage: String?
+    var collapsible = false
+    var collapsed = false
+    var onToggle: (() -> Void)?
+
+    var body: some View {
+        Button {
+            onToggle?()
+        } label: {
+            HStack(spacing: 8) {
+                if let systemImage {
+                    Image(systemName: systemImage).font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.label)
+                }
+                Text(title.uppercased()).font(Theme.caps(12.5, .bold)).tracking(0.5).foregroundStyle(Theme.label)
+                Spacer()
+                if collapsible {
+                    Image(systemName: "chevron.down").font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Theme.label)
+                        .rotationEffect(.degrees(collapsed ? -90 : 0))
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(!collapsible)
     }
 }

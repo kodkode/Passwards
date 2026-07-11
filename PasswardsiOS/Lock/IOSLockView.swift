@@ -2,128 +2,129 @@ import SwiftUI
 import PasswardsCore
 import PasswardsOrchestration
 
-/// iOS lock screen, matched to 1Password 8: a dark backdrop, the app mark, and a
-/// dark inline password field with a reveal eye + arrow submit, plus Face ID.
+/// iOS lock screen (playful): a centered brand block on the lavender background,
+/// with a large Face ID button and a password fallback. Our real unlock is the
+/// account master password (+ Secret Key when a new device needs it), not a PIN.
 struct IOSLockView: View {
     let core: AccountController
 
     @State private var password = ""
     @State private var typedSecretKey = ""
     @State private var revealPassword = false
+    @State private var showPassword = false
     @State private var isUnlocking = false
     @State private var failed = false
     @State private var shake = 0
     @FocusState private var passwordFocused: Bool
 
+    private var faceIDMode: Bool { core.biometricUnlockAllowed && !showPassword && !core.needsSecretKeyEntry }
+
     var body: some View {
         ZStack {
-            Theme.heroGradient.ignoresSafeArea()
-
-            VStack(spacing: 22) {
+            Theme.background.ignoresSafeArea()
+            VStack(spacing: 0) {
                 Spacer()
-                AppMark(size: 96)
-                Text("Passwards")
-                    .font(Theme.title(28, .bold))
-                    .foregroundStyle(.white)
-
-                if core.needsSecretKeyEntry {
-                    secretKeyField
+                VStack(spacing: 14) {
+                    AppMark(size: 92)
+                    Text("Passwards").font(Theme.display(30, .semibold)).foregroundStyle(Theme.primaryLabel)
+                    Text("You're back! Let's go").font(Theme.text(15)).foregroundStyle(Theme.label)
                 }
-                passwordField
-
-                if failed {
-                    Text(core.needsSecretKeyEntry ? "Incorrect password or Secret Key." : "Incorrect password.")
-                        .font(.callout)
-                        .foregroundStyle(Color(.sRGB, red: 0.95, green: 0.40, blue: 0.40))
-                }
-
-                if core.biometricUnlockAllowed {
-                    Button {
-                        Task { _ = await core.unlockWithTouchID() }
-                    } label: {
-                        Label("Unlock with Face ID", systemImage: "faceid")
-                            .font(.callout.weight(.medium))
-                            .foregroundStyle(Theme.lockFocus)
-                    }
-                    .padding(.top, 4)
-                }
-
                 Spacer()
+                Group { if faceIDMode { faceIDArea } else { passwordArea } }
+                    .padding(.horizontal, 28)
                 Spacer()
             }
-            .padding(.horizontal, 28)
         }
-        .task { passwordFocused = true }
+        .task {
+            if !faceIDMode { passwordFocused = true }
+        }
+    }
+
+    // MARK: Face ID
+
+    private var faceIDArea: some View {
+        VStack(spacing: 18) {
+            Button {
+                Task { _ = await core.unlockWithTouchID() }
+            } label: {
+                Image(systemName: "faceid").font(.system(size: 34, weight: .semibold)).foregroundStyle(Theme.accentText)
+                    .frame(width: 74, height: 74).background(Theme.accent, in: Circle())
+                    .shadow(color: Theme.accent.opacity(0.35), radius: 16, y: 8)
+            }
+            .buttonStyle(PressScale(scale: 0.92))
+            Button("Enter Password Instead") { showPassword = true; passwordFocused = true }
+                .font(Theme.text(15, .medium)).foregroundStyle(Theme.accent)
+        }
+    }
+
+    // MARK: Password
+
+    private var passwordArea: some View {
+        VStack(spacing: 14) {
+            if core.needsSecretKeyEntry { secretKeyField }
+            passwordField
+            if failed {
+                Text(core.needsSecretKeyEntry ? "Incorrect password or Secret Key." : "Incorrect password.")
+                    .font(Theme.text(14)).foregroundStyle(Theme.danger)
+            }
+            if core.biometricUnlockAllowed && !core.needsSecretKeyEntry {
+                Button { showPassword = false; Task { _ = await core.unlockWithTouchID() } } label: {
+                    Label("Use Face ID Instead", systemImage: "faceid").font(Theme.text(15, .medium))
+                }
+                .foregroundStyle(Theme.accent).padding(.top, 2)
+            }
+        }
     }
 
     private var passwordField: some View {
         HStack(spacing: 10) {
             Group {
                 if revealPassword {
-                    TextField("", text: $password, prompt: Text("Enter your password").foregroundStyle(.white.opacity(0.4)))
+                    TextField("", text: $password, prompt: Text("Enter your password").foregroundStyle(Theme.label))
                 } else {
-                    SecureField("", text: $password, prompt: Text("Enter your password").foregroundStyle(.white.opacity(0.4)))
+                    SecureField("", text: $password, prompt: Text("Enter your password").foregroundStyle(Theme.label))
                 }
             }
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .foregroundStyle(.white)
-            .tint(.white)
-            .focused($passwordFocused)
-            .onSubmit(unlock)
+            .textInputAutocapitalization(.never).autocorrectionDisabled()
+            .foregroundStyle(Theme.primaryLabel).tint(Theme.accent)
+            .focused($passwordFocused).onSubmit(unlock).font(Theme.text(16))
 
             Button { revealPassword.toggle() } label: {
-                Image(systemName: revealPassword ? "eye.slash" : "eye")
-                    .foregroundStyle(.white.opacity(0.55))
+                Image(systemName: revealPassword ? "eye.slash" : "eye").foregroundStyle(Theme.label)
             }
-
-            Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 22)
-
+            Rectangle().fill(Theme.cardBorder).frame(width: 1, height: 22)
             Button(action: unlock) {
-                if isUnlocking {
-                    ProgressView().tint(.white)
-                } else {
-                    Image(systemName: "arrow.right").fontWeight(.semibold)
-                }
+                if isUnlocking { ProgressView() }
+                else { Image(systemName: "arrow.right").fontWeight(.semibold) }
             }
-            .foregroundStyle(password.isEmpty ? .white.opacity(0.3) : Theme.lockFocus)
+            .foregroundStyle(password.isEmpty ? Theme.label : Theme.accent)
             .disabled(password.isEmpty || isUnlocking)
         }
-        .padding(.horizontal, 16)
-        .frame(height: 52)
-        .background(Theme.lockField, in: RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 16).frame(height: 54)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.rInput, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(passwordFocused ? Theme.lockFocus : .white.opacity(0.10),
-                              lineWidth: passwordFocused ? 1.5 : 1)
+            RoundedRectangle(cornerRadius: Theme.rInput, style: .continuous)
+                .strokeBorder(passwordFocused ? Theme.accent : Theme.cardBorder, lineWidth: passwordFocused ? 1.5 : 1)
         }
         .modifier(ShakeEffect(animatableData: CGFloat(shake)))
     }
 
     private var secretKeyField: some View {
-        TextField("", text: $typedSecretKey, prompt: Text("Secret Key").foregroundStyle(.white.opacity(0.4)))
-            .font(Theme.mono(15))
-            .textInputAutocapitalization(.characters)
-            .autocorrectionDisabled()
-            .foregroundStyle(.white)
-            .tint(.white)
-            .padding(.horizontal, 16)
-            .frame(height: 52)
-            .background(Theme.lockField, in: RoundedRectangle(cornerRadius: 12))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.10), lineWidth: 1)
-            }
+        TextField("", text: $typedSecretKey, prompt: Text("Secret Key").foregroundStyle(Theme.label))
+            .font(Theme.mono(15)).textInputAutocapitalization(.characters).autocorrectionDisabled()
+            .foregroundStyle(Theme.primaryLabel).tint(Theme.accent)
+            .padding(.horizontal, 16).frame(height: 54)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.rInput, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Theme.rInput, style: .continuous).strokeBorder(Theme.cardBorder, lineWidth: 1))
     }
 
     private func unlock() {
         guard !password.isEmpty, !isUnlocking else { return }
-        isUnlocking = true
-        failed = false
+        isUnlocking = true; failed = false
         Task {
             do {
                 try await core.unlock(password: password, typedSecretKey: typedSecretKey.isEmpty ? nil : typedSecretKey)
-                password = ""
-                typedSecretKey = ""
+                password = ""; typedSecretKey = ""
             } catch {
                 failed = true
                 withAnimation(.default) { shake += 1 }

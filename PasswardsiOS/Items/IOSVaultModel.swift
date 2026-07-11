@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import os
 import PasswardsCore
 import PasswardsOrchestration
@@ -15,6 +16,13 @@ final class IOSVaultModel {
     private(set) var vaults: [Vault] = []
     private(set) var summaries: [ItemSummary] = []
 
+    /// Resolved website icons, keyed by host. A tracked `@Observable` property on the
+    /// same object the tabs already observe — mutating it invalidates exactly the rows
+    /// that read `favicon(for:)`, via the proven `summaries` refresh path.
+    private(set) var favicons: [String: UIImage] = [:]
+    @ObservationIgnored private var faviconTasks: Set<String> = []      // in-flight hosts
+    @ObservationIgnored private var faviconAttempted: Set<String> = []  // finished (incl. misses)
+
     var searchText = ""
     var sortKey: VaultSortKey = .dateEdited
     var sortAscending = true
@@ -26,19 +34,24 @@ final class IOSVaultModel {
 
     /// Populates the model with sample data for `-uiPreview` screenshots.
     func seedPreview() {
-        let samples: [(id: String, title: String, sub: String, cat: PasswardsCore.Category, fav: Bool, day: Double, tags: [String], archived: Bool, trashed: Bool)] = [
-            ("1", "GitHub", "octocat", .login, true, 0, ["work", "dev"], false, false),
-            ("2", "Personal Email", "me@example.com", .emailAccount, false, 1, ["personal"], false, false),
-            ("3", "Visa", "•••• 4242", .creditCard, false, 2, ["finance"], false, false),
-            ("4", "AWS Production", "AKIA…", .apiCredential, false, 9, ["work"], false, false),
-            ("5", "Home Wi-Fi", "Living room", .wirelessRouter, false, 12, [], false, false),
-            ("6", "Old Dropbox", "user@old.com", .login, false, 40, [], true, false),     // archived
-            ("7", "Deleted Note", "scratch pad", .secureNote, false, 30, [], false, true), // trashed
+        let samples: [(id: String, title: String, sub: String, cat: PasswardsCore.Category, fav: Bool, day: Double, tags: [String], archived: Bool, trashed: Bool, url: String)] = [
+            ("1", "GitHub", "octocat", .login, true, 0, ["work", "dev"], false, false, "https://github.com"),
+            ("2", "Personal Email", "me@example.com", .emailAccount, true, 1, ["personal"], false, false, "https://gmail.com"),
+            ("3", "Visa", "•••• 4242", .creditCard, false, 2, ["finance"], false, false, ""),
+            ("4", "AWS Production", "AKIA…", .apiCredential, true, 9, ["work"], false, false, "https://aws.amazon.com"),
+            ("5", "Home Wi-Fi", "Living room", .wirelessRouter, false, 12, [], false, false, ""),
+            ("6", "Old Dropbox", "user@old.com", .login, false, 40, [], true, false, "https://dropbox.com"),   // archived
+            ("7", "Deleted Note", "scratch pad", .secureNote, false, 30, [], false, true, ""),                 // trashed
+            ("8", "Cloudflare", "admin", .login, true, 3, ["work"], false, false, "https://cloudflare.com"),
+            ("9", "Stripe", "acct", .login, true, 4, ["finance"], false, false, "https://stripe.com"),
+            ("10", "Reddit", "u/me", .login, false, 5, [], false, false, "https://reddit.com"),
+            ("11", "Netflix", "me@home", .login, false, 6, [], false, false, "https://netflix.com"),
+            ("12", "Amazon", "me@home", .login, true, 7, [], false, false, "https://amazon.com"),
         ]
         let base = Date(timeIntervalSince1970: 1_717_200_000) // 2024-06
         summaries = samples.map { s in
             var ov = ItemOverview(title: s.title, subtitle: s.sub,
-                                  urls: s.id == "1" ? ["https://github.com"] : [],
+                                  urls: s.url.isEmpty ? [] : [s.url],
                                   isFavorite: s.fav, category: s.cat)
             ov.tags = s.tags
             ov.isArchived = s.archived
@@ -59,6 +72,7 @@ final class IOSVaultModel {
             ])
         ], notes: "Personal account.")
         seededItems["1"] = gh
+        Task { resolveFavicons() }   // preview: defer past construction (real app kicks from load()/.task)
     }
 
     /// The seeded detail item (call `seedPreview()` first). For editor previews.
@@ -82,6 +96,7 @@ final class IOSVaultModel {
             Logger(subsystem: "com.michael.passwards", category: "ios-vault")
                 .error("load failed: \(String(describing: error), privacy: .public)")
         }
+        resolveFavicons()
     }
 
     func refresh() async {
@@ -92,8 +107,51 @@ final class IOSVaultModel {
     func clearSecrets() {
         vaults = []
         summaries = []
+        favicons = [:]
+        faviconTasks = []
+        faviconAttempted = []
         searchText = ""
         filter = .allItems
+    }
+
+    // MARK: Favicons
+
+    /// The resolved icon for an overview, or nil (custom-symbol / no-URL / not-yet-
+    /// loaded). Reading `favicons` here registers the Observation dependency for the
+    /// calling view's body — the same mechanism `visibleSummaries` uses for `summaries`.
+    func favicon(for overview: ItemOverview) -> UIImage? {
+        guard overview.iconSymbol?.isEmpty ?? true,
+              let url = overview.urls.first, !url.isEmpty,
+              let host = IOSFaviconLoader.host(from: url) else { return nil }
+        return favicons[host]
+    }
+
+    /// Kick off resolution for every summary that would use a favicon. Cheap to call
+    /// repeatedly — deduped per host; the loader adds memory/disk caching.
+    func resolveFavicons() {
+        guard IOSFaviconLoader.enabled else { return }
+        for s in summaries { kickFavicon(for: s.overview) }
+    }
+
+    /// Resolve one overview's icon on demand (e.g. a just-created item not yet batched).
+    func ensureFavicon(for overview: ItemOverview) { kickFavicon(for: overview) }
+
+    private func kickFavicon(for overview: ItemOverview) {
+        guard IOSFaviconLoader.enabled,
+              overview.iconSymbol?.isEmpty ?? true,
+              let url = overview.urls.first, !url.isEmpty,
+              let host = IOSFaviconLoader.host(from: url),
+              favicons[host] == nil,
+              !faviconTasks.contains(host),
+              !faviconAttempted.contains(host) else { return }
+        faviconTasks.insert(host)
+        Task { [weak self] in                     // inherits @MainActor; resumes on main after the actor hop
+            let img = await IOSFaviconLoader.shared.icon(forURLString: url)
+            guard let self else { return }
+            self.faviconTasks.remove(host)
+            self.faviconAttempted.insert(host)
+            if let img { self.favicons[host] = img }
+        }
     }
 
     // MARK: Derived
