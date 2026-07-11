@@ -311,7 +311,17 @@ struct IOSSearchTab: View {
                 }
             }
 
-            if !vault.searchText.isEmpty {
+            if vault.searchText.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: "sparkle.magnifyingglass")
+                        .font(.system(size: 34, weight: .medium))
+                        .foregroundStyle(Theme.accent.opacity(0.55))
+                    Text("Search your logins, cards, notes\u{2009}—\u{2009}anything you've saved.")
+                        .font(Theme.text(14)).foregroundStyle(Theme.label)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity).padding(.vertical, 48).padding(.horizontal, 24)
+            } else {
                 if results.isEmpty {
                     Text("No items match your search").font(Theme.text(14)).foregroundStyle(Theme.label)
                         .frame(maxWidth: .infinity).padding(.vertical, 24)
