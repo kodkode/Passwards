@@ -32,7 +32,10 @@ actor IOSFaviconLoader {
 
     init() {
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-        cacheDirectory = caches.appendingPathComponent("FaviconCache", isDirectory: true)
+        // v2: crisp-first + registrable-domain fallback — new name so icons cached
+        // by the old logic (possibly low-res) re-resolve once. The old dir is purged.
+        cacheDirectory = caches.appendingPathComponent("FaviconCache-v2", isDirectory: true)
+        try? FileManager.default.removeItem(at: caches.appendingPathComponent("FaviconCache", isDirectory: true))
         try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
 
         let cfg = URLSessionConfiguration.ephemeral
