@@ -34,9 +34,13 @@ struct IOSItemEditorView: View {
             }
 
             ForEach($draft.details.sections) { $section in
-                Section(section.title) {
-                    ForEach($section.fields) { $field in
-                        EditorFieldRow(field: $field)
+                if !section.fields.isEmpty {
+                    Section {
+                        ForEach($section.fields) { $field in
+                            EditorFieldRow(field: $field)
+                        }
+                    } header: {
+                        if !section.title.isEmpty { Text(section.title) }
                     }
                 }
             }
@@ -46,11 +50,12 @@ struct IOSItemEditorView: View {
                     .lineLimit(3...8)
             }
         }
-        .navigationTitle(isNew ? "New \(draft.overview.category.displayName)" : "Edit")
+        .navigationTitle("\(isNew ? "New" : "Edit") \(draft.overview.category.displayName)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") { save() }.disabled(saving)
+                Button("Save") { save() }
+                    .disabled(saving || draft.overview.title.trimmingCharacters(in: .whitespaces).isEmpty)
             }
             if showsCancel {
                 ToolbarItem(placement: .cancellationAction) {
@@ -116,6 +121,10 @@ private struct EditorFieldRow: View {
                     Image(systemName: "key.fill")
                 }
                 .buttonStyle(.plain).foregroundStyle(Theme.accent)
+            }
+            if field.kind == .concealed && !field.value.isEmpty {
+                StrengthBar(score: PasswordStrength.score(field.value))
+                    .padding(.top, 4)
             }
         case .address:
             TextField(field.label, text: $field.value, axis: .vertical).lineLimit(2...5)
