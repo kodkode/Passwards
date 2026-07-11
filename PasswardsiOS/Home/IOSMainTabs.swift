@@ -8,6 +8,17 @@ func accountInitials(_ core: AccountController) -> String {
     return String(first).uppercased()
 }
 
+/// First name for the Home greeting, derived from the account email's local part
+/// ("michael.tubul@…" → "Michael"). Handoff: "Hey, Alex!"; fallback "Hey there!".
+func accountGreeting(_ core: AccountController) -> String {
+    guard let email = core.account?.email,
+          let local = email.split(separator: "@").first,
+          let name = local.split(whereSeparator: { ".-_+".contains($0) }).first,
+          !name.isEmpty, name.allSatisfy({ $0.isLetter })
+    else { return "Hey there!" }
+    return "Hey, \(name.prefix(1).uppercased() + name.dropFirst().lowercased())!"
+}
+
 // MARK: - Home tab
 
 struct IOSHomeTab: View {
@@ -26,7 +37,7 @@ struct IOSHomeTab: View {
     private var recent: [ItemSummary] { Array(active.sorted { $0.createdAt > $1.createdAt }.prefix(6)) }
 
     var body: some View {
-        TabScaffold(title: "Hey there!", subtitle: "Let's keep things secure",
+        TabScaffold(title: accountGreeting(vault.core), subtitle: "Let's keep things secure",
                     onSettings: { present(.settings) }, onAdd: { present(.add) }) {
             nudgeCard
             promoCard
