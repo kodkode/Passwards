@@ -76,16 +76,36 @@ actor IOSFaviconLoader {
         let cacheFile = cacheDirectory.appendingPathComponent(cacheKey(host))
         if let data = try? Data(contentsOf: cacheFile), let img = decodeBestFrame(data) { return img }
 
-        let candidates = await candidateIconURLs(host: host, session: session)
-        for url in candidates {
+        var image = await bestIcon(host: host, session: session)
+
+        // Subdomain with no icon of its own (auth0.openai.com, account.live.com…):
+        // fall back to the registrable domain's icon — the brand mark the user expects.
+        if image == nil,
+           let reg = WatchtowerAuditor.registrableDomain("https://\(host)"),
+           reg != host, isPublicHost(reg) {
+            image = await bestIcon(host: reg, session: session)
+        }
+
+        if let image, let png = image.pngData() { try? png.write(to: cacheFile) }   // normalize cache
+        return image
+    }
+
+    /// Walks the candidate list (best declared size first) and returns the first icon
+    /// that is actually sharp (≥ `crispPixels`). A small icon that decodes early no
+    /// longer wins over a large apple-touch-icon later in the list — it is kept only
+    /// as a last resort if nothing crisp exists.
+    private static let crispPixels = 96
+    private static func bestIcon(host: String, session: URLSession) async -> UIImage? {
+        var fallback: UIImage? = nil
+        for url in await candidateIconURLs(host: host, session: session) {
             // Re-gate every URL immediately before fetching (defence in depth).
             guard let h = url.host()?.lowercased(), isPublicHost(h) else { continue }
             guard let data = await fetchBounded(url, maxBytes: iconMaxBytes, session: session),
                   data.count > 70, let img = decodeBestFrame(data) else { continue }
-            if let png = img.pngData() { try? png.write(to: cacheFile) }   // normalize cache
-            return img
+            if Int(max(img.size.width, img.size.height)) >= crispPixels { return img }
+            if fallback.map({ img.size.width > $0.size.width }) ?? true { fallback = img }
         }
-        return nil
+        return fallback
     }
 
     // MARK: Candidate discovery

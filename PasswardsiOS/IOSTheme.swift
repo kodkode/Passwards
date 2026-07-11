@@ -281,11 +281,51 @@ struct CategoryIcon: View {
     var body: some View { IconTile(colorToken: category.colorToken, symbol: category.symbolName, size: size) }
 }
 
+/// 1Password-style monogram fallback: the item's two-letter initials on a soft
+/// tint of a per-item color. The color must be stable across launches, so it is
+/// picked from the handoff's 8 avatar colors by a deterministic FNV-1a hash of the
+/// title (Swift's `hashValue` is seed-randomized per process — unusable here).
+struct MonogramTile: View {
+    let title: String
+    var size: CGFloat = 44
+
+    private static let palette: [Color] = [0x3B82F6, 0xF59E0B, 0x8B5CF6, 0xEF4444,
+                                           0x10B981, 0x06B6D4, 0xF43F5E, 0x84CC16]
+        .map { Color(uiColor: UIColor(hex: $0)) }
+
+    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: size * 0.25, style: .continuous) }
+
+    private var initials: String {
+        let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = t.first else { return "?" }
+        let second = t.dropFirst().first.map(String.init) ?? ""
+        return String(first).uppercased() + second.lowercased()
+    }
+
+    private var color: Color {
+        var h: UInt64 = 0xcbf29ce484222325
+        for b in title.utf8 { h = (h ^ UInt64(b)) &* 0x100000001b3 }
+        return Self.palette[Int(h % UInt64(Self.palette.count))]
+    }
+
+    var body: some View {
+        shape
+            .fill(color.opacity(0.20))
+            .frame(width: size, height: size)
+            .overlay {
+                Text(initials)
+                    .font(Theme.display(size * 0.40, .semibold))
+                    .foregroundStyle(color)
+            }
+    }
+}
+
 /// The item's leading icon. Precedence (matches macOS): custom symbol → favicon →
-/// category tile. The favicon is a resolved `UIImage` injected by `IOSVaultModel`
-/// (see `vault.favicon(for:)`), never fetched here — the view is fully stateless.
-/// `favicon` defaults to nil so untouched call sites still compile and degrade to
-/// the category tile.
+/// monogram (for items that *should* have a favicon: logins or anything with a URL,
+/// like 1Password's letter tiles) → category tile. The favicon is a resolved
+/// `UIImage` injected by `IOSVaultModel` (see `vault.favicon(for:)`), never fetched
+/// here — the view is fully stateless. `favicon` defaults to nil so untouched call
+/// sites still compile and degrade to the fallbacks.
 struct ItemIcon: View {
     let overview: ItemOverview
     var favicon: UIImage? = nil
@@ -296,6 +336,8 @@ struct ItemIcon: View {
             IconTile(colorToken: overview.iconColor ?? overview.category.colorToken, symbol: symbol, size: size)
         } else if let favicon {
             FaviconImage(image: favicon, size: size)
+        } else if overview.category == .login || !overview.urls.isEmpty {
+            MonogramTile(title: overview.title, size: size)
         } else {
             CategoryIcon(category: overview.category, size: size)
         }
